@@ -16,6 +16,8 @@ import com.auth0.jwt.JWT;
 
 import java.util.Date;
 
+import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY;
+
 @Component
 public class JwtUtils {
 
@@ -31,11 +33,9 @@ public class JwtUtils {
     @Value("${jwt.secret}")
     public String secret;
 
-    public static final String AUTHORIZATION = "Authorization";
-    public static final String REFRESH_TOKEN_KEY_PREFIX = "refreshToken";
 
     public String refreshTokenCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_TOKEN_KEY_PREFIX, refreshToken)
+        return ResponseCookie.from(REFRESH_TOKEN_KEY, refreshToken)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")

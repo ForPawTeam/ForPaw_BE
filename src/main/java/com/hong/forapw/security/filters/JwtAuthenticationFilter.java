@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.hong.forapw.common.constants.GlobalConstants.*;
 import static com.hong.forapw.common.utils.DateTimeUtils.DATE_HOUR_FORMAT;
 import static com.hong.forapw.common.utils.DateTimeUtils.formatLocalDateTime;
 
@@ -36,9 +37,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final RedisService redisService;
     private final JwtUtils jwtProvider;
 
-    private static final String REFRESH_TOKEN = "refreshToken";
-    private static final String ACCESS_TOKEN = "accessToken";
-    public static final String TOKEN_PREFIX = "Bearer ";
 
     public JwtAuthenticationFilter(RedisService redisService, JwtUtils jwtProvider) {
         this.redisService = redisService;
@@ -70,15 +68,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String extractAccessToken(HttpServletRequest request) {
-        String jwt = request.getHeader(JwtUtils.AUTHORIZATION);
-        if (jwt != null && jwt.startsWith(TOKEN_PREFIX)) {
+        String jwt = request.getHeader(AUTHORIZATION_HEADER);
+
+        if (jwt != null && jwt.startsWith(BEARER_PREFIX)) {
             return removeTokenPrefix(jwt);
         }
         return null;
     }
 
     private String extractRefreshToken(HttpServletRequest request) {
-        return CookieUtils.getFromRequest(JwtUtils.REFRESH_TOKEN_KEY_PREFIX, request);
+        return CookieUtils.getFromRequest(REFRESH_TOKEN_KEY, request);
     }
 
     private boolean areTokensEmpty(String accessToken, String refreshToken) {
@@ -105,7 +104,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isRefreshTokenValid(User user, String refreshToken) {
-        return redisService.doesValueMatch(REFRESH_TOKEN, String.valueOf(user.getId()), refreshToken);
+        return redisService.doesValueMatch(REFRESH_TOKEN_KEY, String.valueOf(user.getId()), refreshToken);
     }
 
     private void authenticateUser(User user) {
@@ -125,7 +124,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void syncRequestResponseCookies(HttpServletRequest request, HttpServletResponse response) {
-        Set<String> excludedCookies = Set.of(ACCESS_TOKEN, REFRESH_TOKEN);
+        Set<String> excludedCookies = Set.of(ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY);
         CookieUtils.syncRequestCookiesToResponse(request, response, excludedCookies);
     }
 
@@ -149,6 +148,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String removeTokenPrefix(String jwt) {
-        return jwt.replace(TOKEN_PREFIX, "");
+        return jwt.replace(BEARER_PREFIX, "");
     }
 }
