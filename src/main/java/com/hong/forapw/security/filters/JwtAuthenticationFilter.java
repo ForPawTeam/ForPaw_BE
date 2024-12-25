@@ -1,11 +1,6 @@
 package com.hong.forapw.security.filters;
 
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.auth0.jwt.exceptions.SignatureVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import com.hong.forapw.common.utils.CookieUtils;
-import com.hong.forapw.domain.user.constant.UserRole;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.integration.redis.RedisService;
 import com.hong.forapw.security.CustomUserDetails;
@@ -45,75 +40,73 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain) throws IOException, ServletException {
-        String accessToken = extractAccessToken(request);
-        String refreshToken = extractRefreshToken(request);
+        String accessToken = extractAccessTokenFromHeader(request);
+        String refreshToken = extractRefreshTokenFromCookies(request);
 
-        if (areTokensEmpty(accessToken, refreshToken)) {
+        if (areBothTokensAbsent(accessToken, refreshToken)) {
             chain.doFilter(request, response);
             return;
         }
 
-        User user = authenticateWithTokens(accessToken, refreshToken);
-        if (user == null) {
+        User authenticatedUser = authenticateUsingTokens(accessToken, refreshToken);
+        if (authenticatedUser == null) {
             chain.doFilter(request, response);
             return;
         }
 
-        authenticateUser(user);
-        recordUserVisit(user);
-        syncRequestResponseCookies(request, response);
+        setAuthenticationContext(authenticatedUser);
+        recordUserVisit(authenticatedUser);
+        syncCookiesBetweenRequestAndResponse(request, response);
 
         chain.doFilter(request, response);
     }
 
-    private String extractAccessToken(HttpServletRequest request) {
-        String jwt = request.getHeader(AUTHORIZATION_HEADER);
-
-        if (jwt != null && jwt.startsWith(BEARER_PREFIX)) {
-            return removeTokenPrefix(jwt);
+    private String extractAccessTokenFromHeader(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
+        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX)) {
+            return removeBearerPrefix(authorizationHeader);
         }
         return null;
     }
 
-    private String extractRefreshToken(HttpServletRequest request) {
+    private String extractRefreshTokenFromCookies(HttpServletRequest request) {
         return CookieUtils.getFromRequest(REFRESH_TOKEN_KEY, request);
     }
 
-    private boolean areTokensEmpty(String accessToken, String refreshToken) {
+    private boolean areBothTokensAbsent(String accessToken, String refreshToken) {
         return (accessToken == null || accessToken.trim().isEmpty()) &&
                 (refreshToken == null || refreshToken.trim().isEmpty());
     }
 
-    private User authenticateWithTokens(String accessToken, String refreshToken) {
-        return Optional.ofNullable(authenticateAccessToken(accessToken))
-                .orElseGet(() -> authenticateRefreshToken(refreshToken));
+    private User authenticateUsingTokens(String accessToken, String refreshToken) {
+        return Optional.ofNullable(authenticateWithAccessToken(accessToken))
+                .orElseGet(() -> authenticateWithRefreshToken(refreshToken));
     }
 
-    private User authenticateAccessToken(String accessToken) {
+    private User authenticateWithAccessToken(String accessToken) {
         return Optional.ofNullable(accessToken)
                 .flatMap(jwtUtils::getUserFromToken)
                 .orElse(null);
     }
 
-    private User authenticateRefreshToken(String refreshToken) {
+    private User authenticateWithRefreshToken(String refreshToken) {
         return Optional.ofNullable(refreshToken)
                 .flatMap(jwtUtils::getUserFromToken)
-                .filter(user -> isRefreshTokenValid(user, refreshToken))
+                .filter(user -> isRefreshTokenStoredInRedis(user, refreshToken))
                 .orElse(null);
     }
 
-    private boolean isRefreshTokenValid(User user, String refreshToken) {
+    private boolean isRefreshTokenStoredInRedis(User user, String refreshToken) {
         return redisService.doesValueMatch(REFRESH_TOKEN_KEY, String.valueOf(user.getId()), refreshToken);
     }
 
-    private void authenticateUser(User user) {
-        CustomUserDetails myUserDetails = new CustomUserDetails(user);
+    private void setAuthenticationContext(User user) {
+        CustomUserDetails userDetails = new CustomUserDetails(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                myUserDetails,
+                userDetails,
                 null,
-                myUserDetails.getAuthorities()
+                userDetails.getAuthorities()
         );
-
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
@@ -122,12 +115,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         redisService.addSetElement(visitKey, user.getId());
     }
 
-    private void syncRequestResponseCookies(HttpServletRequest request, HttpServletResponse response) {
+    private void syncCookiesBetweenRequestAndResponse(HttpServletRequest request, HttpServletResponse response) {
         Set<String> excludedCookies = Set.of(ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY);
         CookieUtils.syncRequestCookiesToResponse(request, response, excludedCookies);
     }
 
-    private String removeTokenPrefix(String jwt) {
+    private String removeBearerPrefix(String jwt) {
         return jwt.replace(BEARER_PREFIX, "");
     }
 }
