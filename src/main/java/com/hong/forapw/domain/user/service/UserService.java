@@ -26,7 +26,6 @@ import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.integration.email.model.BlankTemplate;
 import com.hong.forapw.integration.email.model.EmailVerificationTemplate;
-import com.hong.forapw.integration.email.model.TemplateModel;
 import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
 import com.hong.forapw.integration.email.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -221,9 +220,9 @@ public class UserService {
     }
 
     public TokenResponse updateAccessToken(String refreshToken) {
-        jwtUtils.validateTokenFormat(refreshToken);
+        Long userId = jwtUtils.getUserIdFromToken(refreshToken)
+                .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
 
-        Long userId = jwtUtils.extractUserId(refreshToken);
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -250,9 +249,9 @@ public class UserService {
     }
 
     public UserResponse.ValidateAccessTokenDTO validateAccessToken(String accessToken) {
-        jwtUtils.validateTokenFormat(accessToken);
+        Long userId = jwtUtils.getUserIdFromToken(accessToken)
+                .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
 
-        Long userId = jwtUtils.extractUserId(accessToken);
         userCacheService.validateAccessToken(accessToken, userId);
 
         String profile = userRepository.findProfileById(userId).orElse(null);
@@ -362,8 +361,8 @@ public class UserService {
     }
 
     private LoginResult createToken(User user) {
-        String accessToken = jwtUtils.createAccessToken(user);
-        String refreshToken = jwtUtils.createRefreshToken(user);
+        String accessToken = jwtUtils.generateAccessToken(user);
+        String refreshToken = jwtUtils.generateRefreshTokenCookie(user);
 
         LoginResult loginResult = new LoginResult(null, accessToken, refreshToken, true);
         userCacheService.storeUserTokens(user.getId(), loginResult);
@@ -373,7 +372,7 @@ public class UserService {
 
     private TokenResponse createAccessToken(User user) {
         String refreshToken = userCacheService.getValidRefreshToken(user.getId());
-        String accessToken = jwtUtils.createAccessToken(user);
+        String accessToken = jwtUtils.generateAccessToken(user);
         userCacheService.storeAccessToken(user.getId(), accessToken);
 
         return new TokenResponse(accessToken, refreshToken);

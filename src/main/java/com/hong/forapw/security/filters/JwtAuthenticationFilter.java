@@ -35,12 +35,11 @@ import static com.hong.forapw.common.utils.DateTimeUtils.formatLocalDateTime;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final RedisService redisService;
-    private final JwtUtils jwtProvider;
+    private final JwtUtils jwtUtils;
 
-
-    public JwtAuthenticationFilter(RedisService redisService, JwtUtils jwtProvider) {
+    public JwtAuthenticationFilter(RedisService redisService, JwtUtils jwtUtils) {
         this.redisService = redisService;
-        this.jwtProvider = jwtProvider;
+        this.jwtUtils = jwtUtils;
     }
 
     @Override
@@ -92,14 +91,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private User authenticateAccessToken(String accessToken) {
         return Optional.ofNullable(accessToken)
-                .map(this::getUserFromToken)
+                .flatMap(jwtUtils::getUserFromToken)
                 .orElse(null);
     }
 
     private User authenticateRefreshToken(String refreshToken) {
         return Optional.ofNullable(refreshToken)
-                .flatMap(token -> Optional.ofNullable(getUserFromToken(token))
-                        .filter(user -> isRefreshTokenValid(user, refreshToken)))
+                .flatMap(jwtUtils::getUserFromToken)
+                .filter(user -> isRefreshTokenValid(user, refreshToken))
                 .orElse(null);
     }
 
@@ -126,25 +125,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void syncRequestResponseCookies(HttpServletRequest request, HttpServletResponse response) {
         Set<String> excludedCookies = Set.of(ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY);
         CookieUtils.syncRequestCookiesToResponse(request, response, excludedCookies);
-    }
-
-    private User getUserFromToken(String token) {
-        try {
-            String encodedJWT = removeTokenPrefix(token);
-            DecodedJWT decodedJWT = jwtProvider.decodeJWT(encodedJWT);
-
-            Long id = decodedJWT.getClaim("id").asLong();
-            UserRole role = decodedJWT.getClaim("role").as(UserRole.class);
-            String nickname = decodedJWT.getClaim("nickName").asString();
-            return User.builder().id(id).role(role).nickName(nickname).build();
-        } catch (SignatureVerificationException sve) {
-            log.error("토큰 유효성 검증 실패 {}: {}", token, sve.getMessage());
-        } catch (TokenExpiredException tee) {
-            log.error("토큰이 만료 되었음 {}: {}", token, tee.getMessage());
-        } catch (JWTDecodeException jde) {
-            log.error("토큰 디코딩 실패 {}: {}", token, jde.getMessage());
-        }
-        return null;
     }
 
     private String removeTokenPrefix(String jwt) {

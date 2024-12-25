@@ -117,7 +117,8 @@ public enum ExceptionCode {
     INVALID_URI_FORMAT(HttpStatus.NOT_FOUND, "잘못된 URI 형식입니다."),
     INTRODUCTION_RETRY_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "소개글 업데이트 요청 재시도 초과"),
     LOCK_ACQUIRE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "레디스 락 시도가 실패하였습니다." ),
-    LOCK_ACQUIRE_INTERRUPT(HttpStatus.INTERNAL_SERVER_ERROR, "레디스 락에 Intrrupt가 발생하였습니다.");
+    LOCK_ACQUIRE_INTERRUPT(HttpStatus.INTERNAL_SERVER_ERROR, "레디스 락에 Intrrupt가 발생하였습니다."),
+    TOKEN_INVALID(HttpStatus.BAD_REQUEST, "잘못된 토큰이 요청으로 넘어왔습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

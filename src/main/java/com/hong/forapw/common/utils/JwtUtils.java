@@ -1,13 +1,13 @@
 package com.hong.forapw.common.utils;
 
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.hong.forapw.common.exceptions.CustomException;
-import com.hong.forapw.common.exceptions.ExceptionCode;
+import com.hong.forapw.domain.user.constant.UserRole;
 import com.hong.forapw.domain.user.entity.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
@@ -15,44 +15,77 @@ import org.springframework.stereotype.Component;
 import com.auth0.jwt.JWT;
 
 import java.util.Date;
+import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.BEARER_PREFIX;
 import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY;
 
 @Component
+@Slf4j
 public class JwtUtils {
 
     @Value("${jwt.access-exp-milli}")
-    public Long accessExpMilli; // 1시간
+    public Long accessTokenExpirationMillis; // 1시간
 
     @Value("${jwt.refresh-exp-milli}")
-    public Long refreshExpMilli; // 일주일
+    public Long refreshTokenExpirationMillis; // 일주일
 
     @Value("${jwt.refresh-exp-milli}")
-    public Long refreshExpSec;
+    public Long refreshTokenExpirationSeconds;
 
     @Value("${jwt.secret}")
     public String secret;
 
+    public String generateRefreshTokenCookie(String refreshToken) {
+        return buildCookie(REFRESH_TOKEN_KEY, refreshToken, refreshTokenExpirationSeconds);
+    }
 
-    public String refreshTokenCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_TOKEN_KEY, refreshToken)
+    public String generateAccessToken(User user) {
+        return generateToken(user, accessTokenExpirationMillis);
+    }
+
+    public String generateRefreshTokenCookie(User user) {
+        return generateToken(user, refreshTokenExpirationMillis);
+    }
+
+    public Optional<User> getUserFromToken(String token) {
+        try {
+            String encodedJWT = removeTokenPrefix(token);
+            DecodedJWT decodedJWT = decodeJWT(encodedJWT);
+
+            Long id = decodedJWT.getClaim("id").asLong();
+            UserRole role = UserRole.values()[decodedJWT.getClaim("role").asInt()];
+            String nickname = decodedJWT.getClaim("nickName").asString();
+
+            return Optional.of(User.builder().id(id).role(role).nickName(nickname).build());
+        } catch (Exception e) {
+            logTokenException(token, e);
+        }
+        return Optional.empty();
+    }
+
+    public Optional<Long> getUserIdFromToken(String token) {
+        try {
+            DecodedJWT decodedJWT = decodeJWT(token);
+            return Optional.of(decodedJWT.getClaim("id").asLong());
+        } catch (Exception e) {
+            logTokenException(token, e);
+        }
+        return Optional.empty();
+    }
+
+    private String buildCookie(String key, String value, Long maxAgeSeconds) {
+        return ResponseCookie.from(key, value)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .sameSite("Lax")
-                .maxAge(refreshExpSec)
-                .build().toString();
+                .maxAge(maxAgeSeconds)
+                .build()
+                .toString();
     }
 
-    public String createAccessToken(User user) {
-        return create(user, accessExpMilli);
-    }
-
-    public String createRefreshToken(User user) {
-        return create(user, refreshExpMilli);
-    }
-
-    public String create(User user, Long exp) {
+    private String generateToken(User user, Long exp) {
         return JWT.create()
                 .withSubject(user.getEmail())
                 .withExpiresAt(new Date(System.currentTimeMillis() + exp))
@@ -62,26 +95,23 @@ public class JwtUtils {
                 .sign(Algorithm.HMAC512(secret));
     }
 
-    public DecodedJWT decodeJWT(String encodedJWT) throws SignatureVerificationException, TokenExpiredException {
+    private DecodedJWT decodeJWT(String encodedJWT) throws SignatureVerificationException, TokenExpiredException {
         return JWT.require(Algorithm.HMAC512(secret))
                 .build()
                 .verify(encodedJWT);
     }
 
-    public Long extractUserId(String token) {
-        DecodedJWT decodedJWT = decodeJWT(token);
-        return decodedJWT.getClaim("id").asLong();
+    private String removeTokenPrefix(String jwt) {
+        return jwt.replace(BEARER_PREFIX, "");
     }
 
-    public void validateTokenFormat(String refreshToken) {
-        try {
-            decodeJWT(refreshToken);
-        } catch (TokenExpiredException e) {
-            throw new CustomException(ExceptionCode.TOKEN_EXPIRED);
-        } catch (SignatureVerificationException e) {
-            throw new CustomException(ExceptionCode.TOKEN_INVALID_SIGNATURE);
-        } catch (JWTVerificationException e) {
-            throw new CustomException(ExceptionCode.TOKEN_WRONG);
+    private void logTokenException(String token, Exception e) {
+        if (e instanceof SignatureVerificationException) {
+            log.error("토큰 유효성 검증 실패 {}: {}", token, e.getMessage());
+        } else if (e instanceof TokenExpiredException) {
+            log.error("토큰이 만료 되었음 {}: {}", token, e.getMessage());
+        } else if (e instanceof JWTDecodeException) {
+            log.error("토큰 디코딩 실패 {}: {}", token, e.getMessage());
         }
     }
 }

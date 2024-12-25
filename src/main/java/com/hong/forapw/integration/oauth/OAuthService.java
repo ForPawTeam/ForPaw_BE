@@ -89,7 +89,7 @@ public class OAuthService {
         } else if (isJoined(loginResult)) {
             String refreshToken = loginResult.refreshToken();
             String accessToken = loginResult.accessToken();
-            response.addHeader(HttpHeaders.SET_COOKIE, jwtUtils.refreshTokenCookie(refreshToken));
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(refreshToken));
 
             return createRedirectUri(redirectHomeUri, Map.of(
                     QUERY_PARAM_ACCESS_TOKEN, accessToken,

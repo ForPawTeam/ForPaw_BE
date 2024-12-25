@@ -38,7 +38,7 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody @Valid UserRequest.LoginDTO requestDTO, HttpServletRequest request) {
         LoginResult loginResult = userService.login(requestDTO, request);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtUtils.refreshTokenCookie(loginResult.refreshToken()))
+                .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(loginResult.refreshToken()))
                 .body(ApiUtils.success(HttpStatus.OK, new UserResponse.LoginDTO(loginResult.accessToken())));
     }
 
@@ -139,7 +139,7 @@ public class UserController {
     public ResponseEntity<?> updateAccessToken(@CookieValue String refreshToken) {
         TokenResponse tokenResponse = userService.updateAccessToken(refreshToken);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtUtils.refreshTokenCookie(tokenResponse.refreshToken()))
+                .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(tokenResponse.refreshToken()))
                 .body(ApiUtils.success(HttpStatus.OK, new UserResponse.AccessTokenDTO(tokenResponse.accessToken())));
     }
 
