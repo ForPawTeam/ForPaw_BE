@@ -121,8 +121,12 @@ public class Comment extends BaseEntity {
         return post.isBlocked();
     }
 
-    public boolean isNotReply() {
+    public boolean isParent() {
         return parent == null;
+    }
+
+    public boolean isChildren() {
+        return parent != null;
     }
 
     public boolean isReply() {

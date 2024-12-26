@@ -18,9 +18,7 @@ import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.admin.repository.ReportRepository;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.integration.s3.S3Service;
 import com.hong.forapw.domain.like.LikeService;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -155,11 +153,8 @@ public class PostService {
         );
         validatePost(post);
 
-        List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
-        List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
-        List<FindPostByIdRes.CommentDTO> commentDTOs = convertToCommentDTO(comments, likedCommentIds);
-
         Long likeCount = likeService.getPostLikeCount(postId);
+        List<FindPostByIdRes.CommentDTO> commentDTOs = buildCommentDTOs(postId, userId);
 
         postCacheService.incrementPostViewCount(postId);
         postCacheService.markNoticePostAsRead(post, userId, postId);
@@ -177,7 +172,6 @@ public class PostService {
         List<Post> answers = postRepository.findByParentIdWithUser(qnaId);
 
         postCacheService.incrementPostViewCount(qnaId);
-
         return new FindQnaByIdRes(qna, answers, userId);
     }
 
@@ -544,35 +538,33 @@ public class PostService {
         }
     }
 
-    private List<FindPostByIdRes.CommentDTO> convertToCommentDTO(List<Comment> comments, List<Long> likedCommentIds) {
-        List<FindPostByIdRes.CommentDTO> parentComments = new ArrayList<>();
-        Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>(); // ParentComment Id로 빠르게 ParentComment를 찾을 용도
+    private List<FindPostByIdRes.CommentDTO> buildCommentDTOs(Long postId, Long userId) {
+        List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
+        List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
 
+        Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>();
         comments.forEach(comment -> {
             Long likeCount = likeService.getCommentLikeCount(comment.getId());
-            if (comment.isNotReply()) { // 부모 댓글
-                FindPostByIdRes.CommentDTO parentCommentDTO = toParentCommentDTO(comment, likeCount, likedCommentIds.contains(comment.getId()));
-                parentComments.add(parentCommentDTO);
-                parentCommentMap.put(comment.getId(), parentCommentDTO);
+            boolean isLikedComment = likedCommentIds.contains(comment.getId());
+
+            if (comment.isParent()) { // 부모 댓글
+                addParentComment(comment, parentCommentMap, likeCount, isLikedComment);
             } else { // 답변 댓글
-                addReplyToParentComment(comment, parentCommentMap, likedCommentIds, likeCount);
+                addReplyToParent(comment, parentCommentMap, likeCount, isLikedComment);
             }
         });
 
-        return parentComments;
+        return new ArrayList<>(parentCommentMap.values());
     }
 
-    private void addReplyToParentComment(Comment childComment, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, List<Long> likedCommentIds, Long likeCount) {
-        if (childComment.isDeleted() && isFinalReply(childComment)) {
-            return; // 삭제된 댓글이 마지막 대댓글이면, 보이지 않고. 반면, 마지막 대댓글이 아니면, '삭제된 댓글입니다' 처리
-        }
-
-        FindPostByIdRes.CommentDTO parentCommentDTO = parentCommentMap.get(childComment.getParentId());
-        FindPostByIdRes.ReplyDTO childCommentDTO = FindPostByIdRes.ReplyDTO.fromEntity(childComment, likedCommentIds.contains(childComment.getId()), likeCount);
-        parentCommentDTO.replies().add(childCommentDTO);
+    private void addParentComment(Comment parent, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
+        FindPostByIdRes.CommentDTO parentCommentDTO = FindPostByIdRes.CommentDTO.fromEntity(parent, likeCount, isLiked);
+        parentCommentMap.put(parent.getId(), parentCommentDTO);
     }
 
-    private boolean isFinalReply(Comment comment) {
-        return !commentRepository.existsByParentIdAndDateAfter(comment.getParent().getId(), comment.getCreatedDate());
+    private void addReplyToParent(Comment reply, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
+        FindPostByIdRes.CommentDTO parentCommentDTO = parentCommentMap.get(reply.getParentId());
+        FindPostByIdRes.ReplyDTO replyDTO = FindPostByIdRes.ReplyDTO.fromEntity(reply, isLiked, likeCount);
+        parentCommentDTO.replies().add(replyDTO);
     }
 }

@@ -5,6 +5,7 @@ import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.region.constant.Province;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 public record FindPostByIdRes(
@@ -57,6 +58,20 @@ public record FindPostByIdRes(
             Long likeNum,
             boolean isLike,
             List<ReplyDTO> replies) {
+
+        public static CommentDTO fromEntity(Comment comment, Long likeCount, boolean isLikedByUser) {
+            return new CommentDTO(
+                    comment.getId(),
+                    comment.getWriterNickname(),
+                    comment.getWriterProfileURL(),
+                    comment.getContent(),
+                    comment.getCreatedDate(),
+                    comment.getWriterProvince(),
+                    likeCount,
+                    isLikedByUser,
+                    new ArrayList<>() // 답변을 담을 리스트
+            );
+        }
     }
 
     public record ReplyDTO(
