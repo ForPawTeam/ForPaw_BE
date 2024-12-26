@@ -2,7 +2,7 @@ package com.hong.forapw.domain.alarm;
 
 import com.hong.forapw.domain.alarm.model.AlarmRequest;
 import com.hong.forapw.domain.alarm.model.AlarmResponse;
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +22,18 @@ public class AlarmController {
 
     @GetMapping(value = "/alarms/connect", produces = "text/event-stream")
     public SseEmitter connectToAlarm(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return alarmService.connectToSseForAlarms(userDetails.getUser().getId().toString());
+        return alarmService.connectToSseForAlarms(userDetails.user().getId().toString());
     }
 
     @GetMapping("/alarms")
     public ResponseEntity<?> findAlarmList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AlarmResponse.FindAlarmListDTO responseDTO = alarmService.findAlarms(userDetails.getUser().getId());
+        AlarmResponse.FindAlarmListDTO responseDTO = alarmService.findAlarms(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/alarms/read")
     public ResponseEntity<?> readAlarm(@RequestBody @Valid AlarmRequest.ReadAlarmDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        alarmService.updateAlarmAsRead(requestDTO.id(), userDetails.getUser().getId());
+        alarmService.updateAlarmAsRead(requestDTO.id(), userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

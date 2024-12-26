@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.shelter;
 
 import com.hong.forapw.domain.shelter.model.ShelterResponse;
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +57,7 @@ public class ShelterController {
 
     private Long getUserIdSafely(CustomUserDetails userDetails) {
         return Optional.ofNullable(userDetails)
-                .map(CustomUserDetails::getUser)
+                .map(CustomUserDetails::user)
                 .map(User::getId)
                 .orElse(null);
     }

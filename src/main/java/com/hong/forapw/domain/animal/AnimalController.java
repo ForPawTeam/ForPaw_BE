@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.animal;
 
 import com.hong.forapw.domain.animal.model.AnimalResponse;
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.like.LikeService;
@@ -48,7 +48,7 @@ public class AnimalController {
 
     @GetMapping("/animals/like")
     public ResponseEntity<?> findLikeAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AnimalResponse.FindLikeAnimalListDTO responseDTO = animalService.findLikeAnimalList(userDetails.getUser().getId());
+        AnimalResponse.FindLikeAnimalListDTO responseDTO = animalService.findLikeAnimalList(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
@@ -60,13 +60,13 @@ public class AnimalController {
 
     @PostMapping("/animals/{animalId}/like")
     public ResponseEntity<?> likeAnimal(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.likeAnimal(animalId, userDetails.getUser().getId());
+        likeService.likeAnimal(animalId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     private Long getUserIdSafely(CustomUserDetails userDetails) {
         return Optional.ofNullable(userDetails)
-                .map(CustomUserDetails::getUser)
+                .map(CustomUserDetails::user)
                 .map(User::getId)
                 .orElse(null);
     }

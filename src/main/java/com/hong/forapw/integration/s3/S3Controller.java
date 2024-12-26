@@ -1,7 +1,7 @@
 package com.hong.forapw.integration.s3;
 
 import com.amazonaws.HttpMethod;
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ public class S3Controller {
 
     @GetMapping("/aws/presigned-url")
     public ResponseEntity<?> generatePresignedUrl(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        URL url = s3Service.generatePresignedUrl(userDetails.getUser().getId(), HttpMethod.PUT);
+        URL url = s3Service.generatePresignedUrl(userDetails.user().getId(), HttpMethod.PUT);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, url.toString()));
     }
 }

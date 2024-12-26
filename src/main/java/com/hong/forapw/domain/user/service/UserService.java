@@ -35,7 +35,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.hong.forapw.common.utils.JwtUtils;
+import com.hong.forapw.security.jwt.JwtUtils;
 
 import java.security.SecureRandom;
 import java.util.*;

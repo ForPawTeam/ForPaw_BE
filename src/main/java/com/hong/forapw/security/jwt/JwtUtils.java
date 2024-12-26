@@ -1,4 +1,4 @@
-package com.hong.forapw.common.utils;
+package com.hong.forapw.security.jwt;
 
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTDecodeException;

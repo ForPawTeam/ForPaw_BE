@@ -2,7 +2,7 @@ package com.hong.forapw.domain.apply;
 
 import com.hong.forapw.domain.apply.model.ApplyRequest;
 import com.hong.forapw.domain.apply.model.ApplyResponse;
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,26 +21,26 @@ public class ApplyController {
 
     @PostMapping("/animals/{animalId}/apply")
     public ResponseEntity<?> applyAdoption(@RequestBody @Valid ApplyRequest.ApplyAdoptionDTO requestDTO, @PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.CreateApplyDTO responseDTO = applyService.applyAdoption(requestDTO, userDetails.getUser().getId(), animalId);
+        ApplyResponse.CreateApplyDTO responseDTO = applyService.applyAdoption(requestDTO, userDetails.user().getId(), animalId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @GetMapping("/applies")
     public ResponseEntity<?> findApplyList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.FindApplyListDTO responseDTO = applyService.findApplyList(userDetails.getUser().getId());
+        ApplyResponse.FindApplyListDTO responseDTO = applyService.findApplyList(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/applies/{applyId}")
     public ResponseEntity<?> updateApply(@RequestBody @Valid ApplyRequest.UpdateApplyDTO requestDTO, @PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        applyService.updateApply(requestDTO, applyId, userDetails.getUser().getId());
+        applyService.updateApply(requestDTO, applyId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     // 권한 처리가 필요함
     @DeleteMapping("/applies/{applyId}")
     public ResponseEntity<?> deleteApply(@PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        applyService.deleteApply(applyId, userDetails.getUser().getId());
+        applyService.deleteApply(applyId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

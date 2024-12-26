@@ -5,8 +5,8 @@ import com.hong.forapw.domain.user.model.TokenResponse;
 import com.hong.forapw.domain.user.model.UserRequest;
 import com.hong.forapw.domain.user.model.UserResponse;
 import com.hong.forapw.integration.oauth.OAuthService;
-import com.hong.forapw.security.CustomUserDetails;
-import com.hong.forapw.common.utils.JwtUtils;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
+import com.hong.forapw.security.jwt.JwtUtils;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -113,25 +113,25 @@ public class UserController {
 
     @PostMapping("/accounts/password/verify")
     public ResponseEntity<?> verifyPassword(@RequestBody @Valid UserRequest.CurPasswordDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.VerifyPasswordDTO responseDTO = userService.verifyPassword(requestDTO, userDetails.getUser().getId());
+        UserResponse.VerifyPasswordDTO responseDTO = userService.verifyPassword(requestDTO, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/accounts/password")
     public ResponseEntity<?> updatePassword(@RequestBody @Valid UserRequest.UpdatePasswordDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updatePassword(requestDTO, userDetails.getUser().getId());
+        userService.updatePassword(requestDTO, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/accounts/profile")
     public ResponseEntity<?> findProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.ProfileDTO responseDTO = userService.findProfile(userDetails.getUser().getId());
+        UserResponse.ProfileDTO responseDTO = userService.findProfile(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/accounts/profile")
     public ResponseEntity<?> updateProfile(@RequestBody @Valid UserRequest.UpdateProfileDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updateProfile(requestDTO, userDetails.getUser().getId());
+        userService.updateProfile(requestDTO, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -145,7 +145,7 @@ public class UserController {
 
     @DeleteMapping("/accounts/withdraw")
     public ResponseEntity<?> withdrawMember(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.withdrawMember(userDetails.getUser().getId());
+        userService.withdrawMember(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -157,7 +157,7 @@ public class UserController {
 
     @GetMapping("/communityStats")
     public ResponseEntity<?> findCommunityStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.FindCommunityRecord responseDTO = userService.findCommunityStats(userDetails.getUser().getId());
+        UserResponse.FindCommunityRecord responseDTO = userService.findCommunityStats(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 }

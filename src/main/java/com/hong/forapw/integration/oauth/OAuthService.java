@@ -2,7 +2,7 @@ package com.hong.forapw.integration.oauth;
 
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.common.utils.JwtUtils;
+import com.hong.forapw.security.jwt.JwtUtils;
 import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.service.UserService;
 import com.hong.forapw.integration.oauth.google.GoogleOAuthService;

@@ -1,7 +1,7 @@
 package com.hong.forapw.security.filters;
 
 import com.hong.forapw.integration.redis.RedisService;
-import com.hong.forapw.common.utils.JwtUtils;
+import com.hong.forapw.security.jwt.JwtUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

@@ -1,6 +1,6 @@
 package com.hong.forapw.security.filters;
 
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,8 +13,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * 현재 프로젝트에 적용시키는 것은 시기상조라 판단하여 테스트만 해보고 적용은 하지 않는다.
+ */
 @Slf4j
 public class TraceIdFilter extends OncePerRequestFilter {
 
@@ -31,36 +35,37 @@ public class TraceIdFilter extends OncePerRequestFilter {
             MDC.put(MDC_TRACE_ID_KEY, traceId);
             response.setHeader(TRACE_ID_HEADER, traceId);
 
-            String userId = extractUserIdFromSecurityContext();
-            if (userId != null) {
-                MDC.put(MDC_USER_ID_KEY, userId);
+            String authenticatedUserId = getAuthenticatedUserId();
+            if (authenticatedUserId != null) {
+                MDC.put(MDC_USER_ID_KEY, authenticatedUserId);
             }
 
             chain.doFilter(request, response);
         } finally {
             MDC.remove(MDC_TRACE_ID_KEY);
+            MDC.remove(MDC_USER_ID_KEY);
         }
     }
 
     private String getOrCreateTraceId(HttpServletRequest request) {
-        String traceId = request.getHeader(TRACE_ID_HEADER);
-        if (traceId == null || traceId.isEmpty()) {
-            traceId = UUID.randomUUID().toString(); // 새 TraceId 생성
-            log.debug("새 TraceId 생성: {}", traceId);
+        String existingTraceId = request.getHeader(TRACE_ID_HEADER);
+        if (existingTraceId == null || existingTraceId.isEmpty()) {
+            String newTraceId = UUID.randomUUID().toString();
+            log.debug("새 TraceId 생성: {}", newTraceId);
+            return newTraceId;
         } else {
-            log.debug("기존 TraceId 사용: {}", traceId);
+            log.debug("기존 TraceId 사용: {}", existingTraceId);
+            return existingTraceId;
         }
-        return traceId;
     }
 
-    private String extractUserIdFromSecurityContext() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof CustomUserDetails userDetails) {
-                return String.valueOf(userDetails.getUser().getId());
-            }
-        }
-        return null;
+    private String getAuthenticatedUserId() {
+        return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .filter(Authentication::isAuthenticated)
+                .map(Authentication::getPrincipal)
+                .filter(CustomUserDetails.class::isInstance)
+                .map(CustomUserDetails.class::cast)
+                .map(userDetails -> String.valueOf(userDetails.user().getId()))
+                .orElse(null);
     }
 }

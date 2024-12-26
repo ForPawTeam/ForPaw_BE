@@ -1,4 +1,4 @@
-package com.hong.forapw.security;
+package com.hong.forapw.security.userdetails;
 
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;

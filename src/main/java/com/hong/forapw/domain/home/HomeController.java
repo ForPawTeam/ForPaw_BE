@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.home;
 
-import com.hong.forapw.security.CustomUserDetails;
+import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.home.model.HomeResponse;
 import com.hong.forapw.domain.user.entity.User;
@@ -29,7 +29,7 @@ public class HomeController {
 
     private Long getUserIdSafely(CustomUserDetails userDetails) {
         return Optional.ofNullable(userDetails)
-                .map(CustomUserDetails::getUser)
+                .map(CustomUserDetails::user)
                 .map(User::getId)
                 .orElse(null);
     }
