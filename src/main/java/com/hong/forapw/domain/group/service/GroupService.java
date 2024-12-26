@@ -9,7 +9,7 @@ import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
-import com.hong.forapw.domain.post.model.PostImageDTO;
+import com.hong.forapw.domain.post.model.request.PostImageDTO;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;

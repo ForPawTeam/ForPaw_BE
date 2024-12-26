@@ -1,7 +1,8 @@
 package com.hong.forapw.domain.post.model.request;
 
 import com.hong.forapw.domain.post.constant.PostType;
-import com.hong.forapw.domain.post.model.PostImageDTO;
+import com.hong.forapw.domain.post.entity.Post;
+import com.hong.forapw.domain.user.entity.User;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -15,5 +16,14 @@ public record CreatePostReq(
         @NotBlank(message = "본문을 입력해주세요.")
         String content,
         @NotNull(message = "이미지가 비어있다면, null이 아닌 빈 리스트로 보내주세요.")
-        List<PostImageDTO> images) {
+        List<PostImageDTO> images
+) {
+    public Post toEntity(User owner) {
+        return Post.builder()
+                .user(owner)
+                .postType(type)
+                .title(title)
+                .content(content)
+                .build();
+    }
 }

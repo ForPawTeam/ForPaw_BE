@@ -2,6 +2,7 @@ package com.hong.forapw.domain.post;
 
 import com.hong.forapw.domain.post.model.*;
 import com.hong.forapw.domain.post.model.request.*;
+import com.hong.forapw.domain.post.model.response.*;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.post.constant.PostType;
@@ -29,81 +30,81 @@ public class PostController {
 
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestBody @Valid CreatePostReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreatePostDTO responseDTO = postService.createPost(request, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreatePostRes response = postService.createPost(request, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/posts/{postId}/qna")
     public ResponseEntity<?> createAnswer(@RequestBody @Valid CreateAnswerReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateAnswerDTO responseDTO = postService.createAnswer(request, postId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreateAnswerRes response = postService.createAnswer(request, postId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/adoption")
     public ResponseEntity<?> findAdoptionPostList(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
-        PostResponse.FindPostListDTO responseDTO = postService.findPostsByType(pageable, PostType.ADOPTION);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindPostListRes response = postService.findPostsByType(pageable, PostType.ADOPTION);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/fostering")
     public ResponseEntity<?> findFosteringPostList(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
-        PostResponse.FindPostListDTO responseDTO = postService.findPostsByType(pageable, PostType.FOSTERING);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindPostListRes response = postService.findPostsByType(pageable, PostType.FOSTERING);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/question")
     public ResponseEntity<?> findQuestionList(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
-        PostResponse.FindQnaListDTO responseDTO = postService.findQuestions(pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindQnaListRes response = postService.findQuestions(pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/popular")
     public ResponseEntity<?> findPopularPostList(@RequestParam PostType type,
                                                  @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
-        PostResponse.FindPostListDTO responseDTO = postService.findPopularPostsByType(pageable, type);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindPostListRes response = postService.findPopularPostsByType(pageable, type);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myPost")
     public ResponseEntity<?> findMyPosts(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindMyPostListDTO responseDTO = postService.findMyPosts(userDetails.user().getId(), pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindMyPostListRes response = postService.findMyPosts(userDetails.user().getId(), pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myQuestion")
     public ResponseEntity<?> findMyQuestions(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindQnaListDTO responseDTO = postService.findMyQuestions(userDetails.user().getId(), pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindQnaListRes response = postService.findMyQuestions(userDetails.user().getId(), pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myAnswer")
     public ResponseEntity<?> findQuestionsAnsweredByMe(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindQnaListDTO responseDTO = postService.findQuestionsAnsweredByMe(userDetails.user().getId(), pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindQnaListRes response = postService.findQuestionsAnsweredByMe(userDetails.user().getId(), pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myComment")
     public ResponseEntity<?> findMyCommentList(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindMyCommentListDTO responseDTO = postService.findMyComments(userDetails.user().getId(), pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindMyCommentListRes response = postService.findMyComments(userDetails.user().getId(), pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/{postId}")
     public ResponseEntity<?> findPostById(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindPostByIdDTO responseDTO = postService.findPostById(postId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindPostByIdRes response = postService.findPostById(postId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/{postId}/qna")
     public ResponseEntity<?> findQnaById(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindQnaByIdDTO responseDTO = postService.findQnaById(postId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindQnaByIdRes response = postService.findQnaById(postId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/answers/{answerId}")
     public ResponseEntity<?> findAnswerById(@PathVariable Long answerId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.FindAnswerByIdDTO responseDTO = postService.findAnswerById(answerId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindAnswerByIdRes response = postService.findAnswerById(answerId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/posts/{postId}")
@@ -132,14 +133,14 @@ public class PostController {
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> createComment(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateCommentDTO responseDTO = postService.createComment(request, userDetails.user().getId(), postId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreateCommentRes response = postService.createComment(request, userDetails.user().getId(), postId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/posts/{postId}/comments/{commentId}/reply")
     public ResponseEntity<?> createReply(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateCommentDTO responseDTO = postService.createReply(request, postId, userDetails.user().getId(), commentId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreateCommentRes response = postService.createReply(request, postId, userDetails.user().getId(), commentId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/posts/{postId}/comments/{commentId}")

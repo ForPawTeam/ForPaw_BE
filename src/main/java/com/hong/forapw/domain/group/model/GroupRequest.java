@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.group.model;
 
-import com.hong.forapw.domain.post.model.PostImageDTO;
+import com.hong.forapw.domain.post.model.request.PostImageDTO;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.region.constant.Province;
