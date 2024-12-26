@@ -54,10 +54,10 @@ public class JwtUtils {
             DecodedJWT decodedJWT = decodeJWT(encodedJWT);
 
             Long id = decodedJWT.getClaim("id").asLong();
-            UserRole role = UserRole.values()[decodedJWT.getClaim("role").asInt()];
+            String role = decodedJWT.getClaim("role").asString(); // ROLE_ 접두어 포함된 역할
             String nickname = decodedJWT.getClaim("nickName").asString();
 
-            return Optional.of(User.builder().id(id).role(role).nickName(nickname).build());
+            return Optional.of(User.builder().id(id).role(UserRole.valueOf(role.replace("ROLE_", ""))).nickName(nickname).build());
         } catch (Exception e) {
             logTokenException(token, e);
         }
@@ -90,7 +90,7 @@ public class JwtUtils {
                 .withSubject(user.getEmail())
                 .withExpiresAt(new Date(System.currentTimeMillis() + exp))
                 .withClaim("id", user.getId())
-                .withClaim("role", user.getRole().ordinal())
+                .withClaim("role", "ROLE_" + user.getRole()) // 역할에 ROLE_ 접두어 추가
                 .withClaim("nickName", user.getNickname())
                 .sign(Algorithm.HMAC512(secret));
     }

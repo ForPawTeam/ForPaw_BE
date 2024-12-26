@@ -6,7 +6,6 @@ import com.hong.forapw.common.entity.BaseEntity;
 import com.hong.forapw.domain.user.constant.AuthProvider;
 import com.hong.forapw.domain.user.constant.UserRole;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;

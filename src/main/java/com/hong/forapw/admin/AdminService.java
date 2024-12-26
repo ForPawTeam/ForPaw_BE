@@ -64,9 +64,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindDashboardStatsDTO findDashboardStats(Long userId) {
-        // 권한 체크
-        checkAdminAuthority(userId);
-
         LocalDateTime now = LocalDateTime.now();
 
         // 유저 통계
@@ -138,8 +135,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindUserListDTO findUserList(Long adminId, Pageable pageable) {
-        checkAdminAuthority(adminId);
-
         // <userId, 가장 최근의 Visit 객체> 맵
         List<Visit> visits = visitRepository.findAll();
         Map<Long, Visit> latestVisitMap = visits.stream()
@@ -190,8 +185,6 @@ public class AdminService {
 
     @Transactional
     public void changeUserRole(AdminRequest.ChangeUserRoleDTO requestDTO, Long adminId, UserRole adminRole) {
-        checkAdminAuthority(adminId);
-
         User user = userRepository.findNonWithdrawnById(requestDTO.userId()).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -213,8 +206,6 @@ public class AdminService {
 
     @Transactional
     public void suspendUser(AdminRequest.SuspendUserDTO requestDTO, Long adminId, UserRole adminRole) {
-        checkAdminAuthority(adminId);
-
         UserStatus userStatus = userStatusRepository.findByUserId(requestDTO.userId()).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -230,8 +221,6 @@ public class AdminService {
 
     @Transactional
     public void unSuspendUser(Long userId, Long adminId, UserRole adminRole) {
-        checkAdminAuthority(adminId);
-
         UserStatus userStatus = userStatusRepository.findByUserId(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -247,8 +236,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindApplyListDTO findApplyList(Long adminId, ApplyStatus status, Pageable pageable) {
-        checkAdminAuthority(adminId);
-
         Page<Apply> applyPage = applyRepository.findAllByStatusWithAnimal(status, pageable);
 
         // Apply의 animalId를 리스트로 만듦 => shleter와 fetch 조인해서 Animal 객체를 조회 => <animalId, Anmal 객체> 맵 생성
@@ -284,8 +271,6 @@ public class AdminService {
 
     @Transactional
     public void changeApplyStatus(AdminRequest.ChangeApplyStatusDTO requestDTO, Long adminId) {
-        checkAdminAuthority(adminId);
-
         Apply apply = applyRepository.findByIdWithAnimal(requestDTO.id()).orElseThrow(
                 () -> new CustomException(ExceptionCode.APPLY_NOT_FOUND)
         );
@@ -306,8 +291,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindReportListDTO findReportList(Long adminId, ReportStatus status, Pageable pageable) {
-        checkAdminAuthority(adminId);
-
         Page<Report> reportPage = reportRepository.findAllByStatus(status, pageable);
 
         List<AdminResponse.ReportDTO> reportDTOS = reportPage.getContent().stream()
@@ -329,8 +312,6 @@ public class AdminService {
 
     @Transactional
     public void processReport(AdminRequest.ProcessReportDTO requestDTO, Long adminId) {
-        checkAdminAuthority(adminId);
-
         Report report = reportRepository.findById(requestDTO.id()).orElseThrow(
                 () -> new CustomException(ExceptionCode.REPORT_NOT_FOUND)
         );
@@ -362,8 +343,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindSupportListDTO findSupportList(Long adminId, InquiryStatus status, Pageable pageable) {
-        checkAdminAuthority(adminId);
-
         Page<Inquiry> inquiryPage = inquiryRepository.findByStatusWithUser(status, pageable);
 
         List<AdminResponse.InquiryDTO> inquiryDTOS = inquiryPage.getContent().stream()
@@ -382,8 +361,6 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminResponse.FindSupportByIdDTO findSupportById(Long adminId, Long inquiryId) {
-        checkAdminAuthority(adminId);
-
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
@@ -398,8 +375,6 @@ public class AdminService {
 
     @Transactional
     public AdminResponse.AnswerInquiryDTO answerInquiry(AdminRequest.AnswerInquiryDTO requestDTO, Long adminId, Long inquiryId) {
-        checkAdminAuthority(adminId);
-
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
@@ -431,8 +406,6 @@ public class AdminService {
 
     @Transactional
     public void createFAQ(AdminRequest.CreateFaqDTO requestDTO, Long adminId) {
-        checkAdminAuthority(adminId);
-
         FAQ faq = FAQ.builder()
                 .question(requestDTO.question())
                 .answer(requestDTO.answer())
@@ -441,16 +414,6 @@ public class AdminService {
                 .build();
 
         faqRepository.save(faq);
-    }
-
-    public void checkAdminAuthority(Long userId) {
-        UserRole role = userRepository.findRoleById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_FORBIDDEN)
-        );
-
-        if (!role.equals(UserRole.ADMIN) && !role.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
-        }
     }
 
     private void checkSuperAuthority(Long userId) {

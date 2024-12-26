@@ -60,8 +60,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/admin/user")
-    public ResponseEntity<?> withdrawUser(@RequestBody @Valid AdminResponse.WithdrawUserDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        authenticationService.checkAdminAuthority(userDetails.user().getId());
+    public ResponseEntity<?> withdrawUser(@RequestBody @Valid AdminResponse.WithdrawUserDTO requestDTO) {
         userService.withdrawMember(requestDTO.userId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }

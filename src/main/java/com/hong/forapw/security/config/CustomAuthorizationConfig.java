@@ -10,7 +10,7 @@ public class CustomAuthorizationConfig {
         auth
                 .requestMatchers(SecurityRoutes.AUTHENTICATED_ROUTES).authenticated()
                 .requestMatchers(SecurityRoutes.PUBLIC_ROUTES).permitAll()
+                .requestMatchers(SecurityRoutes.ADMIN_ROUTES).hasRole("ADMIN")
                 .anyRequest().authenticated();
     }
 }
-

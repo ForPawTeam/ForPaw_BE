@@ -18,4 +18,3 @@ public class CustomExceptionHandlingConfig {
                         FilterResponseUtils.forbidden(response, new CustomException(ExceptionCode.USER_FORBIDDEN)));
     }
 }
-

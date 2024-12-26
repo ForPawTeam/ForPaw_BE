@@ -17,6 +17,10 @@ public class SecurityRoutes {
             "/api/animals/*/apply"
     };
 
+    protected static final String[] ADMIN_ROUTES = {
+            "/api/admin/**"
+    };
+    
     protected static final String[] PUBLIC_ROUTES = {
             "/api/groups/*/detail",
             "/api/chat/*/read",

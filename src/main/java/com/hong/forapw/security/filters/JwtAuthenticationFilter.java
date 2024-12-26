@@ -43,14 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain) throws IOException, ServletException {
         String accessToken = extractAccessTokenFromHeader(request);
-        String refreshToken = extractRefreshTokenFromCookies(request);
-
-        if (areBothTokensAbsent(accessToken, refreshToken)) {
+        if (isAccessTokenAbsent(accessToken)) {
             chain.doFilter(request, response);
             return;
         }
 
-        User authenticatedUser = authenticateUsingTokens(accessToken, refreshToken);
+        User authenticatedUser = authenticateWithAccessToken(accessToken);
         if (authenticatedUser == null) {
             chain.doFilter(request, response);
             return;
@@ -71,35 +69,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private String extractRefreshTokenFromCookies(HttpServletRequest request) {
-        return CookieUtils.getFromRequest(REFRESH_TOKEN_KEY, request);
-    }
-
-    private boolean areBothTokensAbsent(String accessToken, String refreshToken) {
-        return (accessToken == null || accessToken.trim().isEmpty()) &&
-                (refreshToken == null || refreshToken.trim().isEmpty());
-    }
-
-    private User authenticateUsingTokens(String accessToken, String refreshToken) {
-        return Optional.ofNullable(authenticateWithAccessToken(accessToken))
-                .orElseGet(() -> authenticateWithRefreshToken(refreshToken));
+    private boolean isAccessTokenAbsent(String accessToken) {
+        return accessToken == null || accessToken.trim().isEmpty();
     }
 
     private User authenticateWithAccessToken(String accessToken) {
         return Optional.ofNullable(accessToken)
                 .flatMap(jwtUtils::getUserFromToken)
                 .orElse(null);
-    }
-
-    private User authenticateWithRefreshToken(String refreshToken) {
-        return Optional.ofNullable(refreshToken)
-                .flatMap(jwtUtils::getUserFromToken)
-                .filter(user -> isRefreshTokenStoredInRedis(user, refreshToken))
-                .orElse(null);
-    }
-
-    private boolean isRefreshTokenStoredInRedis(User user, String refreshToken) {
-        return redisService.doesValueMatch(REFRESH_TOKEN_KEY, String.valueOf(user.getId()), refreshToken);
     }
 
     private void setAuthenticationContext(User user) {
