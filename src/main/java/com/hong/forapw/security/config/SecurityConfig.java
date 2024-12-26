@@ -1,6 +1,7 @@
 package com.hong.forapw.security.config;
 
 import com.hong.forapw.security.filters.JwtAuthenticationFilter;
+import com.hong.forapw.security.filters.RateLimitingFilter;
 import com.hong.forapw.security.filters.TraceIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final TraceIdFilter traceIdFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
     private final CustomExceptionHandlingConfig exceptionHandlingConfig;
     private final CustomAuthorizationConfig authorizationConfig;
 
@@ -51,6 +53,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exceptionHandlingConfig::configure) // 인증-인가 실패 시 처리
                 .authorizeHttpRequests(authorizationConfig::configure) // 요청 경로별로 권한 제어
+                .addFilterBefore(rateLimitingFilter, BasicAuthenticationFilter.class)
                 //.addFilterBefore(traceIdFilter, BasicAuthenticationFilter.class)
                 .addFilterAfter(jwtAuthenticationFilter, BasicAuthenticationFilter.class);
 

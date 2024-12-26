@@ -50,6 +50,10 @@ public class RedisService {
         redisTemplate.opsForValue().increment(buildKey(type, id), value);
     }
 
+    public Long incrementAndGet(String key, long increment) {
+        return redisTemplate.opsForValue().increment(key, increment);
+    }
+
     public void decrementValue(String type, String id, Long value) {
         redisTemplate.opsForValue().decrement(buildKey(type, id), value);
     }
@@ -100,6 +104,12 @@ public class RedisService {
 
     public String getValueInString(String type, String id) {
         return redisTemplate.opsForValue().get(buildKey(type, id));
+    }
+
+    public Long getValueInLong(String key) {
+        return Optional.ofNullable(redisTemplate.opsForValue().get(key))
+                .map(Long::valueOf)
+                .orElse(0L);
     }
 
     public Long getValueInLong(String type, String id) {
