@@ -9,12 +9,12 @@ import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
+import com.hong.forapw.domain.post.model.PostImageDTO;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.meeting.MeetingService;
 import com.hong.forapw.domain.meeting.repository.MeetingUserRepository;
-import com.hong.forapw.domain.post.model.PostRequest;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.GroupMapper;
@@ -653,7 +653,7 @@ public class GroupService {
         createAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
     }
 
-    private void addImagesToNotice(List<PostRequest.PostImageDTO> images, Post notice) {
+    private void addImagesToNotice(List<PostImageDTO> images, Post notice) {
         images.stream()
                 .map(imageDTO -> PostImage.builder()
                         .imageURL(imageDTO.imageURL())

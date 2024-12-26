@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.post.repository;
 
-import com.hong.forapw.domain.post.model.PostTypeCountDTO;
+import com.hong.forapw.domain.post.model.query.PostTypeCountDTO;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.user.entity.User;

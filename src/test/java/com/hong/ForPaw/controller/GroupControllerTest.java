@@ -3,7 +3,6 @@ package com.hong.ForPaw.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.meeting.model.MeetingRequest;
-import com.hong.forapw.domain.post.model.PostRequest;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

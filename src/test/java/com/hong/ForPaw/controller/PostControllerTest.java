@@ -1,7 +1,6 @@
 package com.hong.ForPaw.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hong.forapw.domain.post.model.PostRequest;
 import com.hong.forapw.domain.post.constant.PostType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

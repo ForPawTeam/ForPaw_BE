@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.post;
 
-import com.hong.forapw.domain.post.model.PostRequest;
+import com.hong.forapw.domain.post.model.PostImageDTO;
 import com.hong.forapw.domain.post.model.PostResponse;
 import com.hong.forapw.domain.post.entity.Comment;
 import com.hong.forapw.domain.post.entity.Post;
@@ -33,7 +33,7 @@ public class PostMapper {
                 .toList();
     }
 
-    public static List<PostImage> toPostImages(List<PostRequest.PostImageDTO> imageDTOs) {
+    public static List<PostImage> toPostImages(List<PostImageDTO> imageDTOs) {
         return imageDTOs.stream()
                 .map(postImageDTO -> PostImage.builder()
                         .imageURL(postImageDTO.imageURL())

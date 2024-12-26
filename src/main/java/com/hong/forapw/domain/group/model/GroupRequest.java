@@ -1,9 +1,9 @@
 package com.hong.forapw.domain.group.model;
 
+import com.hong.forapw.domain.post.model.PostImageDTO;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.region.constant.Province;
-import com.hong.forapw.domain.post.model.PostRequest;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -64,7 +64,7 @@ public class GroupRequest {
             String title,
             @NotBlank(message = "본문을 입력해주세요.")
             String content,
-            List<PostRequest.PostImageDTO> images) {
+            List<PostImageDTO> images) {
     }
 
     public record ExpelGroupMember(@NotNull(message = "강퇴할 유저 ID를 입력해주세요.") Long userId) {

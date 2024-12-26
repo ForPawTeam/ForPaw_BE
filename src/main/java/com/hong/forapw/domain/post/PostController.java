@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.post;
 
-import com.hong.forapw.domain.post.model.PostRequest;
-import com.hong.forapw.domain.post.model.PostResponse;
+import com.hong.forapw.domain.post.model.*;
+import com.hong.forapw.domain.post.model.request.*;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.post.constant.PostType;
@@ -28,14 +28,14 @@ public class PostController {
     private static final String SORT_BY_ID = "id";
 
     @PostMapping("/posts")
-    public ResponseEntity<?> createPost(@RequestBody @Valid PostRequest.CreatePostDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreatePostDTO responseDTO = postService.createPost(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> createPost(@RequestBody @Valid CreatePostReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        PostResponse.CreatePostDTO responseDTO = postService.createPost(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/posts/{postId}/qna")
-    public ResponseEntity<?> createAnswer(@RequestBody @Valid PostRequest.CreateAnswerDTO requestDTO, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateAnswerDTO responseDTO = postService.createAnswer(requestDTO, postId, userDetails.user().getId());
+    public ResponseEntity<?> createAnswer(@RequestBody @Valid CreateAnswerReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        PostResponse.CreateAnswerDTO responseDTO = postService.createAnswer(request, postId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
@@ -107,8 +107,8 @@ public class PostController {
     }
 
     @PatchMapping("/posts/{postId}")
-    public ResponseEntity<?> updatePost(@RequestBody @Valid PostRequest.UpdatePostDTO requestDTO, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.updatePost(requestDTO, userDetails.user(), postId);
+    public ResponseEntity<?> updatePost(@RequestBody @Valid UpdatePostReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        postService.updatePost(request, userDetails.user(), postId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -131,20 +131,20 @@ public class PostController {
     }
 
     @PostMapping("/posts/{postId}/comments")
-    public ResponseEntity<?> createComment(@RequestBody @Valid PostRequest.CreateCommentDTO requestDTO, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateCommentDTO responseDTO = postService.createComment(requestDTO, userDetails.user().getId(), postId);
+    public ResponseEntity<?> createComment(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        PostResponse.CreateCommentDTO responseDTO = postService.createComment(request, userDetails.user().getId(), postId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/posts/{postId}/comments/{commentId}/reply")
-    public ResponseEntity<?> createReply(@RequestBody @Valid PostRequest.CreateCommentDTO requestDTO, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        PostResponse.CreateCommentDTO responseDTO = postService.createReply(requestDTO, postId, userDetails.user().getId(), commentId);
+    public ResponseEntity<?> createReply(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        PostResponse.CreateCommentDTO responseDTO = postService.createReply(request, postId, userDetails.user().getId(), commentId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/posts/{postId}/comments/{commentId}")
-    public ResponseEntity<?> updateComment(@RequestBody @Valid PostRequest.UpdateCommentDTO requestDTO, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.updateComment(requestDTO, postId, commentId, userDetails.user());
+    public ResponseEntity<?> updateComment(@RequestBody @Valid UpdateCommentReq request, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        postService.updateComment(request, postId, commentId, userDetails.user());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -161,8 +161,8 @@ public class PostController {
     }
 
     @PostMapping("/reports")
-    public ResponseEntity<?> submitReport(@RequestBody @Valid PostRequest.SubmitReport requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.submitReport(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> submitReport(@RequestBody @Valid SubmitReportReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        postService.submitReport(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

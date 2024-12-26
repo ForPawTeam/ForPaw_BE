@@ -5,8 +5,7 @@ import com.hong.forapw.domain.post.entity.Comment;
 import com.hong.forapw.domain.post.entity.PopularPost;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.entity.PostImage;
-import com.hong.forapw.domain.post.model.PostRequest;
-import com.hong.forapw.domain.post.model.PostResponse;
+import com.hong.forapw.domain.post.model.*;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.post.PostMapper;
@@ -14,6 +13,7 @@ import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.admin.constant.ContentType;
 import com.hong.forapw.admin.entity.Report;
 import com.hong.forapw.admin.constant.ReportStatus;
+import com.hong.forapw.domain.post.model.request.*;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.admin.repository.ReportRepository;
@@ -60,11 +60,11 @@ public class PostService {
     private static final String COMMENT_DELETED = "삭제된 댓글 입니다.";
 
     @Transactional
-    public PostResponse.CreatePostDTO createPost(PostRequest.CreatePostDTO requestDTO, Long userId) {
-        validatePostRequest(requestDTO);
+    public PostResponse.CreatePostDTO createPost(CreatePostReq request, Long userId) {
+        validatePostRequest(request);
 
-        List<PostImage> postImages = buildPostImages(requestDTO.images());
-        Post post = buildPost(userId, requestDTO);
+        List<PostImage> postImages = buildPostImages(request.images());
+        Post post = buildPost(userId, request);
         setPostRelationships(post, postImages);
         postRepository.save(post);
 
@@ -74,19 +74,19 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse.CreateAnswerDTO createAnswer(PostRequest.CreateAnswerDTO requestDTO, Long questionPostId, Long userId) {
+    public PostResponse.CreateAnswerDTO createAnswer(CreateAnswerReq request, Long questionPostId, Long userId) {
         Post questionPost = postRepository.findByIdWithUser(questionPostId).orElseThrow(
                 () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
         );
         validateQuestionPostType(questionPost);
 
-        List<PostImage> answerImages = buildPostImages(requestDTO.images());
-        Post answerPost = buildAnswerPost(questionPost, userId, requestDTO);
+        List<PostImage> answerImages = buildPostImages(request.images());
+        Post answerPost = buildAnswerPost(questionPost, userId, request);
         setAnswerPostRelationships(answerPost, answerImages, questionPost);
         postRepository.save(answerPost);
 
         questionPost.incrementAnswerNum();
-        sendNewAnswerAlarm(questionPost, requestDTO.content(), questionPostId);
+        sendNewAnswerAlarm(questionPost, request.content(), questionPostId);
 
         return new PostResponse.CreateAnswerDTO(answerPost.getId());
     }
@@ -211,16 +211,16 @@ public class PostService {
     }
 
     @Transactional
-    public void updatePost(PostRequest.UpdatePostDTO requestDTO, User user, Long postId) {
+    public void updatePost(UpdatePostReq request, User user, Long postId) {
         Post post = postRepository.findByIdWithUser(postId).orElseThrow(
                 () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
         );
         validateAccessorAuthorization(user, post.getWriterId());
 
-        post.updateContent(requestDTO.title(), requestDTO.content());
+        post.updateContent(request.title(), request.content());
 
-        removeUnretainedImages(requestDTO.retainedImageIds(), postId);
-        saveNewPostImages(requestDTO.newImages(), post);
+        removeUnretainedImages(request.retainedImageIds(), postId);
+        saveNewPostImages(request.newImages(), post);
     }
 
     @Transactional
@@ -252,49 +252,49 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponse.CreateCommentDTO createComment(PostRequest.CreateCommentDTO requestDTO, Long userId, Long postId) {
+    public PostResponse.CreateCommentDTO createComment(CreateCommentReq request, Long userId, Long postId) {
         Post post = postRepository.findByIdWithUser(postId).orElseThrow(
                 () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
         );
         validatePostType(post);
 
-        Comment comment = buildComment(requestDTO.content(), postId, userId);
+        Comment comment = buildComment(request.content(), postId, userId);
         commentRepository.save(comment);
 
         incrementCommentCount(postId);
         postCacheService.initializeCommentCache(comment.getId());
-        notifyNewComment(requestDTO.content(), postId, post.getPostType(), post.getWriterId());
+        notifyNewComment(request.content(), postId, post.getPostType(), post.getWriterId());
 
         return new PostResponse.CreateCommentDTO(comment.getId());
     }
 
     @Transactional
-    public PostResponse.CreateCommentDTO createReply(PostRequest.CreateCommentDTO requestDTO, Long postId, Long userId, Long parentCommentId) {
+    public PostResponse.CreateCommentDTO createReply(CreateCommentReq request, Long postId, Long userId, Long parentCommentId) {
         Comment parentComment = commentRepository.findByIdWithPost(parentCommentId).orElseThrow(
                 () -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND)
         );
         validateParentComment(parentComment, userId);
 
-        Comment reply = buildComment(requestDTO.content(), postId, userId);
+        Comment reply = buildComment(request.content(), postId, userId);
         parentComment.addChildComment(reply);
         commentRepository.save(reply);
 
         incrementCommentCount(postId);
         postCacheService.initializeCommentCache(reply.getId());
-        notifyNewReply(requestDTO.content(), postId, parentComment);
+        notifyNewReply(request.content(), postId, parentComment);
 
         return new PostResponse.CreateCommentDTO(reply.getId());
     }
 
     @Transactional
-    public void updateComment(PostRequest.UpdateCommentDTO requestDTO, Long postId, Long commentId, User user) {
+    public void updateComment(UpdateCommentReq request, Long postId, Long commentId, User user) {
         Comment comment = commentRepository.findById(commentId).orElseThrow(
                 () -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND)
         );
         validateCommentBelongsToPost(comment, postId);
         validateAccessorAuthorization(user, comment.getWriterId());
 
-        comment.updateContent(requestDTO.content());
+        comment.updateContent(request.content());
     }
 
     @Transactional
@@ -313,16 +313,16 @@ public class PostService {
     }
 
     @Transactional
-    public void submitReport(PostRequest.SubmitReport requestDTO, Long userId) {
+    public void submitReport(SubmitReportReq request, Long userId) {
         User reporter = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
-        validateReportRequest(requestDTO.contentId(), requestDTO.contentType(), userId);
+        validateReportRequest(request.contentId(), request.contentType(), userId);
 
-        User reportedUser = findOffendingUser(requestDTO);
+        User reportedUser = findOffendingUser(request);
         validateNotSelfReport(userId, reportedUser);
 
-        Report report = buildReport(requestDTO, reporter, reportedUser);
+        Report report = buildReport(request, reporter, reportedUser);
         reportRepository.save(report);
     }
 
@@ -332,23 +332,23 @@ public class PostService {
         processPopularPosts(posts, postType);
     }
 
-    private void validatePostRequest(PostRequest.CreatePostDTO requestDTO) {
-        if (requestDTO.type() == PostType.ANSWER) {
+    private void validatePostRequest(CreatePostReq request) {
+        if (request.type() == PostType.ANSWER) {
             throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
         }
 
-        if (requestDTO.type().isImageRequired() && requestDTO.images().isEmpty()) {
+        if (request.type().isImageRequired() && request.images().isEmpty()) {
             throw new CustomException(ExceptionCode.POST_MUST_CONTAIN_IMAGE);
         }
     }
 
-    private Post buildPost(Long userId, PostRequest.CreatePostDTO requestDTO) {
+    private Post buildPost(Long userId, CreatePostReq request) {
         User userRef = entityManager.getReference(User.class, userId);
         return Post.builder()
                 .user(userRef)
-                .postType(requestDTO.type())
-                .title(requestDTO.title())
-                .content(requestDTO.content())
+                .postType(request.type())
+                .title(request.title())
+                .content(request.content())
                 .build();
     }
 
@@ -356,7 +356,7 @@ public class PostService {
         postImages.forEach(post::addImage);
     }
 
-    private List<PostImage> buildPostImages(List<PostRequest.PostImageDTO> imageDTOs) {
+    private List<PostImage> buildPostImages(List<PostImageDTO> imageDTOs) {
         return imageDTOs.stream()
                 .map(postImageDTO -> PostImage.builder()
                         .imageURL(postImageDTO.imageURL())
@@ -370,13 +370,13 @@ public class PostService {
         }
     }
 
-    private Post buildAnswerPost(Post questionPost, Long userId, PostRequest.CreateAnswerDTO requestDTO) {
+    private Post buildAnswerPost(Post questionPost, Long userId, CreateAnswerReq request) {
         User userRef = entityManager.getReference(User.class, userId);
         return Post.builder()
                 .user(userRef)
                 .postType(PostType.ANSWER)
                 .title(questionPost.getTitle() + "(답변)")
-                .content(requestDTO.content())
+                .content(request.content())
                 .build();
     }
 
@@ -430,7 +430,7 @@ public class PostService {
         }
     }
 
-    private void saveNewPostImages(List<PostRequest.PostImageDTO> newImageDTOs, Post post) {
+    private void saveNewPostImages(List<PostImageDTO> newImageDTOs, Post post) {
         List<PostImage> newPostImages = newImageDTOs.stream()
                 .map(request -> PostImage.builder()
                         .post(post)
@@ -507,24 +507,24 @@ public class PostService {
         }
     }
 
-    private Report buildReport(PostRequest.SubmitReport requestDTO, User reporter, User reportedUser) {
+    private Report buildReport(SubmitReportReq request, User reporter, User reportedUser) {
         return Report.builder()
                 .reporter(reporter)
                 .offender(reportedUser)
-                .contentType(requestDTO.contentType())
-                .contentId(requestDTO.contentId())
-                .type(requestDTO.reportType())
+                .contentType(request.contentType())
+                .contentId(request.contentId())
+                .type(request.reportType())
                 .status(ReportStatus.PROCESSING)
-                .reason(requestDTO.reason())
+                .reason(request.reason())
                 .build();
     }
 
-    private User findOffendingUser(PostRequest.SubmitReport requestDTO) {
-        if (requestDTO.contentType() == ContentType.POST) {
-            return postRepository.findUserById(requestDTO.contentId())
+    private User findOffendingUser(SubmitReportReq request) {
+        if (request.contentType() == ContentType.POST) {
+            return postRepository.findUserById(request.contentId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-        } else if (requestDTO.contentType() == ContentType.COMMENT) {
-            return commentRepository.findUserById(requestDTO.contentId())
+        } else if (request.contentType() == ContentType.COMMENT) {
+            return commentRepository.findUserById(request.contentId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
         }
         throw new CustomException(ExceptionCode.WRONG_REPORT_TARGET);

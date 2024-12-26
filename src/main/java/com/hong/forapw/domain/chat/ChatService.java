@@ -67,7 +67,7 @@ public class ChatService {
 
         List<ChatResponse.RoomDTO> roomDTOS = chatUsers.stream()
                 .map(this::buildRoomDTO)
-                .collect(Collectors.toList());
+                .toList();
 
         return new ChatResponse.FindChatRoomsDTO(roomDTOS);
     }

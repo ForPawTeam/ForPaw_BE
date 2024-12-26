@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.user.service;
 
 import com.hong.forapw.domain.user.model.*;
-import com.hong.forapw.domain.post.model.PostTypeCountDTO;
+import com.hong.forapw.domain.post.model.query.PostTypeCountDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.admin.entity.LoginAttempt;
