@@ -1,18 +1,13 @@
 package com.hong.forapw.integration.rabbitmq;
 
-import com.hong.forapw.domain.alarm.model.AlarmDTO;
-import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
-import com.hong.forapw.domain.alarm.repository.EmitterRepository;
+import com.hong.forapw.domain.alarm.AlarmService;
+import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.domain.chat.model.ChatRequest;
-import com.hong.forapw.domain.alarm.entity.Alarm;
 import com.hong.forapw.domain.chat.entity.Message;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.user.entity.User;
-import com.hong.forapw.domain.alarm.repository.AlarmRepository;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.MessageRepository;
-import com.hong.forapw.domain.user.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
@@ -23,12 +18,9 @@ import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static com.hong.forapw.integration.rabbitmq.RabbitMqMapper.*;
@@ -38,23 +30,17 @@ import static com.hong.forapw.integration.rabbitmq.RabbitMqMapper.*;
 @Slf4j
 public class RabbitMqService {
 
-    private final AlarmRepository alarmRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry;
     private final SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory;
     private final RabbitTemplate rabbitTemplate;
     private final AmqpAdmin amqpAdmin;
     private final MessageConverter converter;
-    private final EntityManager entityManager;
-    private final EmitterRepository emitterRepository;
+    private final AlarmService alarmService;
 
     private static final String CHAT_EXCHANGE = "chat.exchange";
-    private static final String ALARM_EXCHANGE = "alarm.exchange";
     private static final String ROOM_QUEUE_PREFIX = "room.";
-    private static final String USER_QUEUE_PREFIX = "user.";
-    private static final String SSE_EVENT_NAME = "sse";
 
     @Transactional
     public void initChatListener() {
@@ -65,18 +51,6 @@ public class RabbitMqService {
 
                     bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
                     registerChatListener(listenerId, queueName);
-                });
-    }
-
-    @Transactional
-    public void initAlarmListener() {
-        userRepository.findAll()
-                .forEach(user -> {
-                    String queueName = USER_QUEUE_PREFIX + user.getId();
-                    String listenerId = USER_QUEUE_PREFIX + user.getId();
-
-                    bindDirectExchangeToQueue(ALARM_EXCHANGE, queueName);
-                    registerAlarmListener(listenerId, queueName);
                 });
     }
 
@@ -107,26 +81,9 @@ public class RabbitMqService {
         rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
     }
 
-    public void registerAlarmListener(String listenerId, String queueName) {
-        SimpleRabbitListenerEndpoint endpoint = createRabbitListenerEndpoint(listenerId, queueName);
-
-        endpoint.setMessageListener(message -> {
-            AlarmDTO alarmDTO = convertToAlarmDTO(message);
-            Alarm alarm = saveAlarm(alarmDTO);
-            sendAlarmViaSSE(alarm);
-        });
-
-        rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
-    }
-
     public void sendChatMessageToRoom(Long chatRoomId, ChatRequest.MessageDTO message) {
         String routingKey = ROOM_QUEUE_PREFIX + chatRoomId;
         rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, message);
-    }
-
-    public void sendAlarmToUser(Long userId, AlarmDTO alarm) {
-        String routingKey = USER_QUEUE_PREFIX + userId;
-        rabbitTemplate.convertAndSend(ALARM_EXCHANGE, routingKey, alarm);
     }
 
     public void deleteQueue(String queueName) {
@@ -156,21 +113,7 @@ public class RabbitMqService {
     private void sendAlarmForNewMessage(User user, ChatRequest.MessageDTO messageDTO) {
         String content = "새로운 메시지: " + messageDTO.content();
         String redirectURL = "/chatting/" + messageDTO.chatRoomId();
-
-        AlarmDTO alarmDTO = new AlarmDTO(user, content, redirectURL);
-        sendAlarmToUser(messageDTO.senderId(), alarmDTO);
-    }
-
-    private AlarmDTO convertToAlarmDTO(org.springframework.amqp.core.Message message) {
-        return (AlarmDTO) converter.fromMessage(message);
-    }
-
-    private Alarm saveAlarm(AlarmDTO alarmDTO) {
-        User receiver = entityManager.getReference(User.class, alarmDTO.receiverId());
-        Alarm alarm = alarmDTO.toEntity(receiver);
-
-        alarmRepository.save(alarm);
-        return alarm;
+        alarmService.sendAlarm(user.getId(), content, redirectURL, AlarmType.CHATTING);
     }
 
     private SimpleRabbitListenerEndpoint createRabbitListenerEndpoint(String listenerId, String queueName) {
@@ -178,35 +121,5 @@ public class RabbitMqService {
         endpoint.setId(listenerId);
         endpoint.setQueueNames(queueName);
         return endpoint;
-    }
-
-    private void sendAlarmViaSSE(Alarm alarm) {
-        String receiverId = alarm.getReceiverId().toString();
-        String eventId = createTimestampedId(receiverId);
-
-        Map<String, SseEmitter> emitters = emitterRepository.findEmittersByMemberIdPrefix(receiverId);
-        emitters.forEach((key, emitter) -> emitAlarmToEmitter(emitter, key, alarm, eventId));
-    }
-
-    private void emitAlarmToEmitter(SseEmitter emitter, String emitterId, Alarm alarm, String eventId) {
-        FindAlarmListRes.AlarmDTO alarmDTO = new FindAlarmListRes.AlarmDTO(alarm, false);
-        emitAlarmEvent(emitter, eventId, emitterId, alarmDTO);
-    }
-
-    private void emitAlarmEvent(SseEmitter emitter, String eventId, String emitterId, Object data) {
-        try {
-            emitter.send(SseEmitter.event()
-                    .id(eventId)
-                    .name(SSE_EVENT_NAME)
-                    .data(data)
-            );
-        } catch (IOException e) {
-            log.error("SSE 이벤트 전송 실패, emitterId: {}", emitterId, e);
-            emitterRepository.deleteById(emitterId);
-        }
-    }
-
-    private String createTimestampedId(String userId) {
-        return userId + "_" + System.currentTimeMillis();
     }
 }

@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.group.service;
 
-import com.hong.forapw.domain.alarm.model.AlarmDTO;
+import com.hong.forapw.domain.alarm.AlarmService;
 import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.group.model.GroupResponse;
 import com.hong.forapw.domain.group.entity.Group;
@@ -65,7 +65,8 @@ public class GroupService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatUserRepository chatUserRepository;
     private final UserRepository userRepository;
-    private final RabbitMqService brokerService;
+    private final RabbitMqService rabbitMqService;
+    private final AlarmService alarmService;
     private final LikeService likeService;
     private final MeetingService meetingService;
     private final GroupCacheService groupCacheService;
@@ -358,7 +359,7 @@ public class GroupService {
         String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
         chatUserRepository.deleteByGroupId(groupId);
         chatRoomRepository.delete(chatRoom);
-        brokerService.deleteQueue(queueName); // 채팅방 큐 삭제
+        rabbitMqService.deleteQueue(queueName); // 채팅방 큐 삭제
 
         groupRepository.deleteById(groupId);
     }
@@ -606,8 +607,8 @@ public class GroupService {
         String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
         String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
 
-        brokerService.bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
-        brokerService.registerChatListener(listenerId, queueName);
+        rabbitMqService.bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
+        rabbitMqService.registerChatListener(listenerId, queueName);
     }
 
     private GroupUser findGroupUser(Long groupId, Long userId) {
@@ -624,7 +625,8 @@ public class GroupService {
     private void notifyApplicant(Long applicantId, Long groupId) {
         String content = "가입이 승인 되었습니다!";
         String redirectURL = "/volunteer/" + groupId;
-        createAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
+
+        alarmService.sendAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
     }
 
     private void addApplicantToChatRoom(Long applicantId, Long groupId) {
@@ -650,7 +652,7 @@ public class GroupService {
     private void sendJoinRejectionAlarm(Long applicantId, Long groupId) {
         String content = "가입이 거절 되었습니다.";
         String redirectURL = "/volunteer/" + groupId;
-        createAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
+        alarmService.sendAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
     }
 
     private void addImagesToNotice(List<PostImageDTO> images, Post notice) {
@@ -667,18 +669,7 @@ public class GroupService {
         String content = "공지: " + title;
         String redirectURL = "/volunteer/" + groupId + "/notices/" + noticeId;
 
-        groupMembers.forEach(member -> createAlarm(member.getId(), content, redirectURL, AlarmType.NOTICE));
-    }
-
-    private void createAlarm(Long userId, String content, String redirectURL, AlarmType alarmType) {
-        AlarmDTO alarmDTO = new AlarmDTO(
-                userId,
-                content,
-                redirectURL,
-                LocalDateTime.now(),
-                alarmType);
-
-        brokerService.sendAlarmToUser(userId, alarmDTO);
+        groupMembers.forEach(member -> alarmService.sendAlarm(member.getId(), content, redirectURL, AlarmType.NOTICE));
     }
 
 

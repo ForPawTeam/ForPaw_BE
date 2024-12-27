@@ -334,7 +334,7 @@ public class PostService {
         String content = "새로운 답변: " + answerContent;
         String redirectURL = "/community/question/" + questionPostId;
 
-        alarmService.sendAlarmToBroker(questionPost.getUser().getId(), content, redirectURL, AlarmType.ANSWER);
+        alarmService.sendAlarm(questionPost.getUser().getId(), content, redirectURL, AlarmType.ANSWER);
     }
 
     private void validatePost(Post post) {
@@ -407,7 +407,7 @@ public class PostService {
         String content = "새로운 댓글: " + commentContent;
         String queryParam = postType.name().toLowerCase();
         String redirectURL = "/community/" + postId + "?type=" + queryParam;
-        alarmService.sendAlarmToBroker(writerId, content, redirectURL, AlarmType.COMMENT);
+        alarmService.sendAlarm(writerId, content, redirectURL, AlarmType.COMMENT);
     }
 
     private void validateParentComment(Comment parentComment, Long postId) {
@@ -424,7 +424,7 @@ public class PostService {
         String content = "새로운 대댓글: " + replyContent;
         String queryParam = parentComment.getPostTypeName().toLowerCase();
         String redirectURL = "/community/" + postId + "?type=" + queryParam;
-        alarmService.sendAlarmToBroker(parentComment.getWriterId(), content, redirectURL, AlarmType.COMMENT);
+        alarmService.sendAlarm(parentComment.getWriterId(), content, redirectURL, AlarmType.COMMENT);
     }
 
     private void adjustCommentCountOnDeletion(Comment comment, Long postId) {

@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.meeting;
 
-import com.hong.forapw.domain.alarm.model.AlarmDTO;
+import com.hong.forapw.domain.alarm.AlarmService;
 import com.hong.forapw.domain.meeting.model.MeetingUserProfileDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
@@ -41,7 +41,7 @@ public class MeetingService {
     private final MeetingUserRepository meetingUserRepository;
     private final GroupUserRepository groupUserRepository;
     private final GroupRepository groupRepository;
-    private final RabbitMqService brokerService;
+    private final AlarmService alarmService;
 
     @Transactional
     public MeetingResponse.CreateMeetingDTO createMeeting(MeetingRequest.CreateMeetingDTO requestDTO, Long groupId, Long userId) {
@@ -169,7 +169,7 @@ public class MeetingService {
         for (User member : groupMembers) {
             String content = "새로운 정기 모임: " + meetingName;
             String redirectURL = "/volunteer/" + groupId;
-            createNewMeetingAlarm(member.getId(), content, redirectURL);
+            alarmService.sendAlarm(member.getId(), content, redirectURL, AlarmType.NEW_MEETING);
         }
     }
 
@@ -237,17 +237,6 @@ public class MeetingService {
         groupUserRepository.findByGroupIdAndUserId(groupId, user.getId())
                 .filter(groupUser -> EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR).contains(groupUser.getGroupRole()))
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
-    }
-
-    private void createNewMeetingAlarm(Long userId, String content, String redirectURL) {
-        AlarmDTO alarmDTO = new AlarmDTO(
-                userId,
-                content,
-                redirectURL,
-                LocalDateTime.now(),
-                AlarmType.NEW_MEETING);
-
-        brokerService.sendAlarmToUser(userId, alarmDTO);
     }
 
     private void validateGroupExists(Long groupId) {

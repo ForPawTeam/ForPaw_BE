@@ -1,14 +1,15 @@
 package com.hong.forapw.domain.alarm;
 
-import com.hong.forapw.domain.alarm.model.AlarmDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.alarm.entity.Alarm;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
+import com.hong.forapw.domain.alarm.model.response.AlarmDTO;
 import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
 import com.hong.forapw.domain.alarm.repository.AlarmRepository;
 import com.hong.forapw.domain.alarm.repository.EmitterRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqService;
+import com.hong.forapw.domain.user.entity.User;
+import com.hong.forapw.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,8 +29,8 @@ import java.util.List;
 public class AlarmService {
 
     private final AlarmRepository alarmRepository;
+    private final UserRepository userRepository;
     private final EmitterRepository emitterRepository;
-    private final RabbitMqService brokerService;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60;
     private static final String SSE_EVENT_NAME = "sse";
@@ -54,14 +56,18 @@ public class AlarmService {
         return emitter;
     }
 
-    public void sendAlarmToBroker(Long userId, String content, String redirectURL, AlarmType alarmType) {
-        AlarmDTO alarmDTO = new AlarmDTO(
-                userId,
-                content,
-                redirectURL,
-                LocalDateTime.now(),
-                alarmType);
-        brokerService.sendAlarmToUser(userId, alarmDTO);
+    @Transactional
+    public void sendAlarm(Long receiverId, String content, String redirectURL, AlarmType alarmType) {
+        User receiver = userRepository.getReferenceById(receiverId);
+        Alarm alarm = Alarm.builder()
+                .receiver(receiver)
+                .content(content)
+                .redirectURL(redirectURL)
+                .alarmType(alarmType)
+                .build();
+
+        alarmRepository.save(alarm);
+        sendAlarmViaSSE(alarm);
     }
 
     public FindAlarmListRes findAlarms(Long userId) {
@@ -70,11 +76,11 @@ public class AlarmService {
             throw new CustomException(ExceptionCode.ALARM_NOT_EXIST);
         }
 
-        List<FindAlarmListRes.AlarmDTO> alarmDTOS = alarms.stream()
-                .map(FindAlarmListRes.AlarmDTO::new)
+        List<AlarmDTO> alarmDTOs = alarms.stream()
+                .map(AlarmDTO::new)
                 .toList();
 
-        return new FindAlarmListRes(alarmDTOS);
+        return new FindAlarmListRes(alarmDTOs);
     }
 
     @Transactional
@@ -91,6 +97,19 @@ public class AlarmService {
     private void sendKeepAliveEvent(String userId, SseEmitter emitter, String emitterId) {
         String eventId = createTimestampedId(userId);
         emitAlarmEvent(emitter, eventId, emitterId, "ForPaw");
+    }
+
+    private void sendAlarmViaSSE(Alarm alarm) {
+        String receiverId = alarm.getReceiverId().toString();
+        String eventId = createTimestampedId(receiverId);
+
+        Map<String, SseEmitter> emitters = emitterRepository.findEmittersByMemberIdPrefix(receiverId);
+        emitters.forEach((key, emitter) -> emitAlarmToEmitter(emitter, key, alarm, eventId));
+    }
+
+    private void emitAlarmToEmitter(SseEmitter emitter, String emitterId, Alarm alarm, String eventId) {
+        AlarmDTO alarmDTO = new AlarmDTO(alarm, false);
+        emitAlarmEvent(emitter, eventId, emitterId, alarmDTO);
     }
 
     private void handleEmitterCompletion(SseEmitter emitter, String emitterId) {
