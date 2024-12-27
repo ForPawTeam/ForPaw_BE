@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.meeting;
 
-import com.hong.forapw.domain.alarm.model.AlarmRequest;
+import com.hong.forapw.domain.alarm.model.AlarmDTO;
 import com.hong.forapw.domain.meeting.model.MeetingUserProfileDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
@@ -240,7 +240,7 @@ public class MeetingService {
     }
 
     private void createNewMeetingAlarm(Long userId, String content, String redirectURL) {
-        AlarmRequest.AlarmDTO alarmDTO = new AlarmRequest.AlarmDTO(
+        AlarmDTO alarmDTO = new AlarmDTO(
                 userId,
                 content,
                 redirectURL,

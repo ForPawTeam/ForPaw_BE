@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.alarm;
 
-import com.hong.forapw.domain.alarm.model.AlarmRequest;
 import com.hong.forapw.domain.alarm.model.AlarmResponse;
+import com.hong.forapw.domain.alarm.model.request.ReadAlarmReq;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
@@ -32,8 +32,8 @@ public class AlarmController {
     }
 
     @PostMapping("/alarms/read")
-    public ResponseEntity<?> readAlarm(@RequestBody @Valid AlarmRequest.ReadAlarmDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        alarmService.updateAlarmAsRead(requestDTO.id(), userDetails.user().getId());
+    public ResponseEntity<?> readAlarm(@RequestBody @Valid ReadAlarmReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        alarmService.updateAlarmAsRead(request.id(), userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

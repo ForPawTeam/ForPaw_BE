@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.group.service;
 
-import com.hong.forapw.domain.alarm.model.AlarmRequest;
+import com.hong.forapw.domain.alarm.model.AlarmDTO;
 import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.group.model.GroupResponse;
 import com.hong.forapw.domain.group.entity.Group;
@@ -671,7 +671,7 @@ public class GroupService {
     }
 
     private void createAlarm(Long userId, String content, String redirectURL, AlarmType alarmType) {
-        AlarmRequest.AlarmDTO alarmDTO = new AlarmRequest.AlarmDTO(
+        AlarmDTO alarmDTO = new AlarmDTO(
                 userId,
                 content,
                 redirectURL,

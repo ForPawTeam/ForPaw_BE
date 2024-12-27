@@ -1,7 +1,6 @@
 package com.hong.forapw.integration.rabbitmq;
 
-import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.alarm.model.AlarmRequest;
+import com.hong.forapw.domain.alarm.model.AlarmDTO;
 import com.hong.forapw.domain.alarm.model.AlarmResponse;
 import com.hong.forapw.domain.alarm.repository.EmitterRepository;
 import com.hong.forapw.domain.chat.model.ChatRequest;
@@ -113,7 +112,7 @@ public class RabbitMqUtils {
         SimpleRabbitListenerEndpoint endpoint = createRabbitListenerEndpoint(listenerId, queueName);
 
         endpoint.setMessageListener(message -> {
-            AlarmRequest.AlarmDTO alarmDTO = convertToAlarmDTO(message);
+            AlarmDTO alarmDTO = convertToAlarmDTO(message);
             Alarm alarm = saveAlarm(alarmDTO);
             sendAlarmViaSSE(alarm);
         });
@@ -126,7 +125,7 @@ public class RabbitMqUtils {
         rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, message);
     }
 
-    public void sendAlarmToUser(Long userId, AlarmRequest.AlarmDTO alarm) {
+    public void sendAlarmToUser(Long userId, AlarmDTO alarm) {
         String routingKey = USER_QUEUE_PREFIX + userId;
         rabbitTemplate.convertAndSend(ALARM_EXCHANGE, routingKey, alarm);
     }
@@ -159,17 +158,17 @@ public class RabbitMqUtils {
         String content = "새로운 메시지: " + messageDTO.content();
         String redirectURL = "/chatting/" + messageDTO.chatRoomId();
 
-        AlarmRequest.AlarmDTO alarmDTO = RabbitMqMapper.toAlarmDTO(user, content, redirectURL);
+        AlarmDTO alarmDTO = new AlarmDTO(user, content, redirectURL);
         sendAlarmToUser(messageDTO.senderId(), alarmDTO);
     }
 
-    private AlarmRequest.AlarmDTO convertToAlarmDTO(org.springframework.amqp.core.Message message) {
-        return (AlarmRequest.AlarmDTO) converter.fromMessage(message);
+    private AlarmDTO convertToAlarmDTO(org.springframework.amqp.core.Message message) {
+        return (AlarmDTO) converter.fromMessage(message);
     }
 
-    private Alarm saveAlarm(AlarmRequest.AlarmDTO alarmDTO) {
+    private Alarm saveAlarm(AlarmDTO alarmDTO) {
         User receiver = entityManager.getReference(User.class, alarmDTO.receiverId());
-        Alarm alarm = buildAlarm(alarmDTO, receiver);
+        Alarm alarm = alarmDTO.toEntity(receiver);
 
         alarmRepository.save(alarm);
         return alarm;

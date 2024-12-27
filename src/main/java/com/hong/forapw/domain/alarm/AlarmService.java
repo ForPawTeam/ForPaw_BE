@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.alarm;
 
-import com.hong.forapw.domain.alarm.model.AlarmRequest;
+import com.hong.forapw.domain.alarm.model.AlarmDTO;
 import com.hong.forapw.domain.alarm.model.AlarmResponse;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
@@ -19,7 +19,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import static com.hong.forapw.domain.alarm.AlarmMapper.toAlarmDTO;
 
@@ -58,7 +57,7 @@ public class AlarmService {
     }
 
     public void sendAlarmToBroker(Long userId, String content, String redirectURL, AlarmType alarmType) {
-        AlarmRequest.AlarmDTO alarmDTO = new AlarmRequest.AlarmDTO(
+        AlarmDTO alarmDTO = new AlarmDTO(
                 userId,
                 content,
                 redirectURL,
