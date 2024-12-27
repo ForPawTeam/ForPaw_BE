@@ -57,11 +57,12 @@ public class PostService {
     public CreatePostRes createPost(CreatePostReq request, Long userId) {
         validatePostRequest(request);
 
+        List<PostImage> postImages = PostImageDTO.fromDTOs(request.images());
+
         User writer = userRepository.getReferenceById(userId);
         Post post = request.toEntity(writer);
+        post.setPostRelationships(postImages);
 
-        List<PostImage> postImages = PostImageDTO.fromDTOs(request.images());
-        setPostRelationships(post, postImages);
         postRepository.save(post);
 
         postCacheService.initializePostCache(post.getId());
@@ -76,11 +77,12 @@ public class PostService {
         );
         validateQuestionType(question);
 
+        List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
+
         User writer = userRepository.getReferenceById(userId);
         Post answer = request.toEntity(writer, question);
+        answer.setAnswerRelationships(answerImages, question);
 
-        List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
-        setAnswerRelationships(answer, answerImages, question);
         postRepository.save(answer);
 
         question.incrementAnswerNum();
@@ -235,6 +237,7 @@ public class PostService {
 
         User writer = userRepository.getReferenceById(userId);
         Comment comment = request.toEntity(request.content(), post, writer);
+
         commentRepository.save(comment);
 
         incrementCommentCount(postId);
@@ -255,6 +258,7 @@ public class PostService {
         User writer = userRepository.getReferenceById(userId);
         Comment reply = request.toEntity(request.content(), post, writer);
         parentComment.addChildComment(reply);
+
         commentRepository.save(reply);
 
         incrementCommentCount(postId);
@@ -320,19 +324,10 @@ public class PostService {
         }
     }
 
-    private void setPostRelationships(Post post, List<PostImage> postImages) {
-        postImages.forEach(post::addImage);
-    }
-
     private void validateQuestionType(Post question) {
         if (question.isNotQuestionType()) {
             throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
         }
-    }
-
-    private void setAnswerRelationships(Post answerPost, List<PostImage> answerImages, Post questionPost) {
-        answerImages.forEach(answerPost::addImage); // 이미지와 답변 게시물의 연관 설정
-        questionPost.addChildPost(answerPost); // 질문 게시물과 답변 게시물의 부모-자식 관계 설정
     }
 
     private void sendNewAnswerAlarm(Post questionPost, String answerContent, Long questionPostId) {
@@ -547,13 +542,12 @@ public class PostService {
             Long likeCount = likeService.getCommentLikeCount(comment.getId());
             boolean isLikedComment = likedCommentIds.contains(comment.getId());
 
-            if (comment.isParent()) { // 부모 댓글
+            if (comment.isParent()) {
                 addParentComment(comment, parentCommentMap, likeCount, isLikedComment);
-            } else { // 답변 댓글
+            } else {
                 addReplyToParent(comment, parentCommentMap, likeCount, isLikedComment);
             }
         });
-
         return new ArrayList<>(parentCommentMap.values());
     }
 

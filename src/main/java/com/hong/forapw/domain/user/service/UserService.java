@@ -22,6 +22,7 @@ import com.hong.forapw.domain.post.repository.CommentLikeRepository;
 import com.hong.forapw.domain.post.repository.CommentRepository;
 import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
+import com.hong.forapw.domain.user.model.request.*;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.integration.email.model.BlankTemplate;
@@ -86,8 +87,8 @@ public class UserService {
     private static final long DAILY_FAILURE_LIMIT = 3L;
 
     @Transactional
-    public LoginResult login(UserRequest.LoginDTO requestDTO, HttpServletRequest request) {
-        User user = userRepository.findByEmailWithRemoved(requestDTO.email()).orElseThrow(
+    public LoginResult login(LoginReq request, HttpServletRequest servletRequest) {
+        User user = userRepository.findByEmailWithRemoved(request.email()).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_ACCOUNT_WRONG)
         );
 
@@ -95,22 +96,22 @@ public class UserService {
         validateUserActive(user);
         validateLoginAttempts(user);
 
-        if (isPasswordUnmatched(user, requestDTO.password())) {
+        if (isPasswordUnmatched(user, request.password())) {
             handleLoginFailures(user);
             infoLoginFail(user);
         }
 
-        recordLoginAttempt(user, request);
+        recordLoginAttempt(user, servletRequest);
         return createToken(user);
     }
 
     @Transactional
-    public void join(UserRequest.JoinDTO requestDTO) {
-        validateConfirmPasswordMatch(requestDTO.password(), requestDTO.passwordConfirm());
-        checkEmailNotRegistered(requestDTO.email());
-        validateNicknameUniqueness(requestDTO.nickName());
+    public void join(JoinReq request) {
+        validateConfirmPasswordMatch(request.password(), request.passwordConfirm());
+        checkEmailNotRegistered(request.email());
+        validateNicknameUniqueness(request.nickName());
 
-        User user = buildUser(requestDTO, passwordEncoder.encode(requestDTO.password()));
+        User user = request.toEntity(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
         setUserStatus(user);
@@ -118,11 +119,11 @@ public class UserService {
     }
 
     @Transactional
-    public void socialJoin(UserRequest.SocialJoinDTO requestDTO) {
-        checkEmailNotRegistered(requestDTO.email());
-        validateNicknameUniqueness(requestDTO.nickName());
+    public void socialJoin(SocialJoinReq request) {
+        checkEmailNotRegistered(request.email());
+        validateNicknameUniqueness(request.nickName());
 
-        User user = buildUser(requestDTO, passwordEncoder.encode(generatePassword()));
+        User user = request.toEntity(passwordEncoder.encode(generatePassword()));
         userRepository.save(user);
 
         setUserStatus(user);
@@ -140,22 +141,22 @@ public class UserService {
         emailService.sendMail(email, VERIFICATION_CODE.getSubject(), MAIL_TEMPLATE_FOR_CODE, templateModel);
     }
 
-    public UserResponse.VerifyEmailCodeDTO verifyCode(UserRequest.VerifyCodeDTO requestDTO, String codeType) {
-        if (userCacheService.isCodeMismatch(requestDTO.email(), requestDTO.code(), codeType))
+    public UserResponse.VerifyEmailCodeDTO verifyCode(VerifyCodeReq request, String codeType) {
+        if (userCacheService.isCodeMismatch(request.email(), request.code(), codeType))
             return new UserResponse.VerifyEmailCodeDTO(false);
 
         if (CODE_TYPE_RECOVERY.equals(codeType))
-            userCacheService.storeCodeToEmail(requestDTO.code(), requestDTO.email());
+            userCacheService.storeCodeToEmail(request.code(), request.email());
 
         return new UserResponse.VerifyEmailCodeDTO(true);
     }
 
-    public UserResponse.CheckNickNameDTO checkNickName(UserRequest.CheckNickDTO requestDTO) {
-        boolean isDuplicate = userRepository.existsByNicknameWithRemoved(requestDTO.nickName());
+    public UserResponse.CheckNickNameDTO checkNickName(CheckNickReq request) {
+        boolean isDuplicate = userRepository.existsByNicknameWithRemoved(request.nickName());
         return new UserResponse.CheckNickNameDTO(isDuplicate);
     }
 
-    public UserResponse.CheckLocalAccountExistDTO checkLocalAccountExist(UserRequest.EmailDTO requestDTO) {
+    public UserResponse.CheckLocalAccountExistDTO checkLocalAccountExist(EmailReq requestDTO) {
         return userRepository.findByEmail(requestDTO.email())
                 .map(user -> new UserResponse.CheckLocalAccountExistDTO(true, user.isLocalJoined()))
                 .orElse(new UserResponse.CheckLocalAccountExistDTO(false, false));
@@ -167,22 +168,22 @@ public class UserService {
     }
 
     @Transactional
-    public void resetPassword(UserRequest.ResetPasswordDTO requestDTO) {
-        String email = userCacheService.getEmailByVerificationCode(requestDTO.code());
+    public void resetPassword(ResetPasswordReq request) {
+        String email = userCacheService.getEmailByVerificationCode(request.code());
         if (email == null) {
             throw new CustomException(ExceptionCode.BAD_APPROACH);
         }
 
-        userCacheService.deleteCodeToEmail(requestDTO.code());
-        updateNewPassword(email, requestDTO.newPassword());
+        userCacheService.deleteCodeToEmail(request.code());
+        updateNewPassword(email, request.newPassword());
     }
 
-    public UserResponse.VerifyPasswordDTO verifyPassword(UserRequest.CurPasswordDTO requestDTO, Long userId) {
+    public UserResponse.VerifyPasswordDTO verifyPassword(CurPasswordReq request, Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        if (isPasswordUnmatched(user, requestDTO.password())) {
+        if (isPasswordUnmatched(user, request.password())) {
             return new UserResponse.VerifyPasswordDTO(false);
         }
 
@@ -190,15 +191,15 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(UserRequest.UpdatePasswordDTO requestDTO, Long userId) {
+    public void updatePassword(UpdatePasswordReq request, Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        validatePasswordMatch(user, requestDTO.curPassword());
-        validateConfirmPasswordMatch(requestDTO.curPassword(), requestDTO.newPasswordConfirm());
+        validatePasswordMatch(user, request.curPassword());
+        validateConfirmPasswordMatch(request.curPassword(), request.newPasswordConfirm());
 
-        user.updatePassword(passwordEncoder.encode(requestDTO.newPassword()));
+        user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 
     public UserResponse.ProfileDTO findProfile(Long userId) {
@@ -210,13 +211,13 @@ public class UserService {
     }
 
     @Transactional
-    public void updateProfile(UserRequest.UpdateProfileDTO requestDTO, Long userId) {
+    public void updateProfile(UpdateProfileReq request, Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        validateNickname(user, requestDTO.nickName());
-        user.updateProfile(requestDTO.nickName(), requestDTO.province(), requestDTO.district(), requestDTO.subDistrict(), requestDTO.profileURL());
+        validateNickname(user, request.nickName());
+        user.updateProfile(request.nickName(), request.province(), request.district(), request.subDistrict(), request.profileURL());
     }
 
     public TokenResponse updateAccessToken(String refreshToken) {

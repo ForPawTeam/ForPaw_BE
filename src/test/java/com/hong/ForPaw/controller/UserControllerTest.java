@@ -1,7 +1,6 @@
 package com.hong.ForPaw.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hong.forapw.domain.user.model.UserRequest;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import org.junit.jupiter.api.Test;

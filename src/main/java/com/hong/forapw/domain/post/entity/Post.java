@@ -96,6 +96,15 @@ public class Post extends BaseEntity {
         child.updateParent(this);
     }
 
+    public void setAnswerRelationships(List<PostImage> answerImages, Post questionPost) {
+        answerImages.forEach(this::addImage); // 이미지와 답변 게시물의 연관 설정
+        questionPost.addChildPost(this); // 질문 게시물과 답변 게시물의 부모-자식 관계 설정
+    }
+
+    public void setPostRelationships(List<PostImage> postImages) {
+        postImages.forEach(this::addImage);
+    }
+
     public void updateContent(String title, String content) {
         this.title = title;
         this.content = content;

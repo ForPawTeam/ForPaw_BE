@@ -2,8 +2,8 @@ package com.hong.forapw.domain.user;
 
 import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.TokenResponse;
-import com.hong.forapw.domain.user.model.UserRequest;
 import com.hong.forapw.domain.user.model.UserResponse;
+import com.hong.forapw.domain.user.model.request.*;
 import com.hong.forapw.integration.oauth.OAuthService;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.security.jwt.JwtUtils;
@@ -35,8 +35,8 @@ public class UserController {
     private static final String CODE_TYPE_RECOVERY = "recovery";
 
     @PostMapping("/auth/login")
-    public ResponseEntity<?> login(@RequestBody @Valid UserRequest.LoginDTO requestDTO, HttpServletRequest request) {
-        LoginResult loginResult = userService.login(requestDTO, request);
+    public ResponseEntity<?> login(@RequestBody @Valid LoginReq request, HttpServletRequest servletRequest) {
+        LoginResult loginResult = userService.login(request, servletRequest);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(loginResult.refreshToken()))
                 .body(ApiUtils.success(HttpStatus.OK, new UserResponse.LoginDTO(loginResult.accessToken())));
@@ -55,71 +55,71 @@ public class UserController {
     }
 
     @PostMapping("/accounts")
-    public ResponseEntity<?> join(@RequestBody @Valid UserRequest.JoinDTO requestDTO) {
-        userService.join(requestDTO);
+    public ResponseEntity<?> join(@RequestBody @Valid JoinReq request) {
+        userService.join(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.CREATED, null));
     }
 
     @PostMapping("/accounts/social")
-    public ResponseEntity<?> socialJoin(@RequestBody @Valid UserRequest.SocialJoinDTO requestDTO) {
-        userService.socialJoin(requestDTO);
+    public ResponseEntity<?> socialJoin(@RequestBody @Valid SocialJoinReq request) {
+        userService.socialJoin(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.CREATED, null));
     }
 
     @PostMapping("/accounts/check/email")
-    public ResponseEntity<?> checkEmailAndSendCode(@RequestBody @Valid UserRequest.EmailDTO requestDTO) {
-        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(requestDTO.email());
-        if (responseDTO.isValid()) userService.sendCodeByEmail(requestDTO.email(), CODE_TYPE_JOIN);
+    public ResponseEntity<?> checkEmailAndSendCode(@RequestBody @Valid EmailReq request) {
+        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(request.email());
+        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_JOIN);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/accounts/verify/code")
-    public ResponseEntity<?> verifyCode(@RequestBody @Valid UserRequest.VerifyCodeDTO requestDTO, @RequestParam String codeType) {
-        UserResponse.VerifyEmailCodeDTO responseDTO = userService.verifyCode(requestDTO, codeType);
+    public ResponseEntity<?> verifyCode(@RequestBody @Valid VerifyCodeReq request, @RequestParam String codeType) {
+        UserResponse.VerifyEmailCodeDTO responseDTO = userService.verifyCode(request, codeType);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/accounts/resend/code")
-    public ResponseEntity<?> resendCode(@RequestBody @Valid UserRequest.EmailDTO requestDTO, @RequestParam String codeType) {
-        userService.sendCodeByEmail(requestDTO.email(), codeType);
+    public ResponseEntity<?> resendCode(@RequestBody @Valid EmailReq request, @RequestParam String codeType) {
+        userService.sendCodeByEmail(request.email(), codeType);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/accounts/check/nick")
-    public ResponseEntity<?> checkNickname(@RequestBody @Valid UserRequest.CheckNickDTO requestDTO) {
-        UserResponse.CheckNickNameDTO responseDTO = userService.checkNickName(requestDTO);
+    public ResponseEntity<?> checkNickname(@RequestBody @Valid CheckNickReq request) {
+        UserResponse.CheckNickNameDTO responseDTO = userService.checkNickName(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/accounts/withdraw/code")
-    public ResponseEntity<?> sendCodeForWithdraw(@RequestBody @Valid UserRequest.EmailDTO requestDTO) {
-        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(requestDTO.email());
-        if (responseDTO.isValid()) userService.sendCodeByEmail(requestDTO.email(), CODE_TYPE_WITHDRAW);
+    public ResponseEntity<?> sendCodeForWithdraw(@RequestBody @Valid EmailReq request) {
+        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(request.email());
+        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_WITHDRAW);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/accounts/recovery/code")
-    public ResponseEntity<?> sendCodeForRecovery(@RequestBody @Valid UserRequest.EmailDTO requestDTO) {
-        UserResponse.CheckLocalAccountExistDTO responseDTO = userService.checkLocalAccountExist(requestDTO);
-        if (responseDTO.isValid()) userService.sendCodeByEmail(requestDTO.email(), CODE_TYPE_RECOVERY);
+    public ResponseEntity<?> sendCodeForRecovery(@RequestBody @Valid EmailReq request) {
+        UserResponse.CheckLocalAccountExistDTO responseDTO = userService.checkLocalAccountExist(request);
+        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_RECOVERY);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PostMapping("/accounts/recovery/reset")
-    public ResponseEntity<?> resetPassword(@RequestBody @Valid UserRequest.ResetPasswordDTO requestDTO) {
-        userService.resetPassword(requestDTO);
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid ResetPasswordReq request) {
+        userService.resetPassword(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/accounts/password/verify")
-    public ResponseEntity<?> verifyPassword(@RequestBody @Valid UserRequest.CurPasswordDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.VerifyPasswordDTO responseDTO = userService.verifyPassword(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> verifyPassword(@RequestBody @Valid CurPasswordReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UserResponse.VerifyPasswordDTO responseDTO = userService.verifyPassword(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/accounts/password")
-    public ResponseEntity<?> updatePassword(@RequestBody @Valid UserRequest.UpdatePasswordDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updatePassword(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> updatePassword(@RequestBody @Valid UpdatePasswordReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.updatePassword(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -130,8 +130,8 @@ public class UserController {
     }
 
     @PatchMapping("/accounts/profile")
-    public ResponseEntity<?> updateProfile(@RequestBody @Valid UserRequest.UpdateProfileDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updateProfile(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> updateProfile(@RequestBody @Valid UpdateProfileReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.updateProfile(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
