@@ -1,6 +1,10 @@
 package com.hong.forapw.domain.search;
 
 import com.hong.forapw.domain.meeting.model.query.GroupMeetingCountDTO;
+import com.hong.forapw.domain.search.model.response.GroupDTO;
+import com.hong.forapw.domain.search.model.response.PostDTO;
+import com.hong.forapw.domain.search.model.response.SearchAllRes;
+import com.hong.forapw.domain.search.model.response.ShelterDTO;
 import com.hong.forapw.integration.redis.RedisService;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.post.constant.PostType;
@@ -33,31 +37,31 @@ public class SearchService {
     private static final String POST_LIKE_NUM_KEY_PREFIX = "postLikeNum";
     private static final Long POST_EXP = 1000L * 60 * 60 * 24 * 90; // 세 달
 
-    public SearchResponse.SearchAllDTO searchAll(String keyword, Pageable pageable) {
-        List<SearchResponse.ShelterDTO> shelterDTOS = searchShelterList(keyword, pageable);
-        List<SearchResponse.PostDTO> postDTOS = searchPostList(keyword, pageable);
-        List<SearchResponse.GroupDTO> groupDTOS = searchGroupList(keyword, pageable);
+    public SearchAllRes searchAll(String keyword, Pageable pageable) {
+        List<ShelterDTO> shelterDTOS = searchShelterList(keyword, pageable);
+        List<PostDTO> postDTOS = searchPostList(keyword, pageable);
+        List<GroupDTO> groupDTOS = searchGroupList(keyword, pageable);
 
-        return new SearchResponse.SearchAllDTO(shelterDTOS, postDTOS, groupDTOS);
+        return new SearchAllRes(shelterDTOS, postDTOS, groupDTOS);
     }
 
-    public List<SearchResponse.ShelterDTO> searchShelterList(String keyword, Pageable pageable) {
+    public List<ShelterDTO> searchShelterList(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
         List<Shelter> shelters = shelterRepository.findByNameContaining(formattedKeyword, pageable).getContent();
 
         return shelters.stream()
-                .map(shelter -> new SearchResponse.ShelterDTO(shelter.getId(), shelter.getName()))
-                .collect(Collectors.toList());
+                .map(shelter -> new ShelterDTO(shelter.getId(), shelter.getName()))
+                .toList();
     }
 
-    public List<SearchResponse.PostDTO> searchPostList(String keyword, Pageable pageable) {
+    public List<PostDTO> searchPostList(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
         List<Object[]> posts = postRepository.findByTitleContaining(formattedKeyword, pageable).getContent();
 
         return posts.stream()
                 .map(row -> {
                     Long likeNum = getCachedLikeNum(((Long) row[0]));
-                    return new SearchResponse.PostDTO(
+                    return new PostDTO(
                             (Long) row[0],  // postId
                             PostType.valueOf((String) row[4]),  // postType (String을 PostType으로 변환)
                             (String) row[1],  // title
@@ -68,10 +72,10 @@ public class SearchService {
                             (Long) row[8], // commentNum
                             likeNum);
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    public List<SearchResponse.GroupDTO> searchGroupList(String keyword, Pageable pageable) {
+    public List<GroupDTO> searchGroupList(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
         List<Group> groups = groupRepository.findByNameContaining(formattedKeyword, pageable).getContent();
 
@@ -79,7 +83,7 @@ public class SearchService {
         Map<Long, Long> meetingCountByGroupId = getMeetingCountsByGroupIds(groupIds); // <groupId, meetingCount>
 
         return groups.stream()
-                .map(group -> convertToGroupDTO(group, meetingCountByGroupId))
+                .map(group -> GroupDTO.fromEntity(group, meetingCountByGroupId))
                 .toList();
     }
 
@@ -98,23 +102,6 @@ public class SearchService {
                 ));
     }
 
-    private SearchResponse.GroupDTO convertToGroupDTO(Group group, Map<Long, Long> meetingCountsMap) {
-        return new SearchResponse.GroupDTO(
-                group.getId(),
-                group.getName(),
-                group.getDescription(),
-                group.getCategory(),
-                group.getProvince(),
-                group.getDistrict(),
-                group.getProfileURL(),
-                group.getParticipantNum(),
-                meetingCountsMap.getOrDefault(group.getId(), 0L)
-        );
-    }
-
-    /**
-     * 키워드를 스페이스로 분리하고 각 단어에 +와 *를 추가
-     */
     private String formatKeywordForFullTextSearch(String keyword) {
         String[] words = keyword.split("\\s+");
         StringBuilder modifiedKeyword = new StringBuilder();
