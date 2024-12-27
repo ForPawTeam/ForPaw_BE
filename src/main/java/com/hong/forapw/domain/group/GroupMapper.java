@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.group;
 
-import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.group.model.GroupResponse;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.entity.GroupUser;
@@ -13,21 +12,6 @@ import java.util.List;
 public class GroupMapper {
 
     private GroupMapper() {
-    }
-
-    public static Group buildGroup(GroupRequest.CreateGroupDTO requestDTO) {
-        return Group.builder()
-                .name(requestDTO.name())
-                .province(requestDTO.province())
-                .district(requestDTO.district())
-                .subDistrict(requestDTO.subDistrict())
-                .description(requestDTO.description())
-                .category(requestDTO.category())
-                .profileURL(requestDTO.profileURL())
-                .maxNum(requestDTO.maxNum())
-                .isShelterOwns(requestDTO.isShelterOwns())
-                .shelterName(requestDTO.shelterName())
-                .build();
     }
 
     public static GroupResponse.FindGroupByIdDTO toFindGroupByIdDTO(Group group) {
@@ -145,15 +129,5 @@ public class GroupMapper {
                 groupUser.getGroupRole(),
                 groupUser.getUserProfileURL(),
                 groupUser.getCreatedDate());
-    }
-
-    public static Post buildNotice(GroupRequest.CreateNoticeDTO requestDTO, User noticer, Group group) {
-        return Post.builder()
-                .user(noticer)
-                .group(group)
-                .postType(PostType.NOTICE)
-                .title(requestDTO.title())
-                .content(requestDTO.content())
-                .build();
     }
 }

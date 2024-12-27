@@ -1,16 +1,15 @@
 package com.hong.forapw.domain.group.service;
 
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.group.model.GroupResponse;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.group.entity.GroupUser;
+import com.hong.forapw.domain.group.model.request.*;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
 import com.hong.forapw.domain.meeting.model.response.MeetingRes;
-import com.hong.forapw.domain.post.model.request.PostImageDTO;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.meeting.MeetingService;
@@ -79,10 +78,10 @@ public class GroupService {
     private static final Sort DEFAULT_SORT = Sort.by(Sort.Order.desc(SORT_BY_PARTICIPANT_NUM));
 
     @Transactional
-    public GroupResponse.CreateGroupDTO createGroup(GroupRequest.CreateGroupDTO requestDTO, Long creatorId) {
-        validateGroupNameNotDuplicate(requestDTO.name());
+    public GroupResponse.CreateGroupDTO createGroup(CreateGroupReq request, Long creatorId) {
+        validateGroupNameNotDuplicate(request.name());
 
-        Group group = buildGroup(requestDTO);
+        Group group = request.toEntity();
         groupRepository.save(group);
 
         User groupOwner = addGroupOwner(group, creatorId);
@@ -108,7 +107,7 @@ public class GroupService {
     }
 
     @Transactional
-    public void updateGroup(GroupRequest.UpdateGroupDTO requestDTO, Long groupId, Long userId) {
+    public void updateGroup(UpdateGroupReq request, Long groupId, Long userId) {
         User groupAdmin = userRepository.getReferenceById(userId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
@@ -116,10 +115,11 @@ public class GroupService {
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        validateGroupNameNotDuplicate(groupId, requestDTO.name());
-        updateChatRoomName(groupId, requestDTO.name());
+        validateGroupNameNotDuplicate(groupId, request.name());
+        updateChatRoomName(groupId, request.name());
 
-        updateGroupInfo(group, requestDTO);
+        group.updateInfo(request.name(), request.province(), request.district(), group.getSubDistrict(),
+                request.description(), request.category(), request.profileURL(), request.maxNum());
     }
 
     public GroupResponse.FindGroupMemberListDTO findGroupMembers(Long userId, Long groupId) {
@@ -219,7 +219,7 @@ public class GroupService {
     }
 
     @Transactional
-    public void joinGroup(GroupRequest.JoinGroupDTO requestDTO, Long userId, Long groupId) {
+    public void joinGroup(JoinGroupReq request, Long userId, Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
@@ -228,7 +228,7 @@ public class GroupService {
         validateUserNotAlreadyMemberOrApplicant(groupId, userId);
 
         User applicant = userRepository.getReferenceById(userId);
-        addTemporaryGroupMember(applicant, group, requestDTO.greeting());
+        addTemporaryGroupMember(applicant, group, request.greeting());
     }
 
     @Transactional
@@ -309,7 +309,7 @@ public class GroupService {
     }
 
     @Transactional
-    public GroupResponse.CreateNoticeDTO createNotice(GroupRequest.CreateNoticeDTO requestDTO, Long userId, Long groupId) {
+    public GroupResponse.CreateNoticeDTO createNotice(CreateNoticeReq request, Long userId, Long groupId) {
         validateGroupExists(groupId);
 
         User groupAdmin = userRepository.getReferenceById(userId);
@@ -317,11 +317,11 @@ public class GroupService {
 
         Group group = groupRepository.getReferenceById(groupId);
         User noticer = userRepository.getReferenceById(userId);
-        Post notice = buildNotice(requestDTO, noticer, group);
-        addImagesToNotice(requestDTO.images(), notice);
+        Post notice = request.toEntity(noticer, group);
+        addImagesToNotice(request.images(), notice);
 
         postRepository.save(notice);
-        sendNoticeAlarms(groupId, userId, requestDTO.title(), notice.getId());
+        sendNoticeAlarms(groupId, userId, request.title(), notice.getId());
 
         return new GroupResponse.CreateNoticeDTO(notice.getId());
     }
@@ -362,7 +362,7 @@ public class GroupService {
     }
 
     @Transactional
-    public void updateUserRole(GroupRequest.UpdateUserRoleDTO requestDTO, Long groupId, Long creatorId) {
+    public void updateUserRole(UpdateUserRoleReq requestDTO, Long groupId, Long creatorId) {
         // 존재하지 않는 그룹이면 에러
         validateGroupExists(groupId);
 
@@ -508,19 +508,6 @@ public class GroupService {
         chatRoom.updateName(groupName);
     }
 
-    private void updateGroupInfo(Group group, GroupRequest.UpdateGroupDTO requestDTO) {
-        group.updateInfo(
-                requestDTO.name(),
-                requestDTO.province(),
-                requestDTO.district(),
-                group.getSubDistrict(),
-                requestDTO.description(),
-                requestDTO.category(),
-                requestDTO.profileURL(),
-                requestDTO.maxNum()
-        );
-    }
-
     private List<GroupResponse.MemberDetailDTO> getMemberDetails(Long groupId) {
         return groupUserRepository.findByGroupIdWithGroup(groupId).stream()
                 .filter(GroupUser::isActiveMember)
@@ -652,7 +639,7 @@ public class GroupService {
         alarmService.sendAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
     }
 
-    private void addImagesToNotice(List<PostImageDTO> images, Post notice) {
+    private void addImagesToNotice(List<CreateNoticeReq.PostImageDTO> images, Post notice) {
         images.stream()
                 .map(imageDTO -> PostImage.builder()
                         .imageURL(imageDTO.imageURL())

@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.group;
 
-import com.hong.forapw.domain.group.model.GroupRequest;
 import com.hong.forapw.domain.group.model.GroupResponse;
+import com.hong.forapw.domain.group.model.request.*;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.region.constant.District;
@@ -33,8 +33,8 @@ public class GroupController {
     private static final String SORT_BY_ID = "id";
 
     @PostMapping("/groups")
-    public ResponseEntity<?> createGroup(@RequestBody @Valid GroupRequest.CreateGroupDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        GroupResponse.CreateGroupDTO responseDTO = groupService.createGroup(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> createGroup(@RequestBody @Valid CreateGroupReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        GroupResponse.CreateGroupDTO responseDTO = groupService.createGroup(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
@@ -45,8 +45,8 @@ public class GroupController {
     }
 
     @PatchMapping("/groups/{groupId}")
-    public ResponseEntity<?> updateGroup(@RequestBody @Valid GroupRequest.UpdateGroupDTO requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.updateGroup(requestDTO, groupId, userDetails.user().getId());
+    public ResponseEntity<?> updateGroup(@RequestBody @Valid UpdateGroupReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.updateGroup(request, groupId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -105,8 +105,8 @@ public class GroupController {
     }
 
     @PostMapping("/groups/{groupId}/join")
-    public ResponseEntity<?> joinGroup(@RequestBody @Valid GroupRequest.JoinGroupDTO requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.joinGroup(requestDTO, userDetails.user().getId(), groupId);
+    public ResponseEntity<?> joinGroup(@RequestBody @Valid JoinGroupReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.joinGroup(request, userDetails.user().getId(), groupId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -117,8 +117,8 @@ public class GroupController {
     }
 
     @PostMapping("/groups/{groupId}/expel")
-    public ResponseEntity<?> expelGroupMember(@RequestBody @Valid GroupRequest.ExpelGroupMember requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.expelGroupMember(userDetails.user().getId(), requestDTO.userId(), groupId);
+    public ResponseEntity<?> expelGroupMember(@RequestBody @Valid ExpelGroupMemberReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.expelGroupMember(userDetails.user().getId(), request.userId(), groupId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -129,20 +129,20 @@ public class GroupController {
     }
 
     @PostMapping("/groups/{groupID}/join/approve")
-    public ResponseEntity<?> approveJoin(@RequestBody @Valid GroupRequest.ApproveJoinDTO requestDTO, @PathVariable Long groupID, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.approveJoin(userDetails.user().getId(), requestDTO.applicantId(), groupID);
+    public ResponseEntity<?> approveJoin(@RequestBody @Valid ApproveJoinReq request, @PathVariable Long groupID, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.approveJoin(userDetails.user().getId(), request.applicantId(), groupID);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/groups/{groupID}/join/reject")
-    public ResponseEntity<?> rejectJoin(@RequestBody @Valid GroupRequest.RejectJoinDTO requestDTO, @PathVariable Long groupID, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.rejectJoin(userDetails.user().getId(), requestDTO.applicantId(), groupID);
+    public ResponseEntity<?> rejectJoin(@RequestBody @Valid RejectJoinReq request, @PathVariable Long groupID, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.rejectJoin(userDetails.user().getId(), request.applicantId(), groupID);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/groups/{groupId}/notices")
-    public ResponseEntity<?> createNotice(@RequestBody @Valid GroupRequest.CreateNoticeDTO requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        GroupResponse.CreateNoticeDTO responseDTO = groupService.createNotice(requestDTO, userDetails.user().getId(), groupId);
+    public ResponseEntity<?> createNotice(@RequestBody @Valid CreateNoticeReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        GroupResponse.CreateNoticeDTO responseDTO = groupService.createNotice(request, userDetails.user().getId(), groupId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
@@ -159,8 +159,8 @@ public class GroupController {
     }
 
     @PatchMapping("/groups/{groupId}/userRole")
-    public ResponseEntity<?> updateUserRole(@RequestBody @Valid GroupRequest.UpdateUserRoleDTO requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.updateUserRole(requestDTO, groupId, userDetails.user().getId());
+    public ResponseEntity<?> updateUserRole(@RequestBody @Valid UpdateUserRoleReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        groupService.updateUserRole(request, groupId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
