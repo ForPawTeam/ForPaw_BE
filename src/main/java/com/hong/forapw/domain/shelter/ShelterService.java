@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.shelter;
 
-import com.hong.forapw.domain.animal.model.AnimalDTO;
-import com.hong.forapw.domain.animal.model.AnimalJsonResponse;
+import com.hong.forapw.domain.animal.model.PublicAnimalDTO;
+import com.hong.forapw.domain.animal.model.AnimalJsonDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.common.utils.JsonParser;
@@ -83,8 +83,8 @@ public class ShelterService {
     }
 
     @Transactional
-    public void updateShelterData(List<AnimalJsonResponse> animalJsonResponses) {
-        for (AnimalJsonResponse response : animalJsonResponses) {
+    public void updateShelterData(List<AnimalJsonDTO> animalJsonRespons) {
+        for (AnimalJsonDTO response : animalJsonRespons) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
             updateShelterByAnimalData(animalJson, shelter);
@@ -136,36 +136,36 @@ public class ShelterService {
     }
 
     private void updateShelterByAnimalData(String animalJson, Shelter shelter) {
-        jsonParser.parse(animalJson, AnimalDTO.class).ifPresent(
+        jsonParser.parse(animalJson, PublicAnimalDTO.class).ifPresent(
                 animalDTO -> updateShelterWithAnimalData(animalDTO, shelter)
         );
     }
 
-    private void updateShelterWithAnimalData(AnimalDTO animalData, Shelter shelter) {
+    private void updateShelterWithAnimalData(PublicAnimalDTO animalData, Shelter shelter) {
         findFirstAnimalItem(animalData)
                 .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
                         firstAnimalItem.careTel(), firstAnimalItem.careAddr(), countActiveAnimals(animalData), shelter.getId())
                 );
     }
 
-    private Optional<AnimalDTO.ItemDTO> findFirstAnimalItem(AnimalDTO animalDTO) {
+    private Optional<PublicAnimalDTO.AnimalDTO> findFirstAnimalItem(PublicAnimalDTO animalDTO) {
         return Optional.ofNullable(animalDTO)
-                .map(AnimalDTO::response)
-                .map(AnimalDTO.ResponseDTO::body)
-                .map(AnimalDTO.BodyDTO::items)
-                .map(AnimalDTO.ItemsDTO::item)
+                .map(PublicAnimalDTO::response)
+                .map(PublicAnimalDTO.ResponseDTO::body)
+                .map(PublicAnimalDTO.BodyDTO::items)
+                .map(PublicAnimalDTO.ItemsDTO::item)
                 .filter(items -> !items.isEmpty())
                 .map(items -> items.get(0));
     }
 
-    private long countActiveAnimals(AnimalDTO animalDTO) {
+    private long countActiveAnimals(PublicAnimalDTO animalDTO) {
         LocalDate currentDate = LocalDate.now().minusDays(1);
         return animalDTO.response().body().items().item().stream()
                 .filter(animal -> isAnimalNoticeNotExpired(animal, currentDate))
                 .count();
     }
 
-    private boolean isAnimalNoticeNotExpired(AnimalDTO.ItemDTO animal, LocalDate currentDate) {
+    private boolean isAnimalNoticeNotExpired(PublicAnimalDTO.AnimalDTO animal, LocalDate currentDate) {
         return LocalDate.parse(animal.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(currentDate);
     }
 

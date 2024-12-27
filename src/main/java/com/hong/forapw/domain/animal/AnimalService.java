@@ -1,12 +1,13 @@
 package com.hong.forapw.domain.animal;
 
-import com.hong.forapw.domain.animal.model.AnimalDTO;
-import com.hong.forapw.domain.animal.model.AnimalJsonResponse;
-import com.hong.forapw.domain.animal.model.AnimalResponse;
+import com.hong.forapw.domain.animal.model.PublicAnimalDTO;
+import com.hong.forapw.domain.animal.model.AnimalJsonDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.common.utils.JsonParser;
 import com.hong.forapw.domain.animal.constant.AnimalType;
+import com.hong.forapw.domain.animal.model.RecommendationDTO;
+import com.hong.forapw.domain.animal.model.response.*;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.shelter.Shelter;
@@ -47,7 +48,6 @@ import java.util.stream.Collectors;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
 import static com.hong.forapw.common.utils.UriUtils.buildAnimalOpenApiURI;
-import static com.hong.forapw.domain.animal.AnimalMapper.*;
 
 @Service
 @RequiredArgsConstructor
@@ -90,59 +90,55 @@ public class AnimalService {
         List<Long> existingAnimalIds = animalRepository.findAllIds();
         List<Shelter> shelters = shelterRepository.findAllWithRegionCode();
 
-        List<AnimalJsonResponse> animalJsonResponses = fetchAnimalDataFromApi(shelters);
-        saveNewAnimalData(animalJsonResponses, existingAnimalIds);
+        List<AnimalJsonDTO> animalJsonDTO = fetchAnimalDataFromApi(shelters);
+        saveNewAnimalData(animalJsonDTO, existingAnimalIds);
 
-        shelterService.updateShelterData(animalJsonResponses);
+        shelterService.updateShelterData(animalJsonDTO);
         postProcessAfterAnimalUpdate();
     }
 
-    @Transactional(readOnly = true)
-    public AnimalResponse.FindAnimalListDTO findAnimalList(String type, Long userId, Pageable pageable) {
+    public FindAnimalListRes findAnimalList(String type, Long userId, Pageable pageable) {
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
 
         Page<Animal> animalPage = animalRepository.findByAnimalType(AnimalType.fromString(type), pageable);
-        List<AnimalResponse.AnimalDTO> animalDTOS = animalPage.getContent().stream()
+        List<AnimalDTO> animalDTOS = animalPage.getContent().stream()
                 .map(animal -> {
                     Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return toAnimalDTO(animal, likeCount, likedAnimalIds);
+                    return AnimalDTO.fromEntity(animal, likeCount, likedAnimalIds);
                 })
                 .collect(Collectors.toList());
 
-        return new AnimalResponse.FindAnimalListDTO(animalDTOS, isLastPage(animalPage));
+        return new FindAnimalListRes(animalDTOS, isLastPage(animalPage));
     }
 
-    @Transactional(readOnly = true)
-    public AnimalResponse.FindRecommendedAnimalList findRecommendedAnimalList(Long userId) {
+    public FindRecommendedAnimalListRes findRecommendedAnimalList(Long userId) {
         List<Long> recommendedAnimalIds = findRecommendedAnimalIds(userId);
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
 
         List<Animal> animals = animalRepository.findByIds(recommendedAnimalIds);
-        List<AnimalResponse.AnimalDTO> animalDTOS = animals.stream()
+        List<AnimalDTO> animalDTOS = animals.stream()
                 .map(animal -> {
                     Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return toAnimalDTO(animal, likeCount, likedAnimalIds);
+                    return AnimalDTO.fromEntity(animal, likeCount, likedAnimalIds);
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        return new AnimalResponse.FindRecommendedAnimalList(animalDTOS);
+        return new FindRecommendedAnimalListRes(animalDTOS);
     }
 
-    @Transactional(readOnly = true)
-    public AnimalResponse.FindLikeAnimalListDTO findLikeAnimalList(Long userId) {
+    public FindLikeAnimalListRes findLikeAnimalList(Long userId) {
         List<Animal> animalPage = favoriteAnimalRepository.findAnimalsByUserId(userId);
-        List<AnimalResponse.AnimalDTO> animalDTOS = animalPage.stream()
+        List<AnimalDTO> animalDTOS = animalPage.stream()
                 .map(animal -> {
                     Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return toAnimalDTO(animal, likeCount, Collections.emptyList());
+                    return AnimalDTO.fromEntity(animal, likeCount, Collections.emptyList());
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        return new AnimalResponse.FindLikeAnimalListDTO(animalDTOS);
+        return new FindLikeAnimalListRes(animalDTOS);
     }
 
-    @Transactional(readOnly = true)
-    public AnimalResponse.FindAnimalByIdDTO findAnimalById(Long animalId, Long userId) {
+    public FindAnimalByIdRes findAnimalById(Long animalId, Long userId) {
         Animal animal = animalRepository.findById(animalId).orElseThrow(
                 () -> new CustomException(ExceptionCode.ANIMAL_NOT_FOUND)
         );
@@ -150,7 +146,7 @@ public class AnimalService {
         boolean isLikedAnimal = favoriteAnimalRepository.findByUserIdAndAnimalId(userId, animal.getId()).isPresent();
         saveSearchRecord(animalId, userId);
 
-        return toFindAnimalByIdDTO(animal,isLikedAnimal);
+        return new FindAnimalByIdRes(animal,isLikedAnimal);
     }
 
     // 로그인 X => 그냥 최신순, 로그인 O => 검색 기록을 바탕으로 추천 => 검색 기록이 없다면 위치를 기준으로 주변 보호소의 동물 추천
@@ -167,7 +163,7 @@ public class AnimalService {
         return recommendedAnimalIds;
     }
 
-    private List<AnimalJsonResponse> fetchAnimalDataFromApi(List<Shelter> shelters) {
+    private List<AnimalJsonDTO> fetchAnimalDataFromApi(List<Shelter> shelters) {
         return Flux.fromIterable(shelters)
                 .delayElements(Duration.ofMillis(75))
                 .flatMap(shelter -> buildAnimalOpenApiURI(animalURI, serviceKey, shelter.getId())
@@ -176,7 +172,7 @@ public class AnimalService {
                                 .retrieve()
                                 .bodyToMono(String.class)
                                 .retry(3)
-                                .map(rawJsonResponse -> new AnimalJsonResponse(shelter, rawJsonResponse)))
+                                .map(rawJsonResponse -> new AnimalJsonDTO(shelter, rawJsonResponse)))
                         .onErrorResume(e -> {
                             log.error("Shelter {} 데이터 가져오기 실패: {}", shelter.getId(), e.getMessage());
                             return Mono.empty();
@@ -185,8 +181,8 @@ public class AnimalService {
                 .block();
     }
 
-    public void saveNewAnimalData(List<AnimalJsonResponse> animalJsonResponses, List<Long> existingAnimalIds) {
-        for (AnimalJsonResponse response : animalJsonResponses) {
+    public void saveNewAnimalData(List<AnimalJsonDTO> animalJsonRespons, List<Long> existingAnimalIds) {
+        for (AnimalJsonDTO response : animalJsonRespons) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
 
@@ -198,28 +194,28 @@ public class AnimalService {
     }
 
     private List<Animal> convertAnimalJsonToAnimals(String animalJson, Shelter shelter, List<Long> existingAnimalIds) {
-        return jsonParser.parse(animalJson, AnimalDTO.class)
-                .map(AnimalDTO::response)
-                .map(AnimalDTO.ResponseDTO::body)
-                .map(AnimalDTO.BodyDTO::items)
-                .map(AnimalDTO.ItemsDTO::item)
+        return jsonParser.parse(animalJson, PublicAnimalDTO.class)
+                .map(PublicAnimalDTO::response)
+                .map(PublicAnimalDTO.ResponseDTO::body)
+                .map(PublicAnimalDTO.BodyDTO::items)
+                .map(PublicAnimalDTO.ItemsDTO::item)
                 .orElse(Collections.emptyList())
                 .stream()
-                .filter(item -> isNewAnimal(item, existingAnimalIds))
+                .filter(animalDTO -> isNewAnimal(animalDTO, existingAnimalIds))
                 .filter(this::isActiveAnimal)
-                .map(item -> {
+                .map(animalDTO -> {
                     String name = createAnimalName();
-                    String kind = parseSpecies(item.kindCd());
-                    return buildAnimal(item, name, kind, shelter);
+                    String kind = parseSpecies(animalDTO.kindCd());
+                    return animalDTO.toEntity(name, kind, shelter);
                 })
                 .collect(Collectors.toList());
     }
 
-    private boolean isNewAnimal(AnimalDTO.ItemDTO item, List<Long> existingAnimalIds) {
+    private boolean isNewAnimal(PublicAnimalDTO.AnimalDTO item, List<Long> existingAnimalIds) {
         return !existingAnimalIds.contains(Long.valueOf(item.desertionNo()));
     }
 
-    private boolean isActiveAnimal(AnimalDTO.ItemDTO item) {
+    private boolean isActiveAnimal(PublicAnimalDTO.AnimalDTO item) {
         return LocalDate.parse(item.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(LocalDate.now());
     }
 
@@ -361,8 +357,8 @@ public class AnimalService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(requestBody))
                 .retrieve()
-                .bodyToMono(AnimalResponse.RecommendationDTO.class)
-                .map(AnimalResponse.RecommendationDTO::recommendedAnimals)
+                .bodyToMono(RecommendationDTO.class)
+                .map(RecommendationDTO::recommendedAnimals)
                 .onErrorResume(e -> {
                     log.warn("FastAPI 호출 시 에러 발생: {}", e.getMessage());
                     return Mono.just(Collections.emptyList());

@@ -1,6 +1,9 @@
 package com.hong.forapw.domain.animal;
 
-import com.hong.forapw.domain.animal.model.AnimalResponse;
+import com.hong.forapw.domain.animal.model.response.FindAnimalByIdRes;
+import com.hong.forapw.domain.animal.model.response.FindAnimalListRes;
+import com.hong.forapw.domain.animal.model.response.FindLikeAnimalListRes;
+import com.hong.forapw.domain.animal.model.response.FindRecommendedAnimalListRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.entity.User;
@@ -35,27 +38,27 @@ public class AnimalController {
 
     @GetMapping("/animals/recommend")
     public ResponseEntity<?> findRecommendedAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AnimalResponse.FindRecommendedAnimalList responseDTO = animalService.findRecommendedAnimalList(getUserIdSafely(userDetails));
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimalList(getUserIdSafely(userDetails));
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals")
     public ResponseEntity<?> findAnimalList(@RequestParam String type,
                                             @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AnimalResponse.FindAnimalListDTO responseDTO = animalService.findAnimalList(type, getUserIdSafely(userDetails), pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindAnimalListRes response = animalService.findAnimalList(type, getUserIdSafely(userDetails), pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals/like")
     public ResponseEntity<?> findLikeAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AnimalResponse.FindLikeAnimalListDTO responseDTO = animalService.findLikeAnimalList(userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindLikeAnimalListRes response = animalService.findLikeAnimalList(userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals/{animalId}")
     public ResponseEntity<?> findAnimalById(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AnimalResponse.FindAnimalByIdDTO responseDTO = animalService.findAnimalById(animalId, getUserIdSafely(userDetails));
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindAnimalByIdRes response = animalService.findAnimalById(animalId, getUserIdSafely(userDetails));
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/animals/{animalId}/like")
