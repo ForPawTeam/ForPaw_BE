@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.shelter.model;
 
-
 import com.hong.forapw.domain.region.entity.RegionCode;
 import com.hong.forapw.domain.shelter.Shelter;
 

@@ -1,8 +1,8 @@
 package com.hong.forapw.domain.home;
 
+import com.hong.forapw.domain.home.model.response.FindHomeRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
-import com.hong.forapw.domain.home.model.HomeResponse;
 import com.hong.forapw.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +23,7 @@ public class HomeController {
 
     @GetMapping("/home")
     public ResponseEntity<?> findHome(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        HomeResponse.FindHomeDTO responseDTO = homeService.findHomePageData(getUserIdSafely(userDetails));
+        FindHomeRes responseDTO = homeService.findHomePageData(getUserIdSafely(userDetails));
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
