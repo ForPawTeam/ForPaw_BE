@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.user;
 
 import com.hong.forapw.domain.user.model.LoginResult;
-import com.hong.forapw.domain.user.model.TokenResponse;
+import com.hong.forapw.domain.user.model.TokenDTO;
 import com.hong.forapw.domain.user.model.request.*;
 import com.hong.forapw.domain.user.model.response.*;
 import com.hong.forapw.integration.oauth.OAuthService;
@@ -137,10 +137,10 @@ public class UserController {
 
     @PatchMapping("/auth/access")
     public ResponseEntity<?> updateAccessToken(@CookieValue String refreshToken) {
-        TokenResponse tokenResponse = userService.updateAccessToken(refreshToken);
+        TokenDTO tokenDTO = userService.updateAccessToken(refreshToken);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(tokenResponse.refreshToken()))
-                .body(ApiUtils.success(HttpStatus.OK, new AccessTokenRes(tokenResponse.accessToken())));
+                .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(tokenDTO.refreshToken()))
+                .body(ApiUtils.success(HttpStatus.OK, new AccessTokenRes(tokenDTO.accessToken())));
     }
 
     @DeleteMapping("/accounts/withdraw")

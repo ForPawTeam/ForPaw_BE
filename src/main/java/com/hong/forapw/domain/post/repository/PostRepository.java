@@ -108,7 +108,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT COUNT(p) FROM Post p WHERE p.createdDate >= :date AND p.removedAt IS NULL")
     Long countALlWithinDate(LocalDateTime date);
 
-    @Query("SELECT new com.hong.forapw.domain.post.model.PostTypeCountDTO(p.postType, COUNT(p)) " +
+    @Query("SELECT new com.hong.forapw.domain.post.model.query.PostTypeCountDTO(p.postType, COUNT(p)) " +
             "FROM Post p " +
             "WHERE p.user.id = :userId AND p.removedAt IS NULL AND p.postType IN :postTypes GROUP BY p.postType")
     List<PostTypeCountDTO> countByUserIdAndType(@Param("userId") Long userId, @Param("postTypes") List<PostType> postTypes);

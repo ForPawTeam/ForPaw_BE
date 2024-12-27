@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.inquiry;
 
-import com.hong.forapw.domain.inquiry.model.InquriyRequest;
+import com.hong.forapw.domain.inquiry.model.request.SubmitInquiryReq;
+import com.hong.forapw.domain.inquiry.model.request.UpdateInquiryReq;
 import com.hong.forapw.domain.inquiry.model.response.FindInquiryListRes;
 import com.hong.forapw.domain.inquiry.model.response.SubmitInquiryRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
@@ -20,14 +21,14 @@ public class InquiryController {
     private final InquiryService inquiryService;
 
     @PostMapping("/supports")
-    public ResponseEntity<?> submitInquiry(@RequestBody @Valid InquriyRequest.SubmitInquiry requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        SubmitInquiryRes response = inquiryService.submitInquiry(requestDTO, userDetails.user().getId());
+    public ResponseEntity<?> submitInquiry(@RequestBody @Valid SubmitInquiryReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        SubmitInquiryRes response = inquiryService.submitInquiry(request, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/supports/{inquiryId}")
-    public ResponseEntity<?> updateInquiry(@RequestBody @Valid InquriyRequest.UpdateInquiry requestDTO, @PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        inquiryService.updateInquiry(requestDTO, inquiryId, userDetails.user().getId());
+    public ResponseEntity<?> updateInquiry(@RequestBody @Valid UpdateInquiryReq request, @PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        inquiryService.updateInquiry(request, inquiryId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

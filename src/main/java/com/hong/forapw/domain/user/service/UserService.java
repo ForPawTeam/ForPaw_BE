@@ -22,6 +22,7 @@ import com.hong.forapw.domain.post.repository.CommentLikeRepository;
 import com.hong.forapw.domain.post.repository.CommentRepository;
 import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
+import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.request.*;
 import com.hong.forapw.domain.user.model.response.*;
 import com.hong.forapw.domain.user.repository.UserRepository;
@@ -219,7 +220,7 @@ public class UserService {
         user.updateProfile(request.nickName(), request.province(), request.district(), request.subDistrict(), request.profileURL());
     }
 
-    public TokenResponse updateAccessToken(String refreshToken) {
+    public TokenDTO updateAccessToken(String refreshToken) {
         Long userId = jwtUtils.getUserIdFromToken(refreshToken)
                 .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
 
@@ -370,12 +371,12 @@ public class UserService {
         return loginResult;
     }
 
-    private TokenResponse createAccessToken(User user) {
+    private TokenDTO createAccessToken(User user) {
         String refreshToken = userCacheService.getValidRefreshToken(user.getId());
         String accessToken = jwtUtils.generateAccessToken(user);
         userCacheService.storeAccessToken(user.getId(), accessToken);
 
-        return new TokenResponse(accessToken, refreshToken);
+        return new TokenDTO(accessToken, refreshToken);
     }
 
     private void checkNotLocalJoined(User user) {

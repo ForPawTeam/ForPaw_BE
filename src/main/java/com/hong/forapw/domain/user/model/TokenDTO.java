@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.user.model;
 
-public record TokenResponse(
+public record TokenDTO(
         String accessToken,
         String refreshToken
 ) {

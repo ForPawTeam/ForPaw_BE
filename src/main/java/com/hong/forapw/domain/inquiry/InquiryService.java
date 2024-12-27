@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.inquiry;
 
-import com.hong.forapw.domain.inquiry.model.InquriyRequest;
+import com.hong.forapw.domain.inquiry.model.request.SubmitInquiryReq;
+import com.hong.forapw.domain.inquiry.model.request.UpdateInquiryReq;
 import com.hong.forapw.domain.inquiry.model.response.FindInquiryListRes;
 import com.hong.forapw.domain.inquiry.model.response.SubmitInquiryRes;
 import com.hong.forapw.common.exceptions.CustomException;
@@ -15,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.hong.forapw.domain.inquiry.InquiryMapper.buildInquiry;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -26,9 +25,9 @@ public class InquiryService {
     private final UserRepository userRepository;
 
     @Transactional
-    public SubmitInquiryRes submitInquiry(InquriyRequest.SubmitInquiry requestDTO, Long userId) {
+    public SubmitInquiryRes submitInquiry(SubmitInquiryReq request, Long userId) {
         User submitter = userRepository.getReferenceById(userId);
-        Inquiry inquiry = buildInquiry(requestDTO, InquiryStatus.PROCESSING, submitter);
+        Inquiry inquiry = request.toEntity(InquiryStatus.PROCESSING, submitter);
 
         inquiryRepository.save(inquiry);
 
@@ -36,13 +35,13 @@ public class InquiryService {
     }
 
     @Transactional
-    public void updateInquiry(InquriyRequest.UpdateInquiry requestDTO, Long inquiryId, Long userId) {
+    public void updateInquiry(UpdateInquiryReq request, Long inquiryId, Long userId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
 
         checkAuthority(userId, inquiry.getQuestioner());
-        inquiry.updateInquiry(requestDTO.title(), requestDTO.description(), requestDTO.contactMail());
+        inquiry.updateInquiry(request.title(), request.description(), request.contactMail());
     }
 
     public FindInquiryListRes findInquiries(Long userId) {
