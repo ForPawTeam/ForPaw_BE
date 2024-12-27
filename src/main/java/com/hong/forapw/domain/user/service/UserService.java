@@ -116,7 +116,6 @@ public class UserService {
         userRepository.save(user);
 
         setUserStatus(user);
-        setAlarmQueue(user);
     }
 
     @Transactional
@@ -128,7 +127,6 @@ public class UserService {
         userRepository.save(user);
 
         setUserStatus(user);
-        setAlarmQueue(user);
     }
 
     @Async
@@ -383,14 +381,6 @@ public class UserService {
         if (user.isLocalJoined()) {
             throw new CustomException(ExceptionCode.JOINED_BY_LOCAL);
         }
-    }
-
-    private void setAlarmQueue(User user) {
-        String queueName = USER_QUEUE_PREFIX + user.getId();
-        String listenerId = USER_QUEUE_PREFIX + user.getId();
-
-        rabbitMqService.bindDirectExchangeToQueue(ALARM_EXCHANGE, queueName);
-        rabbitMqService.registerAlarmListener(listenerId, queueName);
     }
 
     private void checkIsGroupCreator(User user) {

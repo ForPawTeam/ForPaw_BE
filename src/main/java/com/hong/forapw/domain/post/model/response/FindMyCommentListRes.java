@@ -13,7 +13,7 @@ public record FindMyCommentListRes(
     public FindMyCommentListRes(Page<Comment> myCommentPage) {
         this(
                 myCommentPage.getContent().stream()
-                        .map(FindMyCommentListRes.MyCommentDTO::fromEntity)
+                        .map(MyCommentDTO::new)
                         .toList(),
                 myCommentPage.isLast()
         );
@@ -29,8 +29,8 @@ public record FindMyCommentListRes(
             Long commentNum,
             boolean isBlocked) {
 
-        public static MyCommentDTO fromEntity(Comment comment) {
-            return new MyCommentDTO(
+        public MyCommentDTO(Comment comment) {
+            this(
                     comment.getId(),
                     comment.getPostId(),
                     comment.getPostTypeValue(),

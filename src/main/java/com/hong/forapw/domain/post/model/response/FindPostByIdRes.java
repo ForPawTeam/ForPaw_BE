@@ -57,10 +57,10 @@ public record FindPostByIdRes(
             Province location,
             Long likeNum,
             boolean isLike,
-            List<ReplyDTO> replies) {
-
-        public static CommentDTO fromEntity(Comment comment, Long likeCount, boolean isLikedByUser) {
-            return new CommentDTO(
+            List<ReplyDTO> replies
+    ) {
+        public CommentDTO(Comment comment, Long likeCount, boolean isLikedByUser) {
+            this(
                     comment.getId(),
                     comment.getWriterNickname(),
                     comment.getWriterProfileURL(),
@@ -83,10 +83,10 @@ public record FindPostByIdRes(
             LocalDateTime date,
             Province location,
             Long likeNum,
-            boolean isLike) {
-
-        public static ReplyDTO fromEntity(Comment childComment, boolean isLikedByUser, Long likeCount) {
-            return new ReplyDTO(
+            boolean isLike
+    ) {
+        public ReplyDTO(Comment childComment, boolean isLikedByUser, Long likeCount) {
+            this(
                     childComment.getId(),
                     childComment.getWriterNickname(),
                     childComment.getWriterProfileURL(),

@@ -9,15 +9,15 @@ import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.meeting.entity.Meeting;
 import com.hong.forapw.domain.meeting.entity.MeetingUser;
-import com.hong.forapw.domain.meeting.model.MeetingRequest;
 import com.hong.forapw.domain.meeting.model.MeetingResponse;
+import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
+import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
 import com.hong.forapw.domain.meeting.repository.MeetingUserRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,9 +44,9 @@ public class MeetingService {
     private final AlarmService alarmService;
 
     @Transactional
-    public MeetingResponse.CreateMeetingDTO createMeeting(MeetingRequest.CreateMeetingDTO requestDTO, Long groupId, Long userId) {
+    public MeetingResponse.CreateMeetingDTO createMeeting(CreateMeetingReq request, Long groupId, Long userId) {
         validateGroupExists(groupId);
-        validateMeetingNameNotDuplicate(requestDTO, groupId);
+        validateMeetingNameNotDuplicate(request, groupId);
 
         User creator = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
@@ -54,10 +54,10 @@ public class MeetingService {
         validateGroupAdminAuthorization(creator, groupId);
 
         Group group = groupRepository.getReferenceById(groupId);
-        Meeting meeting = buildMeeting(requestDTO, group, creator);
+        Meeting meeting = request.toEntity(group, creator);
         addMeetingCreatorToParticipants(creator, meeting);
 
-        notifyGroupMembersAboutNewMeeting(groupId, userId, requestDTO.name());
+        notifyGroupMembersAboutNewMeeting(groupId, userId, request.name());
 
         return new MeetingResponse.CreateMeetingDTO(meeting.getId());
     }
@@ -75,17 +75,18 @@ public class MeetingService {
     }
 
     @Transactional
-    public void updateMeeting(MeetingRequest.UpdateMeetingDTO requestDTO, Long groupId, Long meetingId, Long userId) {
+    public void updateMeeting(UpdateMeetingReq request, Long groupId, Long meetingId, Long userId) {
         validateMeetingExists(meetingId);
 
-        User groupAdmin = userRepository.getReferenceById(groupId);
+        User groupAdmin = userRepository.getReferenceById(userId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
         Meeting meeting = meetingRepository.findById(meetingId).orElseThrow(
                 () -> new CustomException(ExceptionCode.MEETING_NOT_FOUND)
         );
 
-        updateMeeting(requestDTO, meeting);
+        meeting.updateMeeting(request.name(), request.meetDate(), request.location(), request.cost(), request.maxNum(),
+                request.description(), request.profileURL());
     }
 
     @Transactional
@@ -158,8 +159,8 @@ public class MeetingService {
         meeting.incrementParticipantCount();
     }
 
-    private void validateMeetingNameNotDuplicate(MeetingRequest.CreateMeetingDTO requestDTO, Long groupId) {
-        if (meetingRepository.existsByNameAndGroupId(requestDTO.name(), groupId)) {
+    private void validateMeetingNameNotDuplicate(CreateMeetingReq request, Long groupId) {
+        if (meetingRepository.existsByNameAndGroupId(request.name(), groupId)) {
             throw new CustomException(ExceptionCode.GROUP_NAME_EXIST);
         }
     }
@@ -199,18 +200,6 @@ public class MeetingService {
         if (!meetingRepository.existsById(meetingId)) {
             throw new CustomException(ExceptionCode.MEETING_NOT_FOUND);
         }
-    }
-
-    private void updateMeeting(MeetingRequest.UpdateMeetingDTO requestDTO, Meeting meeting) {
-        meeting.updateMeeting(
-                requestDTO.name(),
-                requestDTO.meetDate(),
-                requestDTO.location(),
-                requestDTO.cost(),
-                requestDTO.maxNum(),
-                requestDTO.description(),
-                requestDTO.profileURL()
-        );
     }
 
     private Map<Long, List<String>> getMeetingUserProfilesByGroupId(Long groupId) {

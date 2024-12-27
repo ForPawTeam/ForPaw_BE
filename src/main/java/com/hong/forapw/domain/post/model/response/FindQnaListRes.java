@@ -14,7 +14,7 @@ public record FindQnaListRes(
         this(
                 questionPage.getContent().stream()
                         .distinct() // 중복 제거
-                        .map(QnaDTO::fromEntity)
+                        .map(QnaDTO::new)
                         .toList(),
                 questionPage.isLast()
         );
@@ -30,8 +30,8 @@ public record FindQnaListRes(
             Long answerNum,
             boolean isBlocked) {
 
-        public static QnaDTO fromEntity(Post post) {
-            return new QnaDTO(
+        public QnaDTO(Post post) {
+            this(
                     post.getId(),
                     post.getWriterNickName(),
                     post.getWriterProfileURL(),

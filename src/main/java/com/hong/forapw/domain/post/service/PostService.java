@@ -552,13 +552,13 @@ public class PostService {
     }
 
     private void addParentComment(Comment parent, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
-        FindPostByIdRes.CommentDTO parentCommentDTO = FindPostByIdRes.CommentDTO.fromEntity(parent, likeCount, isLiked);
+        FindPostByIdRes.CommentDTO parentCommentDTO = new FindPostByIdRes.CommentDTO(parent, likeCount, isLiked);
         parentCommentMap.put(parent.getId(), parentCommentDTO);
     }
 
     private void addReplyToParent(Comment reply, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
         FindPostByIdRes.CommentDTO parentCommentDTO = parentCommentMap.get(reply.getParentId());
-        FindPostByIdRes.ReplyDTO replyDTO = FindPostByIdRes.ReplyDTO.fromEntity(reply, isLiked, likeCount);
+        FindPostByIdRes.ReplyDTO replyDTO = new FindPostByIdRes.ReplyDTO(reply, isLiked, likeCount);
         parentCommentDTO.replies().add(replyDTO);
     }
 }

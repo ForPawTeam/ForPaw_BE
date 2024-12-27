@@ -1,9 +1,10 @@
 package com.hong.forapw.domain.meeting;
 
+import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
+import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.group.service.GroupService;
-import com.hong.forapw.domain.meeting.model.MeetingRequest;
 import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,14 +29,14 @@ public class MeetingController {
     private static final String SORT_BY_ID = "id";
 
     @PostMapping("/groups/{groupId}/meetings")
-    public ResponseEntity<?> createMeeting(@RequestBody @Valid MeetingRequest.CreateMeetingDTO requestDTO, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        MeetingResponse.CreateMeetingDTO responseDTO = meetingService.createMeeting(requestDTO, groupId, userDetails.user().getId());
+    public ResponseEntity<?> createMeeting(@RequestBody @Valid CreateMeetingReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        MeetingResponse.CreateMeetingDTO responseDTO = meetingService.createMeeting(request, groupId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @PatchMapping("/groups/{groupId}/meetings/{meetingId}")
-    public ResponseEntity<?> updateMeeting(@RequestBody @Valid MeetingRequest.UpdateMeetingDTO requestDTO, @PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        meetingService.updateMeeting(requestDTO, groupId, meetingId, userDetails.user().getId());
+    public ResponseEntity<?> updateMeeting(@RequestBody @Valid UpdateMeetingReq request, @PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        meetingService.updateMeeting(request, groupId, meetingId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

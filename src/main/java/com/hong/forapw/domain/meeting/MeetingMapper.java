@@ -2,7 +2,6 @@ package com.hong.forapw.domain.meeting;
 
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.meeting.entity.Meeting;
-import com.hong.forapw.domain.meeting.model.MeetingRequest;
 import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import com.hong.forapw.domain.user.entity.User;
 
@@ -32,20 +31,6 @@ public class MeetingMapper {
         return participants.stream()
                 .map(user -> new MeetingResponse.ParticipantDTO(user.getProfileURL(), user.getNickname()))
                 .toList();
-    }
-
-    public static Meeting buildMeeting(MeetingRequest.CreateMeetingDTO requestDTO, Group group, User creator) {
-        return Meeting.builder()
-                .group(group)
-                .creator(creator)
-                .name(requestDTO.name())
-                .meetDate(requestDTO.meetDate())
-                .location(requestDTO.location())
-                .cost(requestDTO.cost())
-                .maxNum(requestDTO.maxNum())
-                .description(requestDTO.description())
-                .profileURL(requestDTO.profileURL())
-                .build();
     }
 
     public static MeetingResponse.MeetingDTO toMeetingDTO(Meeting meeting, List<String> participants) {

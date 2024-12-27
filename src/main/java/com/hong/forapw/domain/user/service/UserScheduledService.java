@@ -62,8 +62,6 @@ public class UserScheduledService {
                     .build();
             userStatusRepository.save(status);
             admin.updateStatus(status);
-
-            setAlarmQueue(admin);
         }
     }
 
@@ -92,14 +90,6 @@ public class UserScheduledService {
     public void deleteExpiredUserData() {
         LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
         userRepository.deleteBySoftDeletedBefore(sixMonthsAgo);
-    }
-
-    private void setAlarmQueue(User user) {
-        String queueName = USER_QUEUE_PREFIX + user.getId();
-        String listenerId = USER_QUEUE_PREFIX + user.getId();
-
-        brokerService.bindDirectExchangeToQueue(ALARM_EXCHANGE, queueName);
-        brokerService.registerAlarmListener(listenerId, queueName);
     }
 
     private String getPreviousHourKey() {
