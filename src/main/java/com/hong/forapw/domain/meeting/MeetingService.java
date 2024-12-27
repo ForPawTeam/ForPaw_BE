@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.meeting;
 
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.meeting.model.MeetingUserProfileDTO;
+import com.hong.forapw.domain.meeting.model.query.MeetingUserProfileDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
@@ -9,9 +9,11 @@ import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.meeting.entity.Meeting;
 import com.hong.forapw.domain.meeting.entity.MeetingUser;
-import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
 import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
+import com.hong.forapw.domain.meeting.model.response.CreateMeetingRes;
+import com.hong.forapw.domain.meeting.model.response.FindMeetingByIdRes;
+import com.hong.forapw.domain.meeting.model.response.MeetingRes;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
@@ -29,8 +31,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.domain.meeting.MeetingMapper.*;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -44,13 +44,12 @@ public class MeetingService {
     private final AlarmService alarmService;
 
     @Transactional
-    public MeetingResponse.CreateMeetingDTO createMeeting(CreateMeetingReq request, Long groupId, Long userId) {
+    public CreateMeetingRes createMeeting(CreateMeetingReq request, Long groupId, Long userId) {
         validateGroupExists(groupId);
         validateMeetingNameNotDuplicate(request, groupId);
 
-        User creator = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User creator = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
         validateGroupAdminAuthorization(creator, groupId);
 
         Group group = groupRepository.getReferenceById(groupId);
@@ -59,7 +58,7 @@ public class MeetingService {
 
         notifyGroupMembersAboutNewMeeting(groupId, userId, request.name());
 
-        return new MeetingResponse.CreateMeetingDTO(meeting.getId());
+        return new CreateMeetingRes(meeting.getId());
     }
 
     @Scheduled(cron = "0 0 0 * * *")
@@ -81,9 +80,8 @@ public class MeetingService {
         User groupAdmin = userRepository.getReferenceById(userId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
-        Meeting meeting = meetingRepository.findById(meetingId).orElseThrow(
-                () -> new CustomException(ExceptionCode.MEETING_NOT_FOUND)
-        );
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
         meeting.updateMeeting(request.name(), request.meetDate(), request.location(), request.cost(), request.maxNum(),
                 request.description(), request.profileURL());
@@ -91,9 +89,8 @@ public class MeetingService {
 
     @Transactional
     public void joinMeeting(Long groupId, Long meetingId, Long userId) {
-        Meeting meeting = meetingRepository.findById(meetingId).orElseThrow(
-                () -> new CustomException(ExceptionCode.MEETING_NOT_FOUND)
-        );
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
         validateIsGroupMember(groupId, userId);
         validateNotAlreadyParticipant(meetingId, userId);
@@ -104,9 +101,8 @@ public class MeetingService {
 
     @Transactional
     public void withdrawMeeting(Long groupId, Long meetingId, Long userId) {
-        Meeting meeting = meetingRepository.findById(meetingId).orElseThrow(
-                () -> new CustomException(ExceptionCode.MEETING_NOT_FOUND)
-        );
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
         validateIsGroupMember(groupId, userId);
         validateMeetingParticipation(meetingId, userId);
@@ -126,27 +122,26 @@ public class MeetingService {
         meetingRepository.deleteById(meetingId);
     }
 
-    public List<MeetingResponse.MeetingDTO> findMeetings(Long groupId, Pageable pageable) {
+    public List<MeetingRes> findMeetings(Long groupId, Pageable pageable) {
         Page<Meeting> meetingPage = meetingRepository.findByGroupId(groupId, pageable);
         Map<Long, List<String>> meetingUserProfiles = getMeetingUserProfilesByGroupId(groupId);
 
         return meetingPage.getContent().stream()
-                .map(meeting -> toMeetingDTO(meeting, meetingUserProfiles.getOrDefault(meeting.getId(), Collections.emptyList())))
+                .map(meeting -> MeetingRes.fromEntity(meeting, meetingUserProfiles.getOrDefault(meeting.getId(), Collections.emptyList())))
                 .toList();
     }
 
-    public MeetingResponse.FindMeetingByIdDTO findMeetingById(Long meetingId, Long groupId, Long userId) {
+    public FindMeetingByIdRes findMeetingById(Long meetingId, Long groupId, Long userId) {
         validateGroupExists(groupId);
         validateIsGroupMember(groupId, userId);
 
-        Meeting meeting = meetingRepository.findById(meetingId).orElseThrow(
-                () -> new CustomException(ExceptionCode.MEETING_NOT_FOUND)
-        );
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
         List<User> participants = meetingUserRepository.findUserByMeetingId(meeting.getId());
-        List<MeetingResponse.ParticipantDTO> participantDTOS = toParticipantDTOs(participants);
+        List<FindMeetingByIdRes.ParticipantDTO> participantDTOs = FindMeetingByIdRes.ParticipantDTO.fromEntity(participants);
 
-        return toFindMeetingByIdDTO(meeting, participantDTOS);
+        return FindMeetingByIdRes.fromEntity(meeting, participantDTOs);
     }
 
     private void addMeetingCreatorToParticipants(User creator, Meeting meeting) {

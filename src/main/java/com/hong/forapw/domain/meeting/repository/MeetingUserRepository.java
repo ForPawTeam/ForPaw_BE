@@ -1,6 +1,6 @@
 package com.hong.forapw.domain.meeting.repository;
 
-import com.hong.forapw.domain.meeting.model.MeetingUserProfileDTO;
+import com.hong.forapw.domain.meeting.model.query.MeetingUserProfileDTO;
 import com.hong.forapw.domain.meeting.entity.MeetingUser;
 import com.hong.forapw.domain.user.entity.User;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -22,7 +22,7 @@ public interface MeetingUserRepository extends JpaRepository<MeetingUser, Long> 
     @Query("SELECT gu FROM GroupUser gu WHERE gu.user.id = :userId")
     List<MeetingUser> findByUserIdWithMeeting(Long userId);
 
-    @Query("SELECT new com.hong.forapw.domain.meeting.model.MeetingUserProfileDTO(m.id, u.profileURL)" +
+    @Query("SELECT new com.hong.forapw.domain.meeting.model.query.MeetingUserProfileDTO(m.id, u.profileURL)" +
             "FROM MeetingUser mu " +
             "JOIN mu.meeting m " +
             "JOIN mu.user u " +

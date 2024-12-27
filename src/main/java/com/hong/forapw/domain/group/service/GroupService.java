@@ -9,9 +9,9 @@ import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
+import com.hong.forapw.domain.meeting.model.response.MeetingRes;
 import com.hong.forapw.domain.post.model.request.PostImageDTO;
 import com.hong.forapw.domain.post.repository.*;
-import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.meeting.MeetingService;
 import com.hong.forapw.domain.meeting.repository.MeetingUserRepository;
@@ -37,13 +37,10 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-
-import java.util.stream.Collectors;
 
 import static com.hong.forapw.domain.group.GroupMapper.*;
 
@@ -197,7 +194,7 @@ public class GroupService {
 
         return joinedGroups.stream()
                 .map(group -> toMyGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public GroupResponse.FindGroupDetailByIdDTO findGroupDetailById(Long userId, Long groupId) {
@@ -205,11 +202,11 @@ public class GroupService {
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        List<MeetingResponse.MeetingDTO> meetingDTOS = meetingService.findMeetings(groupId, DEFAULT_PAGE_REQUEST);
-        List<GroupResponse.NoticeDTO> noticeDTOS = findNotices(userId, groupId, DEFAULT_PAGE_REQUEST);
-        List<GroupResponse.MemberDTO> memberDTOS = findMembers(groupId);
+        List<MeetingRes> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGE_REQUEST);
+        List<GroupResponse.NoticeDTO> noticeDTOs = findNotices(userId, groupId, DEFAULT_PAGE_REQUEST);
+        List<GroupResponse.MemberDTO> memberDTOs = findMembers(groupId);
 
-        return new GroupResponse.FindGroupDetailByIdDTO(group.getProfileURL(), group.getName(), group.getDescription(), noticeDTOS, meetingDTOS, memberDTOS);
+        return new GroupResponse.FindGroupDetailByIdDTO(group.getProfileURL(), group.getName(), group.getDescription(), noticeDTOs, meetingDTOs, memberDTOs);
     }
 
     public List<GroupResponse.NoticeDTO> findNotices(Long userId, Long groupId, Pageable pageable) {

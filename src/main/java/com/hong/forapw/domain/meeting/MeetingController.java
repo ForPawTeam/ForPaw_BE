@@ -2,10 +2,13 @@ package com.hong.forapw.domain.meeting;
 
 import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
 import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
+import com.hong.forapw.domain.meeting.model.response.CreateMeetingRes;
+import com.hong.forapw.domain.meeting.model.response.FindMeetingByIdRes;
+import com.hong.forapw.domain.meeting.model.response.FindMeetingListRes;
+import com.hong.forapw.domain.meeting.model.response.MeetingRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.group.service.GroupService;
-import com.hong.forapw.domain.meeting.model.MeetingResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -30,8 +33,8 @@ public class MeetingController {
 
     @PostMapping("/groups/{groupId}/meetings")
     public ResponseEntity<?> createMeeting(@RequestBody @Valid CreateMeetingReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        MeetingResponse.CreateMeetingDTO responseDTO = meetingService.createMeeting(request, groupId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreateMeetingRes response = meetingService.createMeeting(request, groupId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/groups/{groupId}/meetings/{meetingId}")
@@ -60,16 +63,16 @@ public class MeetingController {
 
     @GetMapping("/groups/{groupId}/meetings/{meetingId}")
     public ResponseEntity<?> findMeetingById(@PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        MeetingResponse.FindMeetingByIdDTO responseDTO = meetingService.findMeetingById(meetingId, groupId, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindMeetingByIdRes response = meetingService.findMeetingById(meetingId, groupId, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/groups/{groupId}/meetings")
     public ResponseEntity<?> findMeetingList(@PathVariable Long groupId,
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         groupService.checkGroupAndIsMember(groupId, userDetails.user().getId());
-        List<MeetingResponse.MeetingDTO> meetingDTOS = meetingService.findMeetings(groupId, pageable);
-        MeetingResponse.FindMeetingListDTO responseDTO = new MeetingResponse.FindMeetingListDTO(meetingDTOS);
+        List<MeetingRes> meetingDTOS = meetingService.findMeetings(groupId, pageable);
+        FindMeetingListRes responseDTO = new FindMeetingListRes(meetingDTOS);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 }

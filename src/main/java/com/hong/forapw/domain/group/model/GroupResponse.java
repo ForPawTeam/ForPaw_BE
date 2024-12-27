@@ -1,9 +1,9 @@
 package com.hong.forapw.domain.group.model;
 
+import com.hong.forapw.domain.meeting.model.response.MeetingRes;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.region.constant.Province;
-import com.hong.forapw.domain.meeting.model.MeetingResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -92,7 +92,7 @@ public class GroupResponse {
                                          String name,
                                          String description,
                                          List<NoticeDTO> notices,
-                                         List<MeetingResponse.MeetingDTO> meetings,
+                                         List<MeetingRes> meetings,
                                          List<MemberDTO> members) {
     }
 
