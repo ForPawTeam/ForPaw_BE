@@ -30,7 +30,7 @@ import com.hong.forapw.domain.user.constant.UserRole;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.ChatUserRepository;
 import com.hong.forapw.domain.user.repository.UserRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.domain.like.LikeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -65,7 +65,7 @@ public class GroupService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatUserRepository chatUserRepository;
     private final UserRepository userRepository;
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
     private final LikeService likeService;
     private final MeetingService meetingService;
     private final GroupCacheService groupCacheService;

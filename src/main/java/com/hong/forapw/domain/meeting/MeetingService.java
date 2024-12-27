@@ -17,7 +17,7 @@ import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
 import com.hong.forapw.domain.meeting.repository.MeetingUserRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,7 +41,7 @@ public class MeetingService {
     private final MeetingUserRepository meetingUserRepository;
     private final GroupUserRepository groupUserRepository;
     private final GroupRepository groupRepository;
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
 
     @Transactional
     public MeetingResponse.CreateMeetingDTO createMeeting(MeetingRequest.CreateMeetingDTO requestDTO, Long groupId, Long userId) {

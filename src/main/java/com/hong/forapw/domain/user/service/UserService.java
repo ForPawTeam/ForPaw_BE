@@ -29,7 +29,7 @@ import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.integration.email.model.BlankTemplate;
 import com.hong.forapw.integration.email.model.EmailVerificationTemplate;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.integration.email.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +69,7 @@ public class UserService {
     private final VisitRepository visitRepository;
     private final FavoriteAnimalRepository favoriteAnimalRepository;
     private final FavoriteGroupRepository favoriteGroupRepository;
-    private final RabbitMqUtils rabbitMqUtils;
+    private final RabbitMqService rabbitMqService;
     private final EmailService emailService;
     private final UserCacheService userCacheService;
     private final JwtUtils jwtUtils;
@@ -389,8 +389,8 @@ public class UserService {
         String queueName = USER_QUEUE_PREFIX + user.getId();
         String listenerId = USER_QUEUE_PREFIX + user.getId();
 
-        rabbitMqUtils.bindDirectExchangeToQueue(ALARM_EXCHANGE, queueName);
-        rabbitMqUtils.registerAlarmListener(listenerId, queueName);
+        rabbitMqService.bindDirectExchangeToQueue(ALARM_EXCHANGE, queueName);
+        rabbitMqService.registerAlarmListener(listenerId, queueName);
     }
 
     private void checkIsGroupCreator(User user) {

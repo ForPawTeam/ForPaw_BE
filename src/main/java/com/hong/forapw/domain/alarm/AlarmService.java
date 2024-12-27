@@ -1,14 +1,14 @@
 package com.hong.forapw.domain.alarm;
 
 import com.hong.forapw.domain.alarm.model.AlarmDTO;
-import com.hong.forapw.domain.alarm.model.AlarmResponse;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.alarm.entity.Alarm;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
+import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
 import com.hong.forapw.domain.alarm.repository.AlarmRepository;
 import com.hong.forapw.domain.alarm.repository.EmitterRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,8 +20,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.hong.forapw.domain.alarm.AlarmMapper.toAlarmDTO;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -30,7 +28,7 @@ public class AlarmService {
 
     private final AlarmRepository alarmRepository;
     private final EmitterRepository emitterRepository;
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60;
     private static final String SSE_EVENT_NAME = "sse";
@@ -66,17 +64,17 @@ public class AlarmService {
         brokerService.sendAlarmToUser(userId, alarmDTO);
     }
 
-    public AlarmResponse.FindAlarmListDTO findAlarms(Long userId) {
+    public FindAlarmListRes findAlarms(Long userId) {
         List<Alarm> alarms = alarmRepository.findByReceiverId(userId);
         if (alarms.isEmpty()) {
             throw new CustomException(ExceptionCode.ALARM_NOT_EXIST);
         }
 
-        List<AlarmResponse.AlarmDTO> alarmDTOS = alarms.stream()
-                .map(AlarmMapper::toAlarmDTO)
+        List<FindAlarmListRes.AlarmDTO> alarmDTOS = alarms.stream()
+                .map(FindAlarmListRes.AlarmDTO::new)
                 .toList();
 
-        return new AlarmResponse.FindAlarmListDTO(alarmDTOS);
+        return new FindAlarmListRes(alarmDTOS);
     }
 
     @Transactional

@@ -7,7 +7,7 @@ import com.hong.forapw.domain.user.entity.UserStatus;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.admin.repository.VisitRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.integration.redis.RedisService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.Set;
 public class UserScheduledService {
 
     private final PasswordEncoder passwordEncoder;
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
     private final RedisService redisService;
     private final UserRepository userRepository;
     private final VisitRepository visitRepository;

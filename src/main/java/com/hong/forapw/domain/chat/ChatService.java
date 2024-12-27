@@ -14,7 +14,7 @@ import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.ChatUserRepository;
 import com.hong.forapw.domain.chat.repository.MessageRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +28,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.hong.forapw.domain.chat.ChatMapper.*;
 
@@ -41,7 +40,7 @@ public class ChatService {
     private final ChatUserRepository chatUserRepository;
     private final UserRepository userRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
 
     private static final String SORT_BY_MESSAGE_DATE = "date";
     private static final String URL_REGEX = "(https?://[\\w\\-\\._~:/?#\\[\\]@!$&'()*+,;=%]+)";

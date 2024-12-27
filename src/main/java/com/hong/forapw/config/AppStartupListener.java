@@ -1,6 +1,6 @@
 package com.hong.forapw.config;
 
-import com.hong.forapw.integration.rabbitmq.RabbitMqUtils;
+import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.domain.user.service.UserScheduledService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AppStartupListener implements ApplicationListener<ApplicationReadyEvent> {
 
-    private final RabbitMqUtils brokerService;
+    private final RabbitMqService brokerService;
     private final UserScheduledService userScheduledTaskService;
 
     @Override

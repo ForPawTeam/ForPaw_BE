@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.alarm;
 
-import com.hong.forapw.domain.alarm.model.AlarmResponse;
 import com.hong.forapw.domain.alarm.model.request.ReadAlarmReq;
+import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
@@ -27,7 +27,7 @@ public class AlarmController {
 
     @GetMapping("/alarms")
     public ResponseEntity<?> findAlarmList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AlarmResponse.FindAlarmListDTO responseDTO = alarmService.findAlarms(userDetails.user().getId());
+        FindAlarmListRes responseDTO = alarmService.findAlarms(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 

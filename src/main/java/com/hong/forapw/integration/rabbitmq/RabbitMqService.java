@@ -1,7 +1,7 @@
 package com.hong.forapw.integration.rabbitmq;
 
 import com.hong.forapw.domain.alarm.model.AlarmDTO;
-import com.hong.forapw.domain.alarm.model.AlarmResponse;
+import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
 import com.hong.forapw.domain.alarm.repository.EmitterRepository;
 import com.hong.forapw.domain.chat.model.ChatRequest;
 import com.hong.forapw.domain.alarm.entity.Alarm;
@@ -31,13 +31,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.hong.forapw.domain.alarm.AlarmMapper.toAlarmDTO;
 import static com.hong.forapw.integration.rabbitmq.RabbitMqMapper.*;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class RabbitMqUtils {
+public class RabbitMqService {
 
     private final AlarmRepository alarmRepository;
     private final ChatRoomRepository chatRoomRepository;
@@ -190,7 +189,7 @@ public class RabbitMqUtils {
     }
 
     private void emitAlarmToEmitter(SseEmitter emitter, String emitterId, Alarm alarm, String eventId) {
-        AlarmResponse.AlarmDTO alarmDTO = toAlarmDTO(alarm, false);
+        FindAlarmListRes.AlarmDTO alarmDTO = new FindAlarmListRes.AlarmDTO(alarm, false);
         emitAlarmEvent(emitter, eventId, emitterId, alarmDTO);
     }
 
