@@ -1,8 +1,8 @@
 package com.hong.forapw.domain.inquiry;
 
-import com.hong.forapw.domain.inquiry.model.InquiryResponse;
 import com.hong.forapw.domain.inquiry.model.InquriyRequest;
-import com.hong.forapw.domain.user.model.UserResponse;
+import com.hong.forapw.domain.inquiry.model.response.FindInquiryListRes;
+import com.hong.forapw.domain.inquiry.model.response.SubmitInquiryRes;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.inquiry.entity.Inquiry;
@@ -26,13 +26,13 @@ public class InquiryService {
     private final UserRepository userRepository;
 
     @Transactional
-    public InquiryResponse.SubmitInquiryDTO submitInquiry(InquriyRequest.SubmitInquiry requestDTO, Long userId) {
+    public SubmitInquiryRes submitInquiry(InquriyRequest.SubmitInquiry requestDTO, Long userId) {
         User submitter = userRepository.getReferenceById(userId);
         Inquiry inquiry = buildInquiry(requestDTO, InquiryStatus.PROCESSING, submitter);
 
         inquiryRepository.save(inquiry);
 
-        return new InquiryResponse.SubmitInquiryDTO(inquiry.getId());
+        return new SubmitInquiryRes(inquiry.getId());
     }
 
     @Transactional
@@ -45,13 +45,13 @@ public class InquiryService {
         inquiry.updateInquiry(requestDTO.title(), requestDTO.description(), requestDTO.contactMail());
     }
 
-    public InquiryResponse.FindInquiryListDTO findInquiries(Long userId) {
+    public FindInquiryListRes findInquiries(Long userId) {
         List<Inquiry> inquiries = inquiryRepository.findAllByQuestionerId(userId);
-        List<UserResponse.InquiryDTO> inquiryDTOS = inquiries.stream()
-                .map(InquiryMapper::toInquiryDTO)
+        List<FindInquiryListRes.InquiryDTO> inquiryDTOS = inquiries.stream()
+                .map(FindInquiryListRes.InquiryDTO::fromEntity)
                 .toList();
 
-        return new InquiryResponse.FindInquiryListDTO(inquiryDTOS);
+        return new FindInquiryListRes(inquiryDTOS);
     }
 
     private void checkAuthority(Long userId, User writer) {

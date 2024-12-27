@@ -2,8 +2,8 @@ package com.hong.forapw.domain.user;
 
 import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.TokenResponse;
-import com.hong.forapw.domain.user.model.UserResponse;
 import com.hong.forapw.domain.user.model.request.*;
+import com.hong.forapw.domain.user.model.response.*;
 import com.hong.forapw.integration.oauth.OAuthService;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.security.jwt.JwtUtils;
@@ -39,7 +39,7 @@ public class UserController {
         LoginResult loginResult = userService.login(request, servletRequest);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(loginResult.refreshToken()))
-                .body(ApiUtils.success(HttpStatus.OK, new UserResponse.LoginDTO(loginResult.accessToken())));
+                .body(ApiUtils.success(HttpStatus.OK, new LoginRes(loginResult.accessToken())));
     }
 
     @GetMapping("/auth/login/kakao")
@@ -68,15 +68,15 @@ public class UserController {
 
     @PostMapping("/accounts/check/email")
     public ResponseEntity<?> checkEmailAndSendCode(@RequestBody @Valid EmailReq request) {
-        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(request.email());
-        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_JOIN);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CheckAccountExistRes response = userService.checkAccountExist(request.email());
+        if (response.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_JOIN);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/accounts/verify/code")
     public ResponseEntity<?> verifyCode(@RequestBody @Valid VerifyCodeReq request, @RequestParam String codeType) {
-        UserResponse.VerifyEmailCodeDTO responseDTO = userService.verifyCode(request, codeType);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        VerifyEmailCodeRes response = userService.verifyCode(request, codeType);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/accounts/resend/code")
@@ -87,22 +87,22 @@ public class UserController {
 
     @PostMapping("/accounts/check/nick")
     public ResponseEntity<?> checkNickname(@RequestBody @Valid CheckNickReq request) {
-        UserResponse.CheckNickNameDTO responseDTO = userService.checkNickName(request);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CheckNickNameRes response = userService.checkNickName(request);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/accounts/withdraw/code")
     public ResponseEntity<?> sendCodeForWithdraw(@RequestBody @Valid EmailReq request) {
-        UserResponse.CheckAccountExistDTO responseDTO = userService.checkAccountExist(request.email());
-        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_WITHDRAW);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CheckAccountExistRes response = userService.checkAccountExist(request.email());
+        if (response.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_WITHDRAW);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/accounts/recovery/code")
     public ResponseEntity<?> sendCodeForRecovery(@RequestBody @Valid EmailReq request) {
-        UserResponse.CheckLocalAccountExistDTO responseDTO = userService.checkLocalAccountExist(request);
-        if (responseDTO.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_RECOVERY);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CheckLocalAccountExistRes response = userService.checkLocalAccountExist(request);
+        if (response.isValid()) userService.sendCodeByEmail(request.email(), CODE_TYPE_RECOVERY);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/accounts/recovery/reset")
@@ -113,8 +113,8 @@ public class UserController {
 
     @PostMapping("/accounts/password/verify")
     public ResponseEntity<?> verifyPassword(@RequestBody @Valid CurPasswordReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.VerifyPasswordDTO responseDTO = userService.verifyPassword(request, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        VerifyPasswordRes response = userService.verifyPassword(request, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/accounts/password")
@@ -125,8 +125,8 @@ public class UserController {
 
     @GetMapping("/accounts/profile")
     public ResponseEntity<?> findProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.ProfileDTO responseDTO = userService.findProfile(userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        ProfileRes response = userService.findProfile(userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/accounts/profile")
@@ -140,7 +140,7 @@ public class UserController {
         TokenResponse tokenResponse = userService.updateAccessToken(refreshToken);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(tokenResponse.refreshToken()))
-                .body(ApiUtils.success(HttpStatus.OK, new UserResponse.AccessTokenDTO(tokenResponse.accessToken())));
+                .body(ApiUtils.success(HttpStatus.OK, new AccessTokenRes(tokenResponse.accessToken())));
     }
 
     @DeleteMapping("/accounts/withdraw")
@@ -151,13 +151,13 @@ public class UserController {
 
     @PostMapping("/validate/accessToken")
     public ResponseEntity<?> validateAccessToken(@CookieValue String accessToken) {
-        UserResponse.ValidateAccessTokenDTO responseDTO = userService.validateAccessToken(accessToken);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        ValidateAccessTokenRes response = userService.validateAccessToken(accessToken);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/communityStats")
     public ResponseEntity<?> findCommunityStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        UserResponse.FindCommunityRecord responseDTO = userService.findCommunityStats(userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindCommunityRecordRes response = userService.findCommunityStats(userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }

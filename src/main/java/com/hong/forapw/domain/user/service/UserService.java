@@ -23,6 +23,7 @@ import com.hong.forapw.domain.post.repository.CommentRepository;
 import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
 import com.hong.forapw.domain.user.model.request.*;
+import com.hong.forapw.domain.user.model.response.*;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.integration.email.model.BlankTemplate;
@@ -42,7 +43,6 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.domain.user.UserMapper.*;
 import static com.hong.forapw.integration.email.EmailService.generateVerificationCode;
 import static com.hong.forapw.integration.email.EmailTemplate.ACCOUNT_SUSPENSION;
 import static com.hong.forapw.integration.email.EmailTemplate.VERIFICATION_CODE;
@@ -141,30 +141,30 @@ public class UserService {
         emailService.sendMail(email, VERIFICATION_CODE.getSubject(), MAIL_TEMPLATE_FOR_CODE, templateModel);
     }
 
-    public UserResponse.VerifyEmailCodeDTO verifyCode(VerifyCodeReq request, String codeType) {
+    public VerifyEmailCodeRes verifyCode(VerifyCodeReq request, String codeType) {
         if (userCacheService.isCodeMismatch(request.email(), request.code(), codeType))
-            return new UserResponse.VerifyEmailCodeDTO(false);
+            return new VerifyEmailCodeRes(false);
 
         if (CODE_TYPE_RECOVERY.equals(codeType))
             userCacheService.storeCodeToEmail(request.code(), request.email());
 
-        return new UserResponse.VerifyEmailCodeDTO(true);
+        return new VerifyEmailCodeRes(true);
     }
 
-    public UserResponse.CheckNickNameDTO checkNickName(CheckNickReq request) {
+    public CheckNickNameRes checkNickName(CheckNickReq request) {
         boolean isDuplicate = userRepository.existsByNicknameWithRemoved(request.nickName());
-        return new UserResponse.CheckNickNameDTO(isDuplicate);
+        return new CheckNickNameRes(isDuplicate);
     }
 
-    public UserResponse.CheckLocalAccountExistDTO checkLocalAccountExist(EmailReq requestDTO) {
+    public CheckLocalAccountExistRes checkLocalAccountExist(EmailReq requestDTO) {
         return userRepository.findByEmail(requestDTO.email())
-                .map(user -> new UserResponse.CheckLocalAccountExistDTO(true, user.isLocalJoined()))
-                .orElse(new UserResponse.CheckLocalAccountExistDTO(false, false));
+                .map(user -> new CheckLocalAccountExistRes(true, user.isLocalJoined()))
+                .orElse(new CheckLocalAccountExistRes(false, false));
     }
 
-    public UserResponse.CheckAccountExistDTO checkAccountExist(String email) {
+    public CheckAccountExistRes checkAccountExist(String email) {
         boolean isValid = userRepository.existsByEmail(email);
-        return new UserResponse.CheckAccountExistDTO(isValid);
+        return new CheckAccountExistRes(isValid);
     }
 
     @Transactional
@@ -178,16 +178,16 @@ public class UserService {
         updateNewPassword(email, request.newPassword());
     }
 
-    public UserResponse.VerifyPasswordDTO verifyPassword(CurPasswordReq request, Long userId) {
+    public VerifyPasswordRes verifyPassword(CurPasswordReq request, Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
         if (isPasswordUnmatched(user, request.password())) {
-            return new UserResponse.VerifyPasswordDTO(false);
+            return new VerifyPasswordRes(false);
         }
 
-        return new UserResponse.VerifyPasswordDTO(true);
+        return new VerifyPasswordRes(true);
     }
 
     @Transactional
@@ -202,12 +202,11 @@ public class UserService {
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 
-    public UserResponse.ProfileDTO findProfile(Long userId) {
+    public ProfileRes findProfile(Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
-
-        return toProfileDTO(user);
+        return new ProfileRes(user);
     }
 
     @Transactional
@@ -249,17 +248,17 @@ public class UserService {
         userRepository.markAsRemovedById(userId);
     }
 
-    public UserResponse.ValidateAccessTokenDTO validateAccessToken(String accessToken) {
+    public ValidateAccessTokenRes validateAccessToken(String accessToken) {
         Long userId = jwtUtils.getUserIdFromToken(accessToken)
                 .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
 
         userCacheService.validateAccessToken(accessToken, userId);
 
         String profile = userRepository.findProfileById(userId).orElse(null);
-        return new UserResponse.ValidateAccessTokenDTO(profile);
+        return new ValidateAccessTokenRes(profile);
     }
 
-    public UserResponse.FindCommunityRecord findCommunityStats(Long userId) {
+    public FindCommunityRecordRes findCommunityStats(Long userId) {
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -274,7 +273,7 @@ public class UserService {
         Long answerNum = postCountMap.getOrDefault(PostType.ANSWER, 0L);
         Long commentNum = commentRepository.countByUserId(userId);
 
-        return new UserResponse.FindCommunityRecord(user.getNickname(), user.getEmail(), adoptionNum + fosteringNum, commentNum, questionNum, answerNum);
+        return new FindCommunityRecordRes(user, adoptionNum + fosteringNum, commentNum, questionNum, answerNum);
     }
 
     public LoginResult processSocialLogin(String email, HttpServletRequest request) {

@@ -1,7 +1,8 @@
 package com.hong.forapw.domain.inquiry;
 
-import com.hong.forapw.domain.inquiry.model.InquiryResponse;
 import com.hong.forapw.domain.inquiry.model.InquriyRequest;
+import com.hong.forapw.domain.inquiry.model.response.FindInquiryListRes;
+import com.hong.forapw.domain.inquiry.model.response.SubmitInquiryRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
@@ -20,8 +21,8 @@ public class InquiryController {
 
     @PostMapping("/supports")
     public ResponseEntity<?> submitInquiry(@RequestBody @Valid InquriyRequest.SubmitInquiry requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        InquiryResponse.SubmitInquiryDTO responseDTO = inquiryService.submitInquiry(requestDTO, userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        SubmitInquiryRes response = inquiryService.submitInquiry(requestDTO, userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/supports/{inquiryId}")
@@ -32,7 +33,7 @@ public class InquiryController {
 
     @GetMapping("/supports")
     public ResponseEntity<?> findInquiryList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        InquiryResponse.FindInquiryListDTO responseDTO = inquiryService.findInquiries(userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindInquiryListRes response = inquiryService.findInquiries(userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }
