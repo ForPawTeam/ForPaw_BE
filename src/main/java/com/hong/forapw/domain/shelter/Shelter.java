@@ -1,5 +1,7 @@
 package com.hong.forapw.domain.shelter;
 
+import com.hong.forapw.domain.region.constant.District;
+import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.region.entity.RegionCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -55,5 +57,13 @@ public class Shelter {
 
     public void updateAnimalCount(Long animalCnt) {
         this.animalCnt = animalCnt;
+    }
+
+    public Province getUprName(){
+        return regionCode.getUprName();
+    }
+
+    public District getOrgName(){
+        return regionCode.getOrgName();
     }
 }

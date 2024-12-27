@@ -1,6 +1,9 @@
 package com.hong.forapw.domain.shelter;
 
-import com.hong.forapw.domain.shelter.model.ShelterResponse;
+import com.hong.forapw.domain.shelter.model.response.FindShelterAnimalsByIdRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterInfoByIdRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterListRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterListWithAddrRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.entity.User;
@@ -32,27 +35,27 @@ public class ShelterController {
 
     @GetMapping("/shelters")
     public ResponseEntity<?> findShelterList() {
-        ShelterResponse.FindShelterListDTO responseDTO = shelterService.findActiveShelters();
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.CREATED, responseDTO));
+        FindShelterListRes response = shelterService.findActiveShelters();
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.CREATED, response));
     }
 
     @GetMapping("/shelters/{shelterId}/info")
     public ResponseEntity<?> findShelterInfoById(@PathVariable Long shelterId) {
-        ShelterResponse.FindShelterInfoByIdDTO responseDTO = shelterService.findShelterInfoById(shelterId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindShelterInfoByIdRes response = shelterService.findShelterInfoById(shelterId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/shelters/{shelterId}/animals")
     public ResponseEntity<?> findShelterAnimalsById(@PathVariable Long shelterId, @RequestParam String type,
                                                     @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ShelterResponse.FindShelterAnimalsByIdDTO responseDTO = shelterService.findAnimalsByShelter(shelterId, getUserIdSafely(userDetails), type, pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindShelterAnimalsByIdRes response = shelterService.findAnimalsByShelter(shelterId, getUserIdSafely(userDetails), type, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/shelters/addr")
     public ResponseEntity<?> findShelterListWithAddr() {
-        ShelterResponse.FindShelterListWithAddr responseDTO = shelterService.findShelterListWithAddress();
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindShelterListWithAddrRes response = shelterService.findShelterListWithAddress();
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     private Long getUserIdSafely(CustomUserDetails userDetails) {

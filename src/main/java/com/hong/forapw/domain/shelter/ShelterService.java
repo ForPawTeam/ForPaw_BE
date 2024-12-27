@@ -7,18 +7,19 @@ import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.common.utils.JsonParser;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.animal.constant.AnimalType;
-import com.hong.forapw.domain.region.constant.District;
-import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.region.entity.RegionCode;
 import com.hong.forapw.domain.animal.repository.AnimalRepository;
 import com.hong.forapw.domain.animal.repository.FavoriteAnimalRepository;
 import com.hong.forapw.domain.region.RegionCodeRepository;
+import com.hong.forapw.domain.shelter.model.response.FindShelterAnimalsByIdRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterInfoByIdRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterListRes;
+import com.hong.forapw.domain.shelter.model.response.FindShelterListWithAddrRes;
 import com.hong.forapw.integration.redis.RedisService;
 import com.hong.forapw.integration.geocoding.model.Coordinates;
 import com.hong.forapw.integration.geocoding.service.GeocodingService;
 import com.hong.forapw.integration.geocoding.service.GoogleGeocodingService;
-import com.hong.forapw.domain.shelter.model.ShelterDTO;
-import com.hong.forapw.domain.shelter.model.ShelterResponse;
+import com.hong.forapw.domain.shelter.model.PublicShelterDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,13 +36,10 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
 import static com.hong.forapw.common.utils.UriUtils.buildShelterOpenApiURI;
-import static com.hong.forapw.domain.shelter.ShelterMapper.toAnimalDTO;
-import static com.hong.forapw.domain.shelter.ShelterMapper.toFindShelterInfoDTO;
 
 @Service
 @RequiredArgsConstructor
@@ -93,46 +91,42 @@ public class ShelterService {
         updateShelterAddressByGoogle();
     }
 
-    public ShelterResponse.FindShelterListDTO findActiveShelters() {
+    public FindShelterListRes findActiveShelters() {
         List<Shelter> shelters = shelterRepository.findAllWithAnimalAndLatitude();
 
-        List<ShelterResponse.ShelterDTO> shelterDTOS = shelters.stream()
-                .map(ShelterMapper::toShelterDTO)
+        List<FindShelterListRes.ShelterDTO> shelterDTOS = shelters.stream()
+                .map(FindShelterListRes.ShelterDTO::fromEntity)
                 .toList();
 
-        return new ShelterResponse.FindShelterListDTO(shelterDTOS);
+        return new FindShelterListRes(shelterDTOS);
     }
 
-    public ShelterResponse.FindShelterInfoByIdDTO findShelterInfoById(Long shelterId) {
+    public FindShelterInfoByIdRes findShelterInfoById(Long shelterId) {
         Shelter shelter = shelterRepository.findById(shelterId).orElseThrow(
                 () -> new CustomException(ExceptionCode.SHELTER_NOT_FOUND)
         );
 
-        return toFindShelterInfoDTO(shelter);
+        return FindShelterInfoByIdRes.fromEntity(shelter);
     }
 
-    public ShelterResponse.FindShelterAnimalsByIdDTO findAnimalsByShelter(Long shelterId, Long userId, String type, Pageable pageable) {
+    public FindShelterAnimalsByIdRes findAnimalsByShelter(Long shelterId, Long userId, String type, Pageable pageable) {
         List<Long> userLikedAnimalIds = findUserLikedAnimalIds(userId);
 
         Page<Animal> animalPage = animalRepository.findByShelterIdAndType(AnimalType.fromString(type), shelterId, pageable);
-        List<ShelterResponse.AnimalDTO> animalDTOS = animalPage.getContent().stream()
+        List<FindShelterAnimalsByIdRes.AnimalDTO> animalDTOS = animalPage.getContent().stream()
                 .map(animal -> {
                     Long likeNum = getCachedLikeNum(animal.getId());
                     boolean isLikedAnimal = userLikedAnimalIds.contains(animal.getId());
-                    return toAnimalDTO(animal, isLikedAnimal, likeNum);
+                    return FindShelterAnimalsByIdRes.AnimalDTO.fromEntity(animal, isLikedAnimal, likeNum);
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        return new ShelterResponse.FindShelterAnimalsByIdDTO(animalDTOS, isLastPage(animalPage));
+        return new FindShelterAnimalsByIdRes(animalDTOS, isLastPage(animalPage));
     }
 
-    public ShelterResponse.FindShelterListWithAddr findShelterListWithAddress() {
+    public FindShelterListWithAddrRes findShelterListWithAddress() {
         List<Shelter> shelters = shelterRepository.findAll();
-
-        Map<Province, Map<District, List<Shelter>>> groupedShelters = groupSheltersByProvinceAndDistrict(shelters);
-        Map<String, List<ShelterResponse.DistrictDTO>> responseMap = createShlelterResponseMap(groupedShelters);
-
-        return new ShelterResponse.FindShelterListWithAddr(responseMap);
+        return FindShelterListWithAddrRes.fromShelters(shelters);
     }
 
     private void updateShelterByAnimalData(String animalJson, Shelter shelter) {
@@ -205,37 +199,29 @@ public class ShelterService {
         return Mono.fromCallable(() -> parseJsonToItemDTO(response))
                 .flatMapMany(Flux::fromIterable)
                 .filter(itemDTO -> isNewShelter(itemDTO, savedShelterIds))
-                .map(itemDTO -> createShelter(itemDTO, regionCode))
+                .map(itemDTO -> itemDTO.toEntity(regionCode))
                 .onErrorResume(e -> {
                     log.warn("보호소 데이터를 패치해오는 과정 중 파싱에서 에러 발생, regionCode {}: {}", regionCode, e.getMessage());
                     return Flux.empty();
                 });
     }
 
-    private List<ShelterDTO.itemDTO> parseJsonToItemDTO(String response) {
-        return jsonParser.parse(response, ShelterDTO.class)
+    private List<PublicShelterDTO.itemDTO> parseJsonToItemDTO(String response) {
+        return jsonParser.parse(response, PublicShelterDTO.class)
                 .map(this::extractShelterItemDTOS)
                 .orElse(Collections.emptyList());
     }
 
-    private List<ShelterDTO.itemDTO> extractShelterItemDTOS(ShelterDTO shelterDTO) {
+    private List<PublicShelterDTO.itemDTO> extractShelterItemDTOS(PublicShelterDTO shelterDTO) {
         return Optional.ofNullable(shelterDTO.response())
-                .map(ShelterDTO.ResponseDTO::body)
-                .map(ShelterDTO.BodyDTO::items)
-                .map(ShelterDTO.ItemsDTO::item)
+                .map(PublicShelterDTO.ResponseDTO::body)
+                .map(PublicShelterDTO.BodyDTO::items)
+                .map(PublicShelterDTO.ItemsDTO::item)
                 .orElse(Collections.emptyList());
     }
 
-    private boolean isNewShelter(ShelterDTO.itemDTO itemDTO, List<Long> existShelterIds) {
+    private boolean isNewShelter(PublicShelterDTO.itemDTO itemDTO, List<Long> existShelterIds) {
         return !existShelterIds.contains(itemDTO.careRegNo());
-    }
-
-    private Shelter createShelter(ShelterDTO.itemDTO itemDTO, RegionCode regionCode) {
-        return Shelter.builder()
-                .regionCode(regionCode)
-                .id(itemDTO.careRegNo())
-                .name(itemDTO.careNm())
-                .build();
     }
 
     private Long getCachedLikeNum(Long key) {
@@ -246,42 +232,6 @@ public class ShelterService {
         }
 
         return likeNum;
-    }
-
-
-     // Shelter 리스트를 Province와 District 기준으로 그룹화
-    private Map<Province, Map<District, List<Shelter>>> groupSheltersByProvinceAndDistrict(List<Shelter> shelters) {
-        return shelters.stream()
-                .collect(Collectors.groupingBy(
-                        shelter -> shelter.getRegionCode().getUprName(),
-                        Collectors.groupingBy(
-                                shelter -> shelter.getRegionCode().getOrgName()
-                        )
-                ));
-    }
-
-     // Province-District-Shelter 구조의 맵을 응답 데이터 구조(Map<String, List<DistrictDTO>>)로 변환
-    private Map<String, List<ShelterResponse.DistrictDTO>> createShlelterResponseMap(
-            Map<Province, Map<District, List<Shelter>>> groupedShelters) {
-        return groupedShelters.entrySet().stream()
-                .collect(Collectors.toMap(
-                        provinceEntry -> provinceEntry.getKey().name(),
-                        provinceEntry -> convertToDistrictDTOList(provinceEntry.getValue())
-                ));
-    }
-
-    private List<ShelterResponse.DistrictDTO> convertToDistrictDTOList(Map<District, List<Shelter>> districtShelterMap) {
-        return districtShelterMap.entrySet().stream()
-                .map(districtEntry -> {
-                    Map<String, List<String>> districtMap = Map.of(
-                            districtEntry.getKey().name(),
-                            districtEntry.getValue().stream()
-                                    .map(Shelter::getName)
-                                    .toList()
-                    );
-                    return new ShelterResponse.DistrictDTO(districtMap);
-                })
-                .collect(Collectors.toList());
     }
 
     private List<Long> findUserLikedAnimalIds(Long userId) {
