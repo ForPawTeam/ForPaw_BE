@@ -2,6 +2,7 @@ package com.hong.forapw.domain.post.entity;
 
 import com.hong.forapw.common.entity.BaseEntity;
 import com.hong.forapw.domain.group.entity.Group;
+import com.hong.forapw.domain.group.model.request.CreateNoticeReq;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -85,7 +86,6 @@ public class Post extends BaseEntity {
         this.isBlocked = false;
     }
 
-    // 연관관계 메서드
     public void addImage(PostImage postImage) {
         this.postImages.add(postImage);
         postImage.updatePost(this);
@@ -94,6 +94,12 @@ public class Post extends BaseEntity {
     public void addChildPost(Post child) {
         this.children.add(child);
         child.updateParent(this);
+    }
+
+    public void addImages(List<CreateNoticeReq.PostImageDTO> images) {
+        images.stream()
+                .map(imageDTO -> PostImage.builder().imageURL(imageDTO.imageURL()).build())
+                .forEach(this::addImage);
     }
 
     public void setAnswerRelationships(List<PostImage> answerImages, Post questionPost) {

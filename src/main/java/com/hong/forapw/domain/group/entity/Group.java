@@ -1,6 +1,8 @@
 package com.hong.forapw.domain.group.entity;
 
 import com.hong.forapw.common.entity.BaseEntity;
+import com.hong.forapw.common.exceptions.CustomException;
+import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import jakarta.persistence.*;
@@ -85,5 +87,9 @@ public class Group extends BaseEntity {
 
     public void decrementParticipantNum() {
         this.participantNum = this.participantNum - 1;
+    }
+
+    public boolean isGroupFull() {
+        return maxNum.equals(participantNum);
     }
 }

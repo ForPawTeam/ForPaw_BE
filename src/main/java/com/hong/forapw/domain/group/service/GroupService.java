@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.group.service;
 
 import com.hong.forapw.domain.alarm.AlarmService;
+import com.hong.forapw.domain.group.GroupValidator;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.group.entity.GroupUser;
@@ -24,7 +25,6 @@ import com.hong.forapw.domain.post.entity.PostImage;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.user.entity.User;
-import com.hong.forapw.domain.user.constant.UserRole;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.ChatUserRepository;
 import com.hong.forapw.domain.user.repository.UserRepository;
@@ -64,13 +64,14 @@ public class GroupService {
     private final LikeService likeService;
     private final MeetingService meetingService;
     private final GroupCacheService groupCacheService;
+    private final GroupValidator validator;
 
     private static final Province DEFAULT_PROVINCE = Province.DAEGU;
     private static final int DEFAULT_RECOMMENDATION_LIMIT = 5;
 
     @Transactional
     public CreateGroupRes createGroup(CreateGroupReq request, Long creatorId) {
-        validateGroupNameNotDuplicate(request.name());
+        validator.validateGroupNameNotDuplicate(request.name());
 
         Group group = request.toEntity();
         groupRepository.save(group);
@@ -87,7 +88,7 @@ public class GroupService {
 
     // 클라이언트단에서 수정할 때 사용하는 API
     public FindGroupByIdRes findGroupById(Long groupId, Long groupAdminId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
@@ -97,19 +98,19 @@ public class GroupService {
 
     @Transactional
     public void updateGroup(UpdateGroupReq request, Long groupId, Long groupAdminId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
 
-        validateGroupNameNotDuplicate(groupId, request.name());
+        validator.validateGroupNameNotDuplicateExcludingId(groupId, request.name());
         updateGroupChatRoomName(groupId, request.name());
 
         updateGroupInfo(request, group);
     }
 
     public FindGroupMemberListRes findGroupMembers(Long groupAdminId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
@@ -130,38 +131,6 @@ public class GroupService {
         return new FindAllGroupListRes(recommendGroupDTOS, newGroupDTOS, myGroupDTOS);
     }
 
-    // 1. 같은 지역의 그룹  2. 좋아요, 사용자 순
-    public List<RecommendGroupDTO> getRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
-        List<RecommendGroupDTO> recommendedGroups = fetchGroupsByProvince(province, userId, likedGroupIds);
-        List<RecommendGroupDTO> additionalGroups = fetchAdditionalGroupsIfNeeded(userId, likedGroupIds, recommendedGroups);
-
-        return mergeAndRandomizeGroups(recommendedGroups, additionalGroups).stream()
-                .limit(DEFAULT_RECOMMENDATION_LIMIT)
-                .toList();
-    }
-
-    public List<NewGroupDTO> getNewGroups(Long userId, Province inputProvince, Pageable pageable) {
-        Province province = resolveProvince(userId, inputProvince);
-
-        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent().stream()
-                .map(NewGroupDTO::new)
-                .toList();
-    }
-
-    public List<MyGroupDTO> getMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
-        if (userId == null) {
-            return Collections.emptyList();
-        }
-
-        return groupUserRepository.findGroupByUserId(userId, pageable).getContent().stream()
-                .map(group -> new MyGroupDTO(
-                        group,
-                        likeService.getGroupLikeCount(group.getId()),
-                        likedGroupIds.contains(group.getId()))
-                )
-                .toList();
-    }
-
     public FindLocalAndNewGroupListRes findLocalAndNewGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
         List<LocalGroupDTO> localGroupDTOS = getLocalGroups(userId, province, district, likedGroupIds, pageable);
         List<NewGroupDTO> newGroupDTOS = getNewGroups(userId, province, pageable);
@@ -178,9 +147,8 @@ public class GroupService {
     }
 
     public FindGroupDetailByIdRes findGroupDetailById(Long userId, Long groupId) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
-        );
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
 
         List<MeetingDTO> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGEABLE);
         List<FindGroupDetailByIdRes.MeetingDTO> convertedMeetingDTOs = FindGroupDetailByIdRes.fromMeetingResList(meetingDTOs);
@@ -191,22 +159,14 @@ public class GroupService {
         return new FindGroupDetailByIdRes(group, noticeDTOs, convertedMeetingDTOs, memberDTOs);
     }
 
-    public List<NoticeDTO> getNotices(Long userId, Long groupId, Pageable pageable) {
-        Set<String> readPostIds = groupCacheService.getReadPostIds(userId);
-
-        return postRepository.findNoticeByGroupIdWithUser(groupId, pageable).getContent().stream()
-                .map(notice -> new NoticeDTO(notice, readPostIds.contains(notice.getId().toString())))
-                .toList();
-    }
-
     @Transactional
     public void joinGroup(JoinGroupReq request, Long userId, Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        validateGroupCapacity(group);
-        validateUserNotAlreadyMemberOrApplicant(groupId, userId);
+        validator.validateGroupCapacity(group);
+        validator.validateNotAlreadyMember(groupId, userId);
 
         User applicant = userRepository.getReferenceById(userId);
         addTemporaryGroupMember(applicant, group, request.greeting());
@@ -214,7 +174,7 @@ public class GroupService {
 
     @Transactional
     public void withdrawGroup(Long userId, Long groupId) {
-        validateIsGroupMember(groupId, userId);
+        validator.validateGroupMembership(groupId, userId);
 
         groupUserRepository.deleteByGroupIdAndUserId(groupId, userId);
         chatUserRepository.deleteByGroupIdAndUserId(groupId, userId);
@@ -226,7 +186,7 @@ public class GroupService {
 
     @Transactional
     public void expelGroupMember(Long groupAdminId, Long memberId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         groupUserRepository.deleteByGroupIdAndUserId(groupId, memberId);
         chatUserRepository.deleteByGroupIdAndUserId(groupId, memberId);
@@ -237,7 +197,7 @@ public class GroupService {
     }
 
     public FindApplicantListRes findApplicants(Long groupAdminId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         List<GroupUser> applicants = groupUserRepository.findByGroupRole(groupId, GroupRole.TEMP);
         List<FindApplicantListRes.ApplicantDTO> applicantDTOS = FindApplicantListRes.ApplicantDTO.toDTOs(applicants);
@@ -247,13 +207,13 @@ public class GroupService {
 
     @Transactional
     public void approveJoin(Long groupAdminId, Long applicantId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
 
         GroupUser groupUser = getGroupUser(groupId, applicantId);
-        validateNotAlreadyMember(groupUser);
+        validator.validateNotAlreadyMember(groupUser);
 
         approveMembership(groupUser, group);
         notifyApplicant(applicantId, groupId);
@@ -262,10 +222,10 @@ public class GroupService {
 
     @Transactional
     public void rejectJoin(Long groupAdminId, Long applicantId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
-        GroupUser groupUser = findPendingGroupUser(groupId, applicantId);
-        validateNotAlreadyMember(groupUser);
+        GroupUser groupUser = getPendingGroupUser(groupId, applicantId);
+        validator.validateNotAlreadyMember(groupUser);
 
         groupUserRepository.delete(groupUser);
 
@@ -274,12 +234,12 @@ public class GroupService {
 
     @Transactional
     public CreateNoticeRes createNotice(CreateNoticeReq request, Long groupAdminId, Long groupId) {
-        validateGroupAdminAuthorization(groupAdminId, groupId);
+        validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         Group group = groupRepository.getReferenceById(groupId);
         User noticer = userRepository.getReferenceById(groupAdminId);
         Post notice = request.toEntity(noticer, group);
-        addImagesToNotice(request.images(), notice);
+        notice.addImages(request.images());
 
         postRepository.save(notice);
         sendNoticeAlarms(groupId, groupAdminId, request.title(), notice.getId());
@@ -289,8 +249,8 @@ public class GroupService {
 
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
-        validateGroupExists(groupId);
-        validateGroupCreatorPrivileges(groupId, userId);
+        validator.validateGroupExists(groupId);
+        validator.validateGroupCreatorPrivileges(groupId, userId);
 
         deleteGroupRelatedData(groupId);
         deleteGroupPostsAndComments(groupId);
@@ -301,11 +261,11 @@ public class GroupService {
 
     @Transactional
     public void updateUserRole(UpdateUserRoleReq request, Long groupId, Long creatorId) {
-        validateGroupExists(groupId);
-        validateGroupMembership(groupId, request.userId());
+        validator.validateGroupExists(groupId);
+        validator.validateGroupMembership(groupId, request.userId());
 
-        validateGroupCreatorPrivileges(groupId, creatorId);
-        validateRoleUpdateConstraints(request.role(), request.userId(), creatorId);
+        validator.validateGroupCreatorPrivileges(groupId, creatorId);
+        validator.validateRoleUpdateConstraints(request.role(), request.userId(), creatorId);
 
         groupUserRepository.updateRole(request.role(), groupId, request.userId());
     }
@@ -374,11 +334,8 @@ public class GroupService {
     }
 
     public void checkGroupAndIsMember(Long groupId, Long userId) {
-        // 그룹 존재 여부 체크
-        validateGroupExists(groupId);
-
-        // 맴버인지 체크
-        validateIsGroupMember(groupId, userId);
+        validator.validateGroupExists(groupId);
+        validator.validateGroupMembership(groupId, userId);
     }
 
     public List<Long> getLikedGroupList(Long userId) {
@@ -417,18 +374,6 @@ public class GroupService {
         chatUserRepository.save(chatUser);
     }
 
-    private void validateGroupNameNotDuplicate(String groupName) {
-        if (groupRepository.existsByName(groupName)) {
-            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
-        }
-    }
-
-    private void validateGroupNameNotDuplicate(Long groupId, String groupName) {
-        if (groupRepository.existsByNameExcludingId(groupName, groupId)) {
-            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
-        }
-    }
-
     private void updateGroupChatRoomName(Long groupId, String groupName) {
         ChatRoom chatRoom = chatRoomRepository.findByGroupId(groupId).orElseThrow(
                 () -> new CustomException(ExceptionCode.CHAT_ROOM_NOT_FOUND)
@@ -448,34 +393,12 @@ public class GroupService {
                 .toList();
     }
 
-    private void validateIsGroupMember(Long groupId, Long userId) {
-        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
+    public List<NoticeDTO> getNotices(Long userId, Long groupId, Pageable pageable) {
+        Set<String> readPostIds = groupCacheService.getReadPostIds(userId);
 
-        if(groupUser.isNotMember()) {
-            throw new CustomException(ExceptionCode.NOT_GROUP_MEMBER);
-        }
-    }
-
-    private void validateGroupCreatorPrivileges(Long groupId, Long userId) {
-        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
-
-        if(groupUser.isNotCreator()){
-            throw new CustomException(ExceptionCode.NOT_GROUP_CREATOR);
-        }
-    }
-
-    private void validateNotAlreadyMember(GroupUser groupUser) {
-        if (groupUser.isMember()) {
-            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
-        }
-    }
-
-    private void validateGroupExists(Long groupId) {
-        if (!groupRepository.existsById(groupId)) {
-            throw new CustomException(ExceptionCode.GROUP_NOT_FOUND);
-        }
+        return postRepository.findNoticeByGroupIdWithUser(groupId, pageable).getContent().stream()
+                .map(notice -> new NoticeDTO(notice, readPostIds.contains(notice.getId().toString())))
+                .toList();
     }
 
     private List<MemberDTO> getMembers(Long groupId) {
@@ -485,17 +408,36 @@ public class GroupService {
                 .toList();
     }
 
-    private void validateGroupCapacity(Group group) {
-        if (group.getMaxNum().equals(group.getParticipantNum())) {
-            throw new CustomException(ExceptionCode.GROUP_FULL);
-        }
+    // 1. 같은 지역의 그룹  2. 좋아요, 사용자 순
+    public List<RecommendGroupDTO> getRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
+        List<RecommendGroupDTO> recommendedGroups = fetchGroupsByProvince(province, userId, likedGroupIds);
+        List<RecommendGroupDTO> additionalGroups = fetchAdditionalGroupsIfNeeded(userId, likedGroupIds, recommendedGroups);
+
+        return mergeAndRandomizeGroups(recommendedGroups, additionalGroups).stream()
+                .limit(DEFAULT_RECOMMENDATION_LIMIT)
+                .toList();
     }
 
-    private void validateUserNotAlreadyMemberOrApplicant(Long groupId, Long userId) {
-        Optional<GroupUser> groupUserOP = groupUserRepository.findByGroupIdAndUserId(groupId, userId);
-        if (groupUserOP.isPresent()) {
-            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
+    public List<NewGroupDTO> getNewGroups(Long userId, Province inputProvince, Pageable pageable) {
+        Province province = resolveProvince(userId, inputProvince);
+
+        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent().stream()
+                .map(NewGroupDTO::new)
+                .toList();
+    }
+
+    public List<MyGroupDTO> getMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
+        if (userId == null) {
+            return Collections.emptyList();
         }
+
+        return groupUserRepository.findGroupByUserId(userId, pageable).getContent().stream()
+                .map(group -> new MyGroupDTO(
+                        group,
+                        likeService.getGroupLikeCount(group.getId()),
+                        likedGroupIds.contains(group.getId()))
+                )
+                .toList();
     }
 
     private void addTemporaryGroupMember(User applicant, Group group, String greeting) {
@@ -548,24 +490,15 @@ public class GroupService {
         chatUserRepository.save(chatUser);
     }
 
-    private GroupUser findPendingGroupUser(Long groupId, Long applicantId) {
+    private GroupUser getPendingGroupUser(Long groupId, Long applicantId) {
         return groupUserRepository.findByGroupIdAndUserId(groupId, applicantId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_APPLIED));
     }
-
 
     private void sendJoinRejectionAlarm(Long applicantId, Long groupId) {
         String content = "가입이 거절 되었습니다.";
         String redirectURL = "/volunteer/" + groupId;
         alarmService.sendAlarm(applicantId, content, redirectURL, AlarmType.JOIN);
-    }
-
-    private void addImagesToNotice(List<CreateNoticeReq.PostImageDTO> images, Post notice) {
-        images.stream()
-                .map(imageDTO -> PostImage.builder()
-                        .imageURL(imageDTO.imageURL())
-                        .build())
-                .forEach(notice::addImage);
     }
 
     private void sendNoticeAlarms(Long groupId, Long senderId, String title, Long noticeId) {
@@ -601,32 +534,5 @@ public class GroupService {
         chatUserRepository.deleteByGroupId(groupId);
         chatRoomRepository.delete(chatRoom);
         rabbitMqService.deleteQueue(queueName); // 채팅방 큐 삭제
-    }
-
-    private void validateGroupAdminAuthorization(Long adminId, Long groupId) {
-        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, adminId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
-
-        if (groupUser.getGroupRole() == GroupRole.ADMIN || groupUser.getGroupRole() == GroupRole.CREATOR) {
-            throw new CustomException(ExceptionCode.NOT_GROUP_ADMIN);
-        }
-    }
-
-    private void validateGroupMembership(Long groupId, Long memberId) {
-        if (!groupUserRepository.existsByGroupIdAndUserId(groupId, memberId)) {
-            throw new CustomException(ExceptionCode.NOT_GROUP_MEMBER);
-        }
-    }
-
-    private void validateRoleUpdateConstraints(GroupRole newRole, Long userIdToUpdate, Long creatorId) {
-        // 그룹장은 자신의 역할을 변경할 수 없음
-        if (userIdToUpdate.equals(creatorId)) {
-            throw new CustomException(ExceptionCode.CREATOR_ROLE_UPDATE_FORBIDDEN);
-        }
-
-        // 그룹장으로의 변경은 불가능
-        if (newRole == GroupRole.CREATOR) {
-            throw new CustomException(ExceptionCode.ROLE_CANT_UPDATE);
-        }
     }
 }
