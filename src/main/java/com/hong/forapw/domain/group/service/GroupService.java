@@ -328,8 +328,7 @@ public class GroupService {
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
         validateGroupExists(groupId);
-
-        checkGroupCreatorAuthority(groupId, userId);
+        validateGroupCreatorPrivileges(groupId, userId);
 
         deleteGroupRelatedData(groupId);
         deleteGroupPostsAndComments(groupId);
@@ -339,29 +338,14 @@ public class GroupService {
     }
 
     @Transactional
-    public void updateUserRole(UpdateUserRoleReq requestDTO, Long groupId, Long creatorId) {
-        // 존재하지 않는 그룹이면 에러
+    public void updateUserRole(UpdateUserRoleReq request, Long groupId, Long creatorId) {
         validateGroupExists(groupId);
+        validateGroupMembership(groupId, request.userId());
 
-        // 가입되지 않은 회원이면 에러
-        if (!groupUserRepository.existsByGroupIdAndUserId(groupId, requestDTO.userId())) {
-            throw new CustomException(ExceptionCode.GROUP_NOT_MEMBER);
-        }
+        validateGroupCreatorPrivileges(groupId, creatorId);
+        validateRoleUpdateConstraints(request.role(), request.userId(), creatorId);
 
-        // 권한체크 (그룹장만 변경 가능)
-        checkGroupCreatorAuthority(groupId, creatorId);
-
-        // 그룹장은 자신의 역할을 변경할 수 없음
-        if (requestDTO.userId().equals(creatorId)) {
-            throw new CustomException(ExceptionCode.CANT_UPDATE_FOR_CREATOR);
-        }
-
-        // 그룹장으로의 변경은 불가능
-        if (requestDTO.role().equals(GroupRole.CREATOR)) {
-            throw new CustomException(ExceptionCode.ROLE_CANT_UPDATE);
-        }
-
-        groupUserRepository.updateRole(requestDTO.role(), groupId, requestDTO.userId());
+        groupUserRepository.updateRole(request.role(), groupId, request.userId());
     }
 
     private Province determineProvince(Long userId) {
@@ -499,19 +483,17 @@ public class GroupService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_MEMBER));
     }
 
-    private void checkGroupCreatorAuthority(Long groupId, Long userId) {
-        // 서비스 운영자는 접근 가능
-        if (checkServiceAdminAuthority(userId)) {
+    private void validateGroupCreatorPrivileges(Long groupId, Long userId) {
+        if (hasServiceAdminPrivileges(userId)) {
             return;
         }
 
-        // CREATOR만 허용
         groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .filter(groupUser -> EnumSet.of(GroupRole.CREATOR).contains(groupUser.getGroupRole()))
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
     }
 
-    private boolean checkServiceAdminAuthority(Long userId) {
+    private boolean hasServiceAdminPrivileges(Long userId) {
         UserRole role = userRepository.findRoleById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -560,6 +542,7 @@ public class GroupService {
                 .group(group)
                 .greeting(greeting)
                 .build();
+
         groupUserRepository.save(groupUser);
     }
 
@@ -668,5 +651,23 @@ public class GroupService {
         groupUserRepository.findByGroupIdAndUserId(groupId, user.getId())
                 .filter(groupUser -> EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR).contains(groupUser.getGroupRole()))
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
+    }
+
+    private void validateGroupMembership(Long groupId, Long memberId) {
+        if (!groupUserRepository.existsByGroupIdAndUserId(groupId, memberId)) {
+            throw new CustomException(ExceptionCode.GROUP_NOT_MEMBER);
+        }
+    }
+
+    private void validateRoleUpdateConstraints(GroupRole newRole, Long userIdToUpdate, Long creatorId) {
+        // 그룹장은 자신의 역할을 변경할 수 없음
+        if (userIdToUpdate.equals(creatorId)) {
+            throw new CustomException(ExceptionCode.CANT_UPDATE_FOR_CREATOR);
+        }
+
+        // 그룹장으로의 변경은 불가능
+        if (newRole == GroupRole.CREATOR) {
+            throw new CustomException(ExceptionCode.ROLE_CANT_UPDATE);
+        }
     }
 }
