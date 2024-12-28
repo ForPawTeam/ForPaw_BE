@@ -1,8 +1,9 @@
 package com.hong.forapw.domain.apply;
 
-import com.hong.forapw.domain.apply.model.ApplyResponse;
 import com.hong.forapw.domain.apply.model.request.ApplyAdoptionReq;
 import com.hong.forapw.domain.apply.model.request.UpdateApplyReq;
+import com.hong.forapw.domain.apply.model.response.CreateApplyRes;
+import com.hong.forapw.domain.apply.model.response.FindApplyListRes;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
@@ -22,13 +23,13 @@ public class ApplyController {
 
     @PostMapping("/animals/{animalId}/apply")
     public ResponseEntity<?> applyAdoption(@RequestBody @Valid ApplyAdoptionReq request, @PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.CreateApplyDTO responseDTO = applyService.applyAdoption(request, userDetails.user().getId(), animalId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        CreateApplyRes response = applyService.applyAdoption(request, userDetails.user().getId(), animalId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/applies")
     public ResponseEntity<?> findApplyList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.FindApplyListDTO response = applyService.findApplyList(userDetails.user().getId());
+        FindApplyListRes response = applyService.findApplyList(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 

@@ -1,12 +1,13 @@
 package com.hong.forapw.domain.apply;
 
-import com.hong.forapw.domain.apply.model.ApplyResponse;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.apply.entity.Apply;
 import com.hong.forapw.domain.apply.model.request.ApplyAdoptionReq;
 import com.hong.forapw.domain.apply.model.request.UpdateApplyReq;
+import com.hong.forapw.domain.apply.model.response.CreateApplyRes;
+import com.hong.forapw.domain.apply.model.response.FindApplyListRes;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.animal.repository.AnimalRepository;
@@ -29,7 +30,7 @@ public class ApplyService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ApplyResponse.CreateApplyDTO applyAdoption(ApplyAdoptionReq request, Long userId, Long animalId) {
+    public CreateApplyRes applyAdoption(ApplyAdoptionReq request, Long userId, Long animalId) {
         Animal animal = animalRepository.findById(animalId).orElseThrow(
                 () -> new CustomException(ExceptionCode.ANIMAL_NOT_FOUND)
         );
@@ -43,17 +44,17 @@ public class ApplyService {
 
         animal.incrementInquiryNum();
 
-        return new ApplyResponse.CreateApplyDTO(apply.getId());
+        return new CreateApplyRes(apply.getId());
     }
 
-    public ApplyResponse.FindApplyListDTO findApplyList(Long userId) {
+    public FindApplyListRes findApplyList(Long userId) {
         List<Apply> applies = applyRepository.findAllByUserIdWithAnimal(userId);
 
-        List<ApplyResponse.ApplyDTO> applyDTOS = applies.stream()
-                .map(ApplyMapper::toApplyDTO)
+        List<FindApplyListRes.ApplyDTO> applyDTOS = applies.stream()
+                .map(FindApplyListRes.ApplyDTO::new)
                 .toList();
 
-        return new ApplyResponse.FindApplyListDTO(applyDTOS);
+        return new FindApplyListRes(applyDTOS);
     }
 
     @Transactional
