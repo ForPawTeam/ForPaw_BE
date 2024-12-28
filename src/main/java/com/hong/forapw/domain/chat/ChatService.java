@@ -8,7 +8,7 @@ import com.hong.forapw.domain.chat.entity.ChatUser;
 import com.hong.forapw.domain.chat.entity.LinkMetadata;
 import com.hong.forapw.domain.chat.entity.Message;
 import com.hong.forapw.domain.chat.constant.MessageType;
-import com.hong.forapw.domain.chat.model.request.MessageDTO;
+import com.hong.forapw.domain.chat.model.MessageDTO;
 import com.hong.forapw.domain.chat.model.request.SendMessageReq;
 import com.hong.forapw.domain.chat.model.response.*;
 import com.hong.forapw.domain.group.constant.GroupRole;
@@ -30,6 +30,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.hong.forapw.common.constants.GlobalConstants.URL_PATTERN;
+import static com.hong.forapw.common.utils.PaginationUtils.DEFAULT_IMAGE_PAGEABLE;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -39,12 +42,8 @@ public class ChatService {
     private final ChatUserRepository chatUserRepository;
     private final UserRepository userRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final RabbitMqService brokerService;
+    private final RabbitMqService rabbitMqService;
 
-    private static final String SORT_BY_MESSAGE_DATE = "date";
-    private static final String URL_REGEX = "(https?://[\\w\\-\\._~:/?#\\[\\]@!$&'()*+,;=%]+)";
-    private static final Pattern URL_PATTERN = Pattern.compile(URL_REGEX);
-    private static final Pageable DEFAULT_IMAGE_PAGEABLE = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, SORT_BY_MESSAGE_DATE));
 
     @Transactional
     public SendMessageRes sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
@@ -175,7 +174,7 @@ public class ChatService {
     }
 
     private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
-        CompletableFuture.runAsync(() -> brokerService.sendChatMessageToRoom(chatRoomId, message));
+        CompletableFuture.runAsync(() -> rabbitMqService.sendChatMessageToRoom(chatRoomId, message));
     }
 
     private FindChatRoomsRes.RoomDTO buildRoomDTO(ChatUser chatUser) {

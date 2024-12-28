@@ -1,17 +1,30 @@
 package com.hong.forapw.common.constants;
 
+import java.util.regex.Pattern;
+
 public class GlobalConstants {
 
     private GlobalConstants() {
     }
 
-    // Jwt Token
+    // JWT
     public static final String REFRESH_TOKEN_KEY = "refreshToken";
     public static final String ACCESS_TOKEN_KEY = "accessToken";
 
+    // Redis Key
+    public static final String ANIMAL_SEARCH_KEY = "animalSearch";
+    public static final String POST_READ_KEY = "user:readPosts";
+    public static final String POST_LIKE_COUNT_KEY = "post:like:count";
+    public static final String COMMENT_LIKE_COUNT_KEY = "comment:like:count";
+    public static final String POST_VIEW_COUNT_KEY = "postViewNum";
+    public static final String ANIMAL_LIKE_NUM_KEY_PREFIX = "animalLikeNum";
+
+    // Http
     public static final String AUTH_CODE_GRANT_TYPE = "authorization_code";
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String BEARER_PREFIX = "Bearer ";
+    public static final String USER_AGENT_HEADER = "User-Agent";
+    public static final String[] IP_HEADER_CANDIDATES = {"X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
 
     // RabbitMQ
     public static final String ROOM_QUEUE_PREFIX = "room.";
@@ -19,6 +32,11 @@ public class GlobalConstants {
 
     // Sort
     public static final String SORT_BY_ID = "id";
-    public static final String SORT_BY_DATE = "date";
     public static final String SORT_BY_PARTICIPANT_NUM = "participantNum";
+    public static final String SORT_BY_MESSAGE_DATE = "date";
+    public static final String SORT_BY_DATE = "createdDate";
+
+    // Url Pattern
+    public static final String URL_REGEX = "(https?://[\\w\\-\\._~:/?#\\[\\]@!$&'()*+,;=%]+)";
+    public static final Pattern URL_PATTERN = Pattern.compile(URL_REGEX);
 }

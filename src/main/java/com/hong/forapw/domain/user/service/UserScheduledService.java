@@ -7,7 +7,6 @@ import com.hong.forapw.domain.user.entity.UserStatus;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.admin.repository.VisitRepository;
-import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.integration.redis.RedisService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,6 @@ import java.util.Set;
 public class UserScheduledService {
 
     private final PasswordEncoder passwordEncoder;
-    private final RabbitMqService brokerService;
     private final RedisService redisService;
     private final UserRepository userRepository;
     private final VisitRepository visitRepository;
@@ -41,8 +39,6 @@ public class UserScheduledService {
     @Value("${admin.name}")
     private String adminName;
 
-    private static final String USER_QUEUE_PREFIX = "user.";
-    private static final String ALARM_EXCHANGE = "alarm.exchange";
 
     // 테스트 기간에만 사용하고, 운영에는 사용 X
     public void initSuperAdmin() {

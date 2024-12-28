@@ -5,8 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
-import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_PARTICIPANT_NUM;
+import static com.hong.forapw.common.constants.GlobalConstants.*;
 
 public class PaginationUtils {
 
@@ -17,6 +16,7 @@ public class PaginationUtils {
 
     public static final Pageable DEFAULT_PAGEABLE = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, SORT_BY_ID));
     public static final Pageable RECOMMEND_GROUP_PAGEABLE = PageRequest.of(0, 30, SORT_BY_PARTICIPANT);
+    public static final Pageable DEFAULT_IMAGE_PAGEABLE = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, SORT_BY_MESSAGE_DATE));
 
     public static boolean isLastPage(Page<?> page) {
         return !page.hasNext();

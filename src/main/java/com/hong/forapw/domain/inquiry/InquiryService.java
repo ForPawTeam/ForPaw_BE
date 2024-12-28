@@ -24,6 +24,7 @@ public class InquiryService {
     private final InquiryRepository inquiryRepository;
     private final UserRepository userRepository;
 
+
     @Transactional
     public SubmitInquiryRes submitInquiry(SubmitInquiryReq request, Long userId) {
         User submitter = userRepository.getReferenceById(userId);

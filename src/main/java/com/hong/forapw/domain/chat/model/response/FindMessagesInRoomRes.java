@@ -7,8 +7,6 @@ import com.hong.forapw.domain.chat.entity.Message;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.hong.forapw.domain.chat.ChatMapper.toMessageDTO;
-
 public record FindMessagesInRoomRes(
         String chatRoomName,
         String lastMessageId,

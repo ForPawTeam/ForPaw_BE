@@ -44,6 +44,8 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.hong.forapw.common.constants.GlobalConstants.IP_HEADER_CANDIDATES;
+import static com.hong.forapw.common.constants.GlobalConstants.USER_AGENT_HEADER;
 import static com.hong.forapw.integration.email.EmailService.generateVerificationCode;
 import static com.hong.forapw.integration.email.EmailTemplate.ACCOUNT_SUSPENSION;
 import static com.hong.forapw.integration.email.EmailTemplate.VERIFICATION_CODE;
@@ -69,7 +71,6 @@ public class UserService {
     private final VisitRepository visitRepository;
     private final FavoriteAnimalRepository favoriteAnimalRepository;
     private final FavoriteGroupRepository favoriteGroupRepository;
-    private final RabbitMqService rabbitMqService;
     private final EmailService emailService;
     private final UserCacheService userCacheService;
     private final JwtUtils jwtUtils;
@@ -77,13 +78,8 @@ public class UserService {
     private static final String MAIL_TEMPLATE_FOR_CODE = "verification_code_email.html";
     private static final String MAIL_TEMPLATE_FOR_LOCK_ACCOUNT = "lock_account.html";
     private static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    private static final String USER_QUEUE_PREFIX = "user.";
-    private static final String ALARM_EXCHANGE = "alarm.exchange";
-    private static final String USER_AGENT_HEADER = "User-Agent";
     private static final String UNKNOWN = "unknown";
-    private static final String[] IP_HEADER_CANDIDATES = {"X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
     private static final String CODE_TYPE_RECOVERY = "recovery";
-    private static final String MODEL_KEY_CODE = "code";
     private static final long CURRENT_FAILURE_LIMIT = 3L;
     private static final long DAILY_FAILURE_LIMIT = 3L;
 

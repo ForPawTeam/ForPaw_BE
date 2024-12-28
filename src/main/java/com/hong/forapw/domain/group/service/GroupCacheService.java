@@ -7,20 +7,21 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Set;
 
+import static com.hong.forapw.common.constants.GlobalConstants.POST_READ_KEY;
+
 @Service
 @RequiredArgsConstructor
 public class GroupCacheService {
 
     private final RedisService redisService;
 
-    private static final String POST_READ_KEY_PREFIX = "user:readPosts:";
 
     public Set<String> getReadPostIds(Long userId) {
         if (userId == null) {
             return Collections.emptySet(); // 유저 ID가 없는 경우 빈 Set 반환
         }
 
-        String key = POST_READ_KEY_PREFIX + userId;
+        String key = POST_READ_KEY + userId;
         return redisService.getMembersOfSet(key);
     }
 }

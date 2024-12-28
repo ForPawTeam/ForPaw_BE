@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -30,7 +32,6 @@ public class GroupController {
 
     private final GroupService groupService;
     private final LikeService likeService;
-    private static final String SORT_BY_ID = "id";
 
     @PostMapping("/groups")
     public ResponseEntity<?> createGroup(@RequestBody @Valid CreateGroupReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {

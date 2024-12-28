@@ -18,13 +18,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
 public class ShelterController {
 
     private final ShelterService shelterService;
-    private static final String SORT_BY_DATE = "createdDate";
 
     // 테스트 시에만 API를 열어둠
     @GetMapping("/shelters/import")

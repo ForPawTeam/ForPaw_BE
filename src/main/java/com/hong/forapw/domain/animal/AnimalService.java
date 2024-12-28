@@ -45,7 +45,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_SEARCH_KEY;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
+import static com.hong.forapw.common.utils.PaginationUtils.DEFAULT_PAGEABLE;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
 import static com.hong.forapw.common.utils.UriUtils.buildAnimalOpenApiURI;
 
@@ -81,8 +83,6 @@ public class AnimalService {
     @Value("${openAPI.animal.uri}")
     private String animalURI;
 
-    private static final String ANIMAL_SEARCH_KEY_PREFIX = "animalSearch";
-    private static final Pageable DEFAULT_PAGE_REQUEST = PageRequest.of(0, 5);
 
     @Transactional
     @Scheduled(cron = "0 0 0 * * *")
@@ -106,7 +106,7 @@ public class AnimalService {
                     Long likeCount = likeService.getAnimalLikeCount(animal.getId());
                     return AnimalDTO.fromEntity(animal, likeCount, likedAnimalIds);
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return new FindAnimalListRes(animalDTOS, isLastPage(animalPage));
     }
@@ -257,7 +257,7 @@ public class AnimalService {
     private void removeAnimalsFromUserSearchHistory(List<Animal> expiredAnimals) {
         List<User> users = userRepository.findAllNonWithdrawn();
         for (User user : users) {
-            String key = ANIMAL_SEARCH_KEY_PREFIX + ":" + user.getId();
+            String key = ANIMAL_SEARCH_KEY + ":" + user.getId();
             expiredAnimals.forEach(animal ->
                     redisService.removeListElement(key, animal.getId().toString())
             );
@@ -336,18 +336,18 @@ public class AnimalService {
         return shelters.stream()
                 .filter(shelter -> !shelter.equals(targetShelter))
                 .map(Shelter::getId)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private void saveSearchRecord(Long animalId, Long userId) {
         if (userId != null) {
-            String key = ANIMAL_SEARCH_KEY_PREFIX + ":" + userId;
+            String key = ANIMAL_SEARCH_KEY + ":" + userId;
             redisService.addListElement(key, animalId.toString(), 5L);
         }
     }
 
     private List<Long> findLatestAnimalIds() {
-        return animalRepository.findAllIds(DEFAULT_PAGE_REQUEST).getContent();
+        return animalRepository.findAllIds(DEFAULT_PAGEABLE).getContent();
     }
 
     private List<Long> fetchRecommendedAnimalIds(Long userId) {
@@ -377,13 +377,13 @@ public class AnimalService {
 
     private List<Long> findAnimalIdsByDistrict(Long userId) {
         return userRepository.findDistrictById(userId)
-                .map(district -> animalRepository.findIdsByDistrict(district, AnimalService.DEFAULT_PAGE_REQUEST))
+                .map(district -> animalRepository.findIdsByDistrict(district, DEFAULT_PAGEABLE))
                 .orElseGet(ArrayList::new);
     }
 
     private void addAnimalIdsFromProvince(Long userId, List<Long> animalIds) {
         userRepository.findProvinceById(userId).ifPresent(province -> {
-            List<Long> provinceAnimalIds = animalRepository.findIdsByProvince(province, AnimalService.DEFAULT_PAGE_REQUEST);
+            List<Long> provinceAnimalIds = animalRepository.findIdsByProvince(province, DEFAULT_PAGEABLE);
             animalIds.addAll(provinceAnimalIds);
         });
     }

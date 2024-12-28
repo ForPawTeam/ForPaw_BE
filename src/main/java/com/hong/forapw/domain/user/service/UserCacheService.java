@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static com.hong.forapw.common.constants.GlobalConstants.ACCESS_TOKEN_KEY;
+import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY;
+
 @Service
 @RequiredArgsConstructor
 public class UserCacheService {
@@ -21,8 +24,6 @@ public class UserCacheService {
     @Value("${jwt.refresh-exp-milli}")
     public Long refreshExpMilli;
 
-    private static final String REFRESH_TOKEN_KEY_PREFIX = "refreshToken";
-    private static final String ACCESS_TOKEN_KEY_PREFIX = "accessToken";
     private static final long VERIFICATION_CODE_EXPIRATION_MS = 175 * 1000L;
     private static final String EMAIL_CODE_KEY_PREFIX = "code:";
     private static final String CODE_TO_EMAIL_KEY_PREFIX = "codeToEmail";
@@ -32,7 +33,7 @@ public class UserCacheService {
     private static final long LOGIN_FAIL_DAILY_EXPIRATION_MS = 86400000L; // 24시간
 
     public void storeAccessToken(Long userId, String accessToken) {
-        redisService.storeValue(ACCESS_TOKEN_KEY_PREFIX, userId.toString(), accessToken, accessExpMilli);
+        redisService.storeValue(ACCESS_TOKEN_KEY, userId.toString(), accessToken, accessExpMilli);
     }
 
     public void storeVerificationCode(String email, String codeType, String verificationCode) {
@@ -44,8 +45,8 @@ public class UserCacheService {
     }
 
     public void storeUserTokens(Long userId, LoginResult loginResult) {
-        redisService.storeValue(ACCESS_TOKEN_KEY_PREFIX, userId.toString(), loginResult.accessToken(), accessExpMilli);
-        redisService.storeValue(REFRESH_TOKEN_KEY_PREFIX, userId.toString(), loginResult.refreshToken(), refreshExpMilli);
+        redisService.storeValue(ACCESS_TOKEN_KEY, userId.toString(), loginResult.accessToken(), accessExpMilli);
+        redisService.storeValue(REFRESH_TOKEN_KEY, userId.toString(), loginResult.refreshToken(), refreshExpMilli);
     }
 
     public long incrementDailyLoginFailures(User user) {
@@ -63,8 +64,8 @@ public class UserCacheService {
     }
 
     public void deleteUserTokens(Long userId) {
-        redisService.removeValue(ACCESS_TOKEN_KEY_PREFIX, userId.toString());
-        redisService.removeValue(REFRESH_TOKEN_KEY_PREFIX, userId.toString());
+        redisService.removeValue(ACCESS_TOKEN_KEY, userId.toString());
+        redisService.removeValue(REFRESH_TOKEN_KEY, userId.toString());
     }
 
     public void deleteCodeToEmail(String verificationCode) {
@@ -72,7 +73,7 @@ public class UserCacheService {
     }
 
     public void validateAccessToken(String accessToken, Long userId) {
-        if (!redisService.doesValueMatch(ACCESS_TOKEN_KEY_PREFIX, userId.toString(), accessToken)) {
+        if (!redisService.doesValueMatch(ACCESS_TOKEN_KEY, userId.toString(), accessToken)) {
             throw new CustomException(ExceptionCode.INVALID_ACCESS_TOKEN);
         }
     }
@@ -96,7 +97,7 @@ public class UserCacheService {
     }
 
     public String getValidRefreshToken(Long userId) {
-        String refreshToken = redisService.getValueInString(REFRESH_TOKEN_KEY_PREFIX, userId.toString());
+        String refreshToken = redisService.getValueInString(REFRESH_TOKEN_KEY, userId.toString());
         if (refreshToken == null)
             throw new CustomException(ExceptionCode.TOKEN_EXPIRED);
 

@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -29,7 +31,6 @@ public class MeetingController {
 
     private final MeetingService meetingService;
     private final GroupService groupService;
-    private static final String SORT_BY_ID = "id";
 
     @PostMapping("/groups/{groupId}/meetings")
     public ResponseEntity<?> createMeeting(@RequestBody @Valid CreateMeetingReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {

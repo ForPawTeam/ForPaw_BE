@@ -1,4 +1,4 @@
-package com.hong.forapw.domain.chat.model.request;
+package com.hong.forapw.domain.chat.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -8,6 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.hong.forapw.domain.chat.constant.MessageType;
 import com.hong.forapw.domain.chat.entity.LinkMetadata;
 import com.hong.forapw.domain.chat.entity.Message;
+import com.hong.forapw.domain.chat.model.request.ChatObjectDTO;
+import com.hong.forapw.domain.chat.model.request.SendMessageReq;
 
 import java.time.LocalDateTime;
 import java.util.List;

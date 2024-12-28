@@ -29,6 +29,7 @@ public class ApplyService {
     private final AnimalRepository animalRepository;
     private final UserRepository userRepository;
 
+
     @Transactional
     public CreateApplyRes applyAdoption(ApplyAdoptionReq request, Long userId, Long animalId) {
         Animal animal = animalRepository.findById(animalId).orElseThrow(

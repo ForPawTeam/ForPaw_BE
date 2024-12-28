@@ -4,7 +4,7 @@ import com.hong.forapw.domain.alarm.AlarmService;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.domain.chat.entity.Message;
 import com.hong.forapw.domain.chat.model.request.ChatObjectDTO;
-import com.hong.forapw.domain.chat.model.request.MessageDTO;
+import com.hong.forapw.domain.chat.model.MessageDTO;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;

@@ -18,6 +18,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -25,7 +27,6 @@ public class PostController {
 
     private final PostService postService;
     private final LikeService likeService;
-    private static final String SORT_BY_ID = "id";
 
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestBody @Valid CreatePostReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {

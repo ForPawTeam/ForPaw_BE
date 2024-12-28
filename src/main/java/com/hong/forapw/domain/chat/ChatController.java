@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_MESSAGE_DATE;
 
 @Controller
 @RequiredArgsConstructor
@@ -37,7 +37,7 @@ public class ChatController {
 
     @GetMapping("/chatRooms/{chatRoomId}/messages")
     public ResponseEntity<?> findMessageListInRoom(@PathVariable Long chatRoomId,
-                                                   @PageableDefault(size = 50, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                                   @PageableDefault(size = 50, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindMessagesInRoomRes response = chatService.findMessagesInRoom(chatRoomId, userDetails.user().getId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
@@ -50,21 +50,21 @@ public class ChatController {
 
     @GetMapping("/chatRooms/{chatRoomId}/images")
     public ResponseEntity<?> findImageObjectList(@PathVariable Long chatRoomId,
-                                                 @PageableDefault(size = 6, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                                 @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindImageObjectsRes response = chatService.findImageObjects(chatRoomId, userDetails.user().getId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/chatRooms/{chatRoomId}/files")
     public ResponseEntity<?> findFileObjectList(@PathVariable Long chatRoomId,
-                                                @PageableDefault(size = 6, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                                @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindFileObjectsRes response = chatService.findFileObjects(chatRoomId, userDetails.user().getId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/chatRooms/{chatRoomId}/links")
     public ResponseEntity<?> findLinkObjectList(@PathVariable Long chatRoomId,
-                                                @PageableDefault(size = 6, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                                @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindLinkObjectsRes response = chatService.findLinkObjects(chatRoomId, userDetails.user().getId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }

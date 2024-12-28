@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,9 +37,9 @@ public class HomeService {
     private final FavoriteGroupRepository favoriteGroupRepository;
 
     private static final Province DEFAULT_PROVINCE = Province.DAEGU;
-    private static final String SORT_BY_DATE = "createdDate";
     private static final int POPULAR_POST_PAGE_INDEX = 0;
     private static final int POPULAR_POST_PAGE_SIZE = 5;
+
 
     public FindHomeRes findHomePageData(Long userId) {
         List<FindHomeRes.AnimalDTO> recommendedAnimals = findRecommendedAnimals(userId);
