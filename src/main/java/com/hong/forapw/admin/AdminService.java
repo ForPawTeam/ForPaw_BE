@@ -1,8 +1,8 @@
 package com.hong.forapw.admin;
 
+import com.hong.forapw.admin.model.request.*;
 import com.hong.forapw.admin.repository.ReportRepository;
 import com.hong.forapw.domain.apply.ApplyRepository;
-import com.hong.forapw.admin.model.AdminRequest;
 import com.hong.forapw.admin.model.AdminResponse;
 import com.hong.forapw.admin.model.AdminResponse.ApplyDTO;
 import com.hong.forapw.common.exceptions.CustomException;
@@ -95,29 +95,29 @@ public class AdminService {
     }
 
     @Transactional
-    public void changeUserRole(AdminRequest.ChangeUserRoleDTO requestDTO, Long adminId, UserRole adminRole) {
-        User user = userRepository.findNonWithdrawnById(requestDTO.userId()).orElseThrow(
+    public void changeUserRole(ChangeUserRoleReq request, UserRole adminRole) {
+        User user = userRepository.findNonWithdrawnById(request.userId()).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
         // 현재 유저의 Role과 동일한 값이 요청으로 들어옴
-        if (requestDTO.role().equals(user.getRole())) {
+        if (request.role().equals(user.getRole())) {
             throw new CustomException(ExceptionCode.DUPLICATE_STATUS);
         }
 
         // Supser로의 권한 변경은 불가능
-        if (requestDTO.role().equals(UserRole.SUPER)) {
+        if (request.role().equals(UserRole.SUPER)) {
             throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
 
         // Admin은 Super를 건들일 수 없음
         checkAdminPrivileges(adminRole, user.getRole());
-        user.updateRole(requestDTO.role());
+        user.updateRole(request.role());
     }
 
     @Transactional
-    public void suspendUser(AdminRequest.SuspendUserDTO requestDTO, Long adminId, UserRole adminRole) {
-        UserStatus userStatus = userStatusRepository.findByUserId(requestDTO.userId()).orElseThrow(
+    public void suspendUser(SuspendUserReq request, UserRole adminRole) {
+        UserStatus userStatus = userStatusRepository.findByUserId(request.userId()).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
@@ -127,11 +127,11 @@ public class AdminService {
         }
 
         checkAdminPrivileges(adminRole, userStatus.getUser().getRole());
-        userStatus.updateForSuspend(LocalDateTime.now(), requestDTO.suspensionDays(), requestDTO.suspensionReason());
+        userStatus.updateForSuspend(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
     }
 
     @Transactional
-    public void unSuspendUser(Long userId, Long adminId, UserRole adminRole) {
+    public void gunSuspendUser(Long userId, UserRole adminRole) {
         UserStatus userStatus = userStatusRepository.findByUserId(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -146,13 +146,13 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public AdminResponse.FindApplyListDTO findApplyList(Long adminId, ApplyStatus status, Pageable pageable) {
+    public AdminResponse.FindApplyListDTO findApplyList(ApplyStatus status, Pageable pageable) {
         Page<Apply> applyPage = applyRepository.findAllByStatusWithAnimal(status, pageable);
 
         // Apply의 animalId를 리스트로 만듦 => shleter와 fetch 조인해서 Animal 객체를 조회 => <animalId, Anmal 객체> 맵 생성
         List<Long> animalIds = applyPage.getContent().stream()
                 .map(apply -> apply.getAnimal().getId())
-                .collect(Collectors.toList());
+                .toList();
 
         List<Animal> animals = animalRepository.findByIdsWithShelter(animalIds);
         Map<Long, Animal> animalMap = animals.stream()
@@ -181,8 +181,8 @@ public class AdminService {
     }
 
     @Transactional
-    public void changeApplyStatus(AdminRequest.ChangeApplyStatusDTO requestDTO, Long adminId) {
-        Apply apply = applyRepository.findByIdWithAnimal(requestDTO.id()).orElseThrow(
+    public void changeApplyStatus(ChangeApplyStatusReq request) {
+        Apply apply = applyRepository.findByIdWithAnimal(request.id()).orElseThrow(
                 () -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND)
         );
 
@@ -192,16 +192,16 @@ public class AdminService {
         }
 
         // 지원서 상태 변경
-        apply.updateApplyStatus(requestDTO.status());
+        apply.updateApplyStatus(request.status());
 
         // 입양이 완료된거면 입양 완료 상태로 변경
-        if (requestDTO.status().equals(ApplyStatus.PROCESSED)) {
+        if (request.status().equals(ApplyStatus.PROCESSED)) {
             apply.getAnimal().finishAdoption();
         }
     }
 
     @Transactional(readOnly = true)
-    public AdminResponse.FindReportListDTO findReportList(Long adminId, ReportStatus status, Pageable pageable) {
+    public AdminResponse.FindReportListDTO findReportList(ReportStatus status, Pageable pageable) {
         Page<Report> reportPage = reportRepository.findAllByStatus(status, pageable);
 
         List<AdminResponse.ReportDTO> reportDTOS = reportPage.getContent().stream()
@@ -222,8 +222,8 @@ public class AdminService {
     }
 
     @Transactional
-    public void processReport(AdminRequest.ProcessReportDTO requestDTO, Long adminId) {
-        Report report = reportRepository.findById(requestDTO.id()).orElseThrow(
+    public void processReport(ProcessReportReq request) {
+        Report report = reportRepository.findById(request.id()).orElseThrow(
                 () -> new CustomException(ExceptionCode.REPORT_NOT_FOUND)
         );
 
@@ -233,18 +233,18 @@ public class AdminService {
         }
 
         // 유저 정지 처리
-        if (requestDTO.hasSuspension()) {
+        if (request.hasSuspension()) {
             // SUPER를 정지 시킬 수는 없다 (악용 방지)
             if (report.getOffender().getRole().equals(UserRole.SUPER)) {
                 throw new CustomException(ExceptionCode.ADMIN_CANNOT_BE_REPORTED);
             }
 
             report.getOffender().getStatus()
-                    .updateForSuspend(LocalDateTime.now(), requestDTO.suspensionDays(), report.getReason());
+                    .updateForSuspend(LocalDateTime.now(), request.suspensionDays(), report.getReason());
         }
 
         // 가림 처리
-        if (requestDTO.hasBlocking()) {
+        if (request.hasBlocking()) {
             processBlocking(report);
         }
 
@@ -253,7 +253,7 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public AdminResponse.FindSupportListDTO findSupportList(Long adminId, InquiryStatus status, Pageable pageable) {
+    public AdminResponse.FindSupportListDTO findSupportList(InquiryStatus status, Pageable pageable) {
         Page<Inquiry> inquiryPage = inquiryRepository.findByStatusWithUser(status, pageable);
 
         List<AdminResponse.InquiryDTO> inquiryDTOS = inquiryPage.getContent().stream()
@@ -271,7 +271,7 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public AdminResponse.FindSupportByIdDTO findSupportById(Long adminId, Long inquiryId) {
+    public AdminResponse.FindSupportByIdDTO findSupportById(Long inquiryId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
@@ -285,7 +285,7 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminResponse.AnswerInquiryDTO answerInquiry(AdminRequest.AnswerInquiryDTO requestDTO, Long adminId, Long inquiryId) {
+    public AdminResponse.AnswerInquiryDTO answerInquiry(AnswerInquiryReq request, Long adminId, Long inquiryId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
@@ -296,7 +296,7 @@ public class AdminService {
         }
 
         User admin = userRepository.getReferenceById(adminId);
-        inquiry.updateAnswer(requestDTO.content(), admin);
+        inquiry.updateAnswer(request.content(), admin);
 
         // 문의글은 처리 완료
         inquiry.updateStatus(InquiryStatus.PROCESSED);
@@ -316,12 +316,12 @@ public class AdminService {
     }
 
     @Transactional
-    public void createFAQ(AdminRequest.CreateFaqDTO requestDTO, Long adminId) {
+    public void createFAQ(CreateFaqReq request) {
         FAQ faq = FAQ.builder()
-                .question(requestDTO.question())
-                .answer(requestDTO.answer())
-                .type(requestDTO.type())
-                .isTop(requestDTO.isTop())
+                .question(request.question())
+                .answer(request.answer())
+                .type(request.type())
+                .isTop(request.isTop())
                 .build();
 
         faqRepository.save(faq);
