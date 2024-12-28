@@ -139,22 +139,12 @@ public class AdminService {
 
     @Transactional
     public void changeApplyStatus(ChangeApplyStatusReq request) {
-        Apply apply = applyRepository.findByIdWithAnimal(request.id()).orElseThrow(
-                () -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND)
-        );
+        Apply apply = applyRepository.findByIdWithAnimal(request.id())
+                .orElseThrow(() -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND));
 
-        // 이미 처리 됌
-        if (apply.getStatus().equals(ApplyStatus.PROCESSED)) {
-            throw new CustomException(ExceptionCode.APPLICATION_ALREADY_PROCESSED);
-        }
+        validateNotAlreadyProcessed(apply);
 
-        // 지원서 상태 변경
-        apply.updateApplyStatus(request.status());
-
-        // 입양이 완료된거면 입양 완료 상태로 변경
-        if (request.status().equals(ApplyStatus.PROCESSED)) {
-            apply.getAnimal().finishAdoption();
-        }
+        updateApplyStatusAndHandleAdoption(apply, request.status());
     }
 
     public FindReportListRes findReportList(ReportStatus status, Pageable pageable) {
@@ -423,6 +413,20 @@ public class AdminService {
     private void validateNotAlreadyUnsuspended(UserStatus userStatus) {
         if (userStatus.isActive()) {
             throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
+        }
+    }
+
+    private void validateNotAlreadyProcessed(Apply apply) {
+        if (apply.getStatus().equals(ApplyStatus.PROCESSED)) {
+            throw new CustomException(ExceptionCode.APPLICATION_ALREADY_PROCESSED);
+        }
+    }
+
+    private void updateApplyStatusAndHandleAdoption(Apply apply, ApplyStatus status) {
+        apply.updateApplyStatus(status);
+
+        if (status.equals(ApplyStatus.PROCESSED)) {
+            apply.finishAdoption();
         }
     }
 

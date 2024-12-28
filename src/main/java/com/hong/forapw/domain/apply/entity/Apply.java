@@ -77,4 +77,8 @@ public class Apply extends BaseEntity {
     public void updateApplyStatus(ApplyStatus applyStatus) {
         this.status = applyStatus;
     }
+
+    public void finishAdoption() {
+        animal.finishAdoption();
+    }
 }
