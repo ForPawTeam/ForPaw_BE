@@ -60,4 +60,8 @@ public class UserStatus {
     public void updateActiveness(boolean isActive) {
         this.isActive = isActive;
     }
+
+    public boolean isNotActive() {
+        return !isActive;
+    }
 }

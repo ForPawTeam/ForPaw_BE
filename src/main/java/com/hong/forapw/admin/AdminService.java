@@ -99,18 +99,10 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        // 현재 유저의 Role과 동일한 값이 요청으로 들어옴
-        if (request.role().equals(user.getRole())) {
-            throw new CustomException(ExceptionCode.DUPLICATE_STATUS);
-        }
+        validateRoleIsDifferent(request.role(), user.getRole());
+        prohibitSuperRoleAssignment(request.role());
+        validateAdminCannotModifySuper(adminRole, user.getRole());
 
-        // Supser로의 권한 변경은 불가능
-        if (request.role().equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
-
-        // Admin은 Super를 건들일 수 없음
-        checkAdminPrivileges(adminRole, user.getRole());
         user.updateRole(request.role());
     }
 
@@ -121,11 +113,11 @@ public class AdminService {
         );
 
         // 이미 정지되어 있음
-        if (!userStatus.isActive()) {
+        if (userStatus.isNotActive()) {
             throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
 
-        checkAdminPrivileges(adminRole, userStatus.getUser().getRole());
+        validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
         userStatus.updateForSuspend(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
     }
 
@@ -140,7 +132,7 @@ public class AdminService {
             throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
 
-        checkAdminPrivileges(adminRole, userStatus.getUser().getRole());
+        validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
         userStatus.updateForUnSuspend();
     }
 
@@ -299,7 +291,6 @@ public class AdminService {
         return new AnswerInquiryRes(inquiryId);
     }
 
-    @Transactional(readOnly = true)
     public FindFAQListRes findFAQList() {
         List<FAQ> faqs = faqRepository.findAll();
 
@@ -437,7 +428,19 @@ public class AdminService {
         );
     }
 
-    private void checkAdminPrivileges(UserRole adminRole, UserRole userRole) {
+    private void validateRoleIsDifferent(UserRole requestedRole, UserRole currentRole) {
+        if (requestedRole.equals(currentRole)) {
+            throw new CustomException(ExceptionCode.DUPLICATE_STATUS);
+        }
+    }
+
+    private void prohibitSuperRoleAssignment(UserRole requestedRole) {
+        if (requestedRole.equals(UserRole.SUPER)) {
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
+        }
+    }
+
+    private void validateAdminCannotModifySuper(UserRole adminRole, UserRole userRole) {
         // ADMIN 권한의 관리자가 SUPER 권한의 유저를 변경 방지
         if (adminRole.equals(UserRole.ADMIN) && userRole.equals(UserRole.SUPER)) {
             throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
