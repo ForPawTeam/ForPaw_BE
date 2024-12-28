@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.chat;
 
-import com.hong.forapw.domain.chat.model.ChatResponse;
 import com.hong.forapw.domain.chat.model.MessageDetailDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
@@ -11,6 +10,7 @@ import com.hong.forapw.domain.chat.entity.Message;
 import com.hong.forapw.domain.chat.constant.MessageType;
 import com.hong.forapw.domain.chat.model.request.MessageDTO;
 import com.hong.forapw.domain.chat.model.request.SendMessageReq;
+import com.hong.forapw.domain.chat.model.response.*;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.ChatUserRepository;
@@ -30,8 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.hong.forapw.domain.chat.ChatMapper.*;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -49,7 +47,7 @@ public class ChatService {
     private static final Pageable DEFAULT_IMAGE_PAGEABLE = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, SORT_BY_MESSAGE_DATE));
 
     @Transactional
-    public ChatResponse.SendMessageDTO sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
+    public SendMessageRes sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
         validateChatAuthorization(senderId, request.chatRoomId());
 
         String messageId = UUID.randomUUID().toString();
@@ -59,21 +57,21 @@ public class ChatService {
         MessageDTO messageDTO = new MessageDTO(request, senderNickName, messageId, metadata, senderProfileURL, senderId);
         publishMessageToBroker(request.chatRoomId(), messageDTO);
 
-        return new ChatResponse.SendMessageDTO(messageId);
+        return new SendMessageRes(messageId);
     }
 
-    public ChatResponse.FindChatRoomsDTO findChatRooms(Long userId) {
+    public FindChatRoomsRes findChatRooms(Long userId) {
         List<ChatUser> chatUsers = chatUserRepository.findAllByUserIdWithChatRoomAndGroup(userId);
 
-        List<ChatResponse.RoomDTO> roomDTOS = chatUsers.stream()
+        List<FindChatRoomsRes.RoomDTO> roomDTOS = chatUsers.stream()
                 .map(this::buildRoomDTO)
                 .toList();
 
-        return new ChatResponse.FindChatRoomsDTO(roomDTOS);
+        return new FindChatRoomsRes(roomDTOS);
     }
 
     @Transactional
-    public ChatResponse.FindMessagesInRoomDTO findMessagesInRoom(Long chatRoomId, Long userId, Pageable pageable) {
+    public FindMessagesInRoomRes findMessagesInRoom(Long chatRoomId, Long userId, Pageable pageable) {
         String nickName = userRepository.findNickname(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -83,59 +81,59 @@ public class ChatService {
         );
 
         List<Message> messages = messageRepository.findByChatRoomId(chatRoomId, pageable).getContent();
-        List<ChatResponse.MessageDTO> messageDTOs = convertToMessageDTOs(messages, userId);
+        List<FindMessagesInRoomRes.MessageDTO> messageDTOs = FindMessagesInRoomRes.MessageDTO.fromEntities(messages, userId);
         Collections.reverse(messageDTOs);
 
         updateLastReadMessage(chatUser, messageDTOs, chatRoomId);
-        return new ChatResponse.FindMessagesInRoomDTO(chatUser.getRoomName(), chatUser.getLastReadMessageId(), nickName, messageDTOs);
+        return new FindMessagesInRoomRes(chatUser.getRoomName(), chatUser.getLastReadMessageId(), nickName, messageDTOs);
     }
 
-    public ChatResponse.FindChatRoomDrawerDTO findChatRoomDrawer(Long chatRoomId, Long userId) {
+    public FindChatRoomDrawerRes findChatRoomDrawer(Long chatRoomId, Long userId) {
         validateChatAuthorization(userId, chatRoomId);
 
-        List<ChatResponse.ChatUserDTO> chatUserDTOs = chatRoomRepository.findUsersByChatRoomIdExcludingRole(chatRoomId, GroupRole.TEMP).stream()
-                .map(ChatMapper::toChatUserDTO)
+        List<FindChatRoomDrawerRes.ChatUserDTO> chatUserDTOs = chatRoomRepository.findUsersByChatRoomIdExcludingRole(chatRoomId, GroupRole.TEMP).stream()
+                .map(FindChatRoomDrawerRes.ChatUserDTO::new)
                 .toList();
 
-        List<ChatResponse.ImageObjectDTO> imageObjectDTOS = findImageObjects(chatRoomId, userId, DEFAULT_IMAGE_PAGEABLE).images();
-        return new ChatResponse.FindChatRoomDrawerDTO(imageObjectDTOS, chatUserDTOs);
+        List<ImageObjectDTO> imageObjectDTOS = findImageObjects(chatRoomId, userId, DEFAULT_IMAGE_PAGEABLE).images();
+        return new FindChatRoomDrawerRes(imageObjectDTOS, chatUserDTOs);
     }
 
-    public ChatResponse.FindImageObjectsDTO findImageObjects(Long chatRoomId, Long userId, Pageable pageable) {
+    public FindImageObjectsRes findImageObjects(Long chatRoomId, Long userId, Pageable pageable) {
         validateChatAuthorization(userId, chatRoomId);
 
         Page<Message> imageMessages = messageRepository.findByChatRoomIdAndMessageType(chatRoomId, MessageType.IMAGE, pageable);
-        List<ChatResponse.ImageObjectDTO> imageObjectDTOs = imageMessages.getContent().stream()
-                .map(ChatMapper::toImageObjectDTO)
+        List<ImageObjectDTO> imageObjectDTOs = imageMessages.getContent().stream()
+                .map(ImageObjectDTO::fromEntity)
                 .toList();
 
-        return new ChatResponse.FindImageObjectsDTO(imageObjectDTOs, imageMessages.isLast());
+        return new FindImageObjectsRes(imageObjectDTOs, imageMessages.isLast());
     }
 
-    public ChatResponse.FindFileObjects findFileObjects(Long chatRoomId, Long userId, Pageable pageable) {
+    public FindFileObjectsRes findFileObjects(Long chatRoomId, Long userId, Pageable pageable) {
         validateChatAuthorization(userId, chatRoomId);
 
         Page<Message> fileMessages = messageRepository.findByChatRoomIdAndMessageType(chatRoomId, MessageType.FILE, pageable);
-        List<ChatResponse.FileObjectDTO> fileObjectDTOs = fileMessages.getContent().stream()
-                .map(ChatMapper::toFileObjectDTO)
+        List<FindFileObjectsRes.FileObjectDTO> fileObjectDTOs = fileMessages.getContent().stream()
+                .map(FindFileObjectsRes.FileObjectDTO::fromEntity)
                 .toList();
 
-        return new ChatResponse.FindFileObjects(fileObjectDTOs, fileMessages.isLast());
+        return new FindFileObjectsRes(fileObjectDTOs, fileMessages.isLast());
     }
 
-    public ChatResponse.FindLinkObjects findLinkObjects(Long chatRoomId, Long userId, Pageable pageable) {
+    public FindLinkObjectsRes findLinkObjects(Long chatRoomId, Long userId, Pageable pageable) {
         validateChatAuthorization(userId, chatRoomId);
 
         Page<Message> linkMessages = messageRepository.findByChatRoomIdAndMetadataOgUrlIsNotNull(chatRoomId, pageable);
-        List<ChatResponse.LinkObjectDTO> linkObjectDTOS = linkMessages.getContent().stream()
-                .map(ChatMapper::toLinkObjectDTO)
+        List<FindLinkObjectsRes.LinkObjectDTO> linkObjectDTOS = linkMessages.getContent().stream()
+                .map(FindLinkObjectsRes.LinkObjectDTO::fromEntity)
                 .toList();
 
-        return new ChatResponse.FindLinkObjects(linkObjectDTOS, linkMessages.isLast());
+        return new FindLinkObjectsRes(linkObjectDTOS, linkMessages.isLast());
     }
 
     @Transactional
-    public ChatResponse.ReadMessageDTO readMessage(String messageId) {
+    public ReadMessageRes readMessage(String messageId) {
         Message message = messageRepository.findById(messageId).orElseThrow(
                 () -> new CustomException(ExceptionCode.MESSAGE_NOT_FOUND)
         );
@@ -144,7 +142,7 @@ public class ChatService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
 
         chatUser.updateLastMessage(message.getId(), chatUser.getLastReadMessageIndex() + 1);
-        return new ChatResponse.ReadMessageDTO(messageId);
+        return new ReadMessageRes(messageId);
     }
 
     private void validateChatAuthorization(Long senderId, Long chatRoomId) {
@@ -180,14 +178,14 @@ public class ChatService {
         CompletableFuture.runAsync(() -> brokerService.sendChatMessageToRoom(chatRoomId, message));
     }
 
-    private ChatResponse.RoomDTO buildRoomDTO(ChatUser chatUser) {
+    private FindChatRoomsRes.RoomDTO buildRoomDTO(ChatUser chatUser) {
         String lastMessageId = chatUser.getLastReadMessageId();
         MessageDetailDTO lastMessageDetails = fetchLastMessageContentAndDate(lastMessageId);
 
         Long unreadMessageIndex = chatUser.getLastReadMessageIndex();
         long unreadMessageOffset = calculateUnreadMessageOffset(chatUser.getChatRoom().getId(), unreadMessageIndex);
 
-        return toRoomDTO(chatUser, lastMessageDetails.content(), lastMessageDetails.date(), unreadMessageOffset);
+        return new FindChatRoomsRes.RoomDTO(chatUser, lastMessageDetails, unreadMessageOffset);
     }
 
     private MessageDetailDTO fetchLastMessageContentAndDate(String lastMessageId) {
@@ -212,15 +210,9 @@ public class ChatService {
         return totalPages - lastReadPage;
     }
 
-    private List<ChatResponse.MessageDTO> convertToMessageDTOs(List<Message> messages, Long userId) {
-        return messages.stream()
-                .map(message -> toMessageDTO(message, userId))
-                .toList();
-    }
-
-    private void updateLastReadMessage(ChatUser chatUser, List<ChatResponse.MessageDTO> messageDTOs, Long chatRoomId) {
+    private void updateLastReadMessage(ChatUser chatUser, List<FindMessagesInRoomRes.MessageDTO> messageDTOs, Long chatRoomId) {
         if (!messageDTOs.isEmpty()) {
-            ChatResponse.MessageDTO lastMessage = messageDTOs.get(messageDTOs.size() - 1);
+            FindMessagesInRoomRes.MessageDTO lastMessage = messageDTOs.get(messageDTOs.size() - 1);
             long totalMessages = messageRepository.countByChatRoomId(chatRoomId);
             chatUser.updateLastMessage(lastMessage.messageId(), totalMessages - 1);
         }

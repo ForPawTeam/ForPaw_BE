@@ -19,5 +19,6 @@ public class GlobalConstants {
 
     // Sort
     public static final String SORT_BY_ID = "id";
+    public static final String SORT_BY_DATE = "date";
     public static final String SORT_BY_PARTICIPANT_NUM = "participantNum";
 }
