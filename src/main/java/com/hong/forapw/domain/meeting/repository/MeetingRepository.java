@@ -34,7 +34,9 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     boolean existsByNameAndGroupId(@Param("name") String name, @Param("groupId") Long groupId);
 
     @Modifying
-    @Query("UPDATE Meeting m SET m.participantNum = m.participantNum - 1 WHERE m.group.id = :groupId AND m.id IN (SELECT mu.meeting.id FROM MeetingUser mu WHERE mu.user.id = :userId) AND m.participantNum > 0")
+    @Query("UPDATE Meeting m SET m.participantNum = m.participantNum - 1 WHERE m.group.id = :groupId " +
+            "AND m.id IN (SELECT mu.meeting.id FROM MeetingUser mu WHERE mu.user.id = :userId) " +
+            "AND m.participantNum > 0")
     void decrementParticipantCountForUserMeetings(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Modifying
