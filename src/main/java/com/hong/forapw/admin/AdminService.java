@@ -6,7 +6,6 @@ import com.hong.forapw.admin.repository.ReportRepository;
 import com.hong.forapw.domain.apply.ApplyRepository;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.apply.entity.Apply;
 import com.hong.forapw.domain.apply.constant.ApplyStatus;
 import com.hong.forapw.admin.entity.Visit;
@@ -85,11 +84,8 @@ public class AdminService {
         Map<Long, Long> processedApplyMap = getApplyCountByStatus(ApplyStatus.PROCESSED);
 
         Page<User> userPage = userRepository.findAll(pageable);
-
-        List<FindUserListRes.ApplicantDTO> applicantDTOS = userPage.getContent().stream()
-                .map(user -> mapToApplicantDTO(user, latestVisitMap, processingApplyMap, processedApplyMap))
-                .toList();
-
+        List<FindUserListRes.ApplicantDTO> applicantDTOS = FindUserListRes.ApplicantDTO.fromEntities(userPage.getContent(), latestVisitMap, processingApplyMap, processedApplyMap);
+        
         return new FindUserListRes(applicantDTOS, userPage.getTotalPages());
     }
 
@@ -147,24 +143,11 @@ public class AdminService {
         updateApplyStatusAndHandleAdoption(apply, request.status());
     }
 
-    public FindReportListRes findReportList(ReportStatus status, Pageable pageable) {
+    public FindReportListRes findReports(ReportStatus status, Pageable pageable) {
         Page<Report> reportPage = reportRepository.findAllByStatus(status, pageable);
+        List<FindReportListRes.ReportDTO> reportDTOs = FindReportListRes.ReportDTO.fromEntities(reportPage.getContent());
 
-        List<FindReportListRes.ReportDTO> reportDTOS = reportPage.getContent().stream()
-                .map(report -> new FindReportListRes.ReportDTO(
-                        report.getId(),
-                        report.getCreatedDate(),
-                        report.getContentType(),
-                        report.getContentId(),
-                        report.getType(),
-                        report.getReason(),
-                        report.getReporter().getNickname(),
-                        report.getOffender().getId(),
-                        report.getOffender().getNickname(),
-                        report.getStatus())
-                ).toList();
-
-        return new FindReportListRes(reportDTOS, reportPage.getTotalPages());
+        return new FindReportListRes(reportDTOs, reportPage.getTotalPages());
     }
 
     @Transactional
@@ -358,31 +341,6 @@ public class AdminService {
                         apply -> apply.getUser().getId(),
                         Collectors.counting()
                 ));
-    }
-
-    private FindUserListRes.ApplicantDTO mapToApplicantDTO(
-            User user,
-            Map<Long, Visit> latestVisitMap,
-            Map<Long, Long> processingApplyMap,
-            Map<Long, Long> processedApplyMap
-    ) {
-        return new FindUserListRes.ApplicantDTO(
-                user.getId(),
-                user.getNickname(),
-                user.getCreatedDate(),
-                Optional.ofNullable(latestVisitMap.get(user.getId()))
-                        .map(Visit::getDate)
-                        .orElse(null),
-                Optional.ofNullable(processingApplyMap.get(user.getId()))
-                        .orElse(0L),
-                Optional.ofNullable(processedApplyMap.get(user.getId()))
-                        .orElse(0L),
-                user.getRole(),
-                user.getStatus().isActive(),
-                user.getStatus().getSuspensionStart(),
-                user.getStatus().getSuspensionDays(),
-                user.getStatus().getSuspensionReason()
-        );
     }
 
     private void validateRoleIsDifferent(UserRole requestedRole, UserRole currentRole) {

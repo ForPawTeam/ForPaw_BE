@@ -80,9 +80,9 @@ public class AdminController {
     }
 
     @GetMapping("/admin/reports")
-    public ResponseEntity<?> findReportList(@RequestParam(required = false) ReportStatus status,
-                                            @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindReportListRes response = authenticationService.findReportList(status, pageable);
+    public ResponseEntity<?> findReports(@RequestParam(required = false) ReportStatus status,
+                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        FindReportListRes response = authenticationService.findReports(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
