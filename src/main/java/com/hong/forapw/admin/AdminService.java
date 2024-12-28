@@ -79,51 +79,16 @@ public class AdminService {
         return new AdminResponse.FindDashboardStatsDTO(userStatsDTO, animalStatsDTO, dailyVisitorDTOS, hourlyVisitorDTOS, dailySummaryDTO);
     }
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindUserListDTO findUserList(Long adminId, Pageable pageable) {
-        // <userId, 가장 최근의 Visit 객체> 맵
-        List<Visit> visits = visitRepository.findAll();
-        Map<Long, Visit> latestVisitMap = visits.stream()
-                .collect(Collectors.toMap(
-                        visit -> visit.getUser().getId(),
-                        visit -> visit,
-                        (visit1, visit2) -> visit1.getDate().isAfter(visit2.getDate()) ? visit1 : visit2
-                ));
+    public AdminResponse.FindUserListDTO findUsers(Pageable pageable) {
+        Map<Long, Visit> latestVisitMap = getLatestVisits();
 
-        // 진행중인 지원서
-        List<Apply> processingApplies = applyRepository.findAllProcessing();
-        Map<Long, Long> processingApplyMap = processingApplies.stream()
-                .collect(Collectors.groupingBy(
-                        apply -> apply.getUser().getId(),
-                        Collectors.counting()
-                ));
-
-        // 처리 완료된 지원서
-        List<Apply> processedApplies = applyRepository.findAllProcessing();
-        Map<Long, Long> processedApplyMap = processedApplies.stream()
-                .collect(Collectors.groupingBy(
-                        apply -> apply.getUser().getId(),
-                        Collectors.counting()
-                ));
+        Map<Long, Long> processingApplyMap = getApplyCountByStatus(ApplyStatus.PROCESSING);
+        Map<Long, Long> processedApplyMap = getApplyCountByStatus(ApplyStatus.PROCESSED);
 
         Page<User> userPage = userRepository.findAll(pageable);
 
         List<AdminResponse.ApplicantDTO> applicantDTOS = userPage.getContent().stream()
-                .map(user -> new AdminResponse.ApplicantDTO(
-                        user.getId(),
-                        user.getNickname(),
-                        user.getCreatedDate(),
-                        Optional.ofNullable(latestVisitMap.get(user.getId()))
-                                .map(Visit::getDate)
-                                .orElse(null),
-                        processingApplyMap.get(user.getId()) != null ? processingApplyMap.get(user.getId()) : 0L,
-                        processedApplyMap.get(user.getId()) != null ? processedApplyMap.get(user.getId()) : 0L,
-                        user.getRole(),
-                        user.getStatus().isActive(),
-                        user.getStatus().getSuspensionStart(),
-                        user.getStatus().getSuspensionDays(),
-                        user.getStatus().getSuspensionReason()
-                ))
+                .map(user -> mapToApplicantDTO(user, latestVisitMap, processingApplyMap, processedApplyMap))
                 .toList();
 
         return new AdminResponse.FindUserListDTO(applicantDTOS, userPage.getTotalPages());
@@ -430,6 +395,50 @@ public class AdminService {
                 newPostNum,
                 newCommentNum,
                 newAdoptApplicationNum
+        );
+    }
+
+    private Map<Long, Visit> getLatestVisits() {
+        List<Visit> visits = visitRepository.findAll();
+        return visits.stream()
+                .collect(Collectors.toMap(
+                        visit -> visit.getUser().getId(),
+                        visit -> visit,
+                        (visit1, visit2) -> visit1.getDate().isAfter(visit2.getDate()) ? visit1 : visit2
+                ));
+    }
+
+    private Map<Long, Long> getApplyCountByStatus(ApplyStatus status) {
+        List<Apply> applies = applyRepository.findByStatus(status);
+        return applies.stream()
+                .collect(Collectors.groupingBy(
+                        apply -> apply.getUser().getId(),
+                        Collectors.counting()
+                ));
+    }
+
+    private AdminResponse.ApplicantDTO mapToApplicantDTO(
+            User user,
+            Map<Long, Visit> latestVisitMap,
+            Map<Long, Long> processingApplyMap,
+            Map<Long, Long> processedApplyMap
+    ) {
+        return new AdminResponse.ApplicantDTO(
+                user.getId(),
+                user.getNickname(),
+                user.getCreatedDate(),
+                Optional.ofNullable(latestVisitMap.get(user.getId()))
+                        .map(Visit::getDate)
+                        .orElse(null),
+                Optional.ofNullable(processingApplyMap.get(user.getId()))
+                        .orElse(0L),
+                Optional.ofNullable(processedApplyMap.get(user.getId()))
+                        .orElse(0L),
+                user.getRole(),
+                user.getStatus().isActive(),
+                user.getStatus().getSuspensionStart(),
+                user.getStatus().getSuspensionDays(),
+                user.getStatus().getSuspensionReason()
         );
     }
 

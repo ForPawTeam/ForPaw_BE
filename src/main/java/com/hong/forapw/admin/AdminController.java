@@ -37,8 +37,8 @@ public class AdminController {
     }
 
     @GetMapping("/admin/user")
-    public ResponseEntity<?> findUserList(@PageableDefault(sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindUserListDTO responseDTO = authenticationService.findUserList(userDetails.user().getId(), pageable);
+    public ResponseEntity<?> findUsers(@PageableDefault(sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        AdminResponse.FindUserListDTO responseDTO = authenticationService.findUsers(pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
