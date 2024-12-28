@@ -112,12 +112,9 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        // 이미 정지되어 있음
-        if (userStatus.isNotActive()) {
-            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
-        }
-
+        validateNotAlreadySuspended(userStatus);
         validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
+
         userStatus.updateForSuspend(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
     }
 
@@ -444,6 +441,12 @@ public class AdminService {
         // ADMIN 권한의 관리자가 SUPER 권한의 유저를 변경 방지
         if (adminRole.equals(UserRole.ADMIN) && userRole.equals(UserRole.SUPER)) {
             throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
+        }
+    }
+
+    private void validateNotAlreadySuspended(UserStatus userStatus) {
+        if (userStatus.isNotActive()) {
+            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
     }
 
