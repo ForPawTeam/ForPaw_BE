@@ -73,13 +73,13 @@ public class UserCacheService {
 
     public void validateAccessToken(String accessToken, Long userId) {
         if (!redisService.doesValueMatch(ACCESS_TOKEN_KEY_PREFIX, userId.toString(), accessToken)) {
-            throw new CustomException(ExceptionCode.ACCESS_TOKEN_WRONG);
+            throw new CustomException(ExceptionCode.INVALID_ACCESS_TOKEN);
         }
     }
 
     public void validateEmailCodeNotSent(String email, String codeType) {
         if (redisService.isValueStored(getCodeTypeKey(codeType), email)) {
-            throw new CustomException(ExceptionCode.ALREADY_SEND_EMAIL);
+            throw new CustomException(ExceptionCode.EMAIL_ALREADY_SENT);
         }
     }
 

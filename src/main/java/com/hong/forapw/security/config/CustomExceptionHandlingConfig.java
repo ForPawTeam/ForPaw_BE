@@ -13,8 +13,8 @@ public class CustomExceptionHandlingConfig {
     public void configure(ExceptionHandlingConfigurer<HttpSecurity> exceptionHandling) {
         exceptionHandling
                 .authenticationEntryPoint((request, response, authException) ->
-                        FilterResponseUtils.unAuthorized(response, new CustomException(ExceptionCode.USER_UNAUTHORIZED)))
+                        FilterResponseUtils.unAuthorized(response, new CustomException(ExceptionCode.LOGIN_REQUIRED)))
                 .accessDeniedHandler((request, response, accessDeniedException) ->
-                        FilterResponseUtils.forbidden(response, new CustomException(ExceptionCode.USER_FORBIDDEN)));
+                        FilterResponseUtils.forbidden(response, new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS)));
     }
 }

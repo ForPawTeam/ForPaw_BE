@@ -142,7 +142,7 @@ public class RedisService {
             lock.tryLock(waitTime, leaseTime, timeUnit);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new CustomException(ExceptionCode.LOCK_ACQUIRE_INTERRUPT);
+            throw new CustomException(ExceptionCode.REDIS_LOCK_INTERRUPTED);
         }
     }
 

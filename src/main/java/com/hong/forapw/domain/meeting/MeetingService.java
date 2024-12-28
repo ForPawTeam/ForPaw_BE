@@ -156,7 +156,7 @@ public class MeetingService {
 
     private void validateMeetingNameNotDuplicate(CreateMeetingReq request, Long groupId) {
         if (meetingRepository.existsByNameAndGroupId(request.name(), groupId)) {
-            throw new CustomException(ExceptionCode.GROUP_NAME_EXIST);
+            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
         }
     }
 
@@ -181,13 +181,13 @@ public class MeetingService {
 
     private void validateMeetingParticipation(Long meetingId, Long userId) {
         if (!meetingUserRepository.existsByMeetingIdAndUserId(meetingId, userId)) {
-            throw new CustomException(ExceptionCode.MEETING_NOT_MEMBER);
+            throw new CustomException(ExceptionCode.NOT_MEETING_MEMBER);
         }
     }
 
     private void validateNotAlreadyParticipant(Long meetingId, Long userId) {
         if (meetingUserRepository.existsByMeetingIdAndUserId(meetingId, userId)) {
-            throw new CustomException(ExceptionCode.MEETING_ALREADY_JOIN);
+            throw new CustomException(ExceptionCode.MEETING_ALREADY_JOINED);
         }
     }
 
@@ -210,7 +210,7 @@ public class MeetingService {
         Set<GroupRole> roles = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
         groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .filter(groupUser -> roles.contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_MEMBER));
+                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
     }
 
     private void validateGroupAdminAuthorization(User user, Long groupId) {
@@ -220,7 +220,7 @@ public class MeetingService {
 
         groupUserRepository.findByGroupIdAndUserId(groupId, user.getId())
                 .filter(groupUser -> EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR).contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
+                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
     }
 
     private void validateGroupExists(Long groupId) {

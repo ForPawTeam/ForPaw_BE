@@ -303,7 +303,7 @@ public class AnimalService {
         return Retry.fixedDelay(3, Duration.ofSeconds(2))
                 .filter(CustomException.class::isInstance)
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) ->
-                        new CustomException(ExceptionCode.INTRODUCTION_RETRY_FAIL)
+                        new CustomException(ExceptionCode.INTRODUCTION_UPDATE_FAILED)
                 );
     }
 

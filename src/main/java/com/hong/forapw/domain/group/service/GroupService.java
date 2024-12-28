@@ -426,13 +426,13 @@ public class GroupService {
 
     private void validateGroupNameNotDuplicate(String groupName) {
         if (groupRepository.existsByName(groupName)) {
-            throw new CustomException(ExceptionCode.GROUP_NAME_EXIST);
+            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
         }
     }
 
     private void validateGroupNameNotDuplicate(Long groupId, String groupName) {
         if (groupRepository.existsByNameExcludingId(groupName, groupId)) {
-            throw new CustomException(ExceptionCode.GROUP_NAME_EXIST);
+            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
         }
     }
 
@@ -459,7 +459,7 @@ public class GroupService {
         Set<GroupRole> groupRoles = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
         groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .filter(groupUser -> groupRoles.contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_MEMBER));
+                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
     }
 
     private void validateGroupCreatorPrivileges(Long groupId, Long userId) {
@@ -469,7 +469,7 @@ public class GroupService {
 
         groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .filter(groupUser -> EnumSet.of(GroupRole.CREATOR).contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
+                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
     }
 
     private boolean hasServiceAdminPrivileges(Long userId) {
@@ -482,7 +482,7 @@ public class GroupService {
 
     private void validateNotAlreadyMember(GroupUser groupUser) {
         if (groupUser.isMember()) {
-            throw new CustomException(ExceptionCode.GROUP_ALREADY_JOIN);
+            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
         }
     }
 
@@ -510,7 +510,7 @@ public class GroupService {
     private void validateUserNotAlreadyMemberOrApplicant(Long groupId, Long userId) {
         Optional<GroupUser> groupUserOP = groupUserRepository.findByGroupIdAndUserId(groupId, userId);
         if (groupUserOP.isPresent()) {
-            throw new CustomException(ExceptionCode.GROUP_ALREADY_JOIN);
+            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
         }
     }
 
@@ -536,7 +536,7 @@ public class GroupService {
 
     private GroupUser findGroupUser(Long groupId, Long userId) {
         return groupUserRepository.findByGroupIdAndUserId(groupId, userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.GROUP_NOT_APPLY)
+                () -> new CustomException(ExceptionCode.GROUP_NOT_APPLIED)
         );
     }
 
@@ -568,7 +568,7 @@ public class GroupService {
 
     private GroupUser findPendingGroupUser(Long groupId, Long applicantId) {
         return groupUserRepository.findByGroupIdAndUserId(groupId, applicantId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_APPLY));
+                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_APPLIED));
     }
 
 
@@ -623,7 +623,7 @@ public class GroupService {
 
     private void validateGroupAdminAuthorization(Long adminId, Long groupId) {
         GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, adminId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_MEMBER));
+                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
 
         if (groupUser.getGroupRole() == GroupRole.ADMIN || groupUser.getGroupRole() == GroupRole.CREATOR) {
             throw new CustomException(ExceptionCode.NOT_GROUP_ADMIN);
@@ -632,14 +632,14 @@ public class GroupService {
 
     private void validateGroupMembership(Long groupId, Long memberId) {
         if (!groupUserRepository.existsByGroupIdAndUserId(groupId, memberId)) {
-            throw new CustomException(ExceptionCode.GROUP_NOT_MEMBER);
+            throw new CustomException(ExceptionCode.NOT_GROUP_MEMBER);
         }
     }
 
     private void validateRoleUpdateConstraints(GroupRole newRole, Long userIdToUpdate, Long creatorId) {
         // 그룹장은 자신의 역할을 변경할 수 없음
         if (userIdToUpdate.equals(creatorId)) {
-            throw new CustomException(ExceptionCode.CANT_UPDATE_FOR_CREATOR);
+            throw new CustomException(ExceptionCode.CREATOR_ROLE_UPDATE_FORBIDDEN);
         }
 
         // 그룹장으로의 변경은 불가능

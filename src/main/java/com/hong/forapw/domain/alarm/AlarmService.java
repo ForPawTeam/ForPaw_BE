@@ -73,7 +73,7 @@ public class AlarmService {
     public FindAlarmListRes findAlarms(Long userId) {
         List<Alarm> alarms = alarmRepository.findByReceiverId(userId);
         if (alarms.isEmpty()) {
-            throw new CustomException(ExceptionCode.ALARM_NOT_EXIST);
+            throw new CustomException(ExceptionCode.ALARM_LIST_EMPTY);
         }
 
         List<AlarmDTO> alarmDTOs = alarms.stream()
@@ -119,7 +119,7 @@ public class AlarmService {
 
     private void validateAlarmAuthorization(Long userId, Alarm alarm) {
         if (!alarm.getReceiverId().equals(userId)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 

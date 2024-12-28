@@ -78,7 +78,7 @@ public class ChatService {
         );
 
         ChatUser chatUser = chatUserRepository.findByUserIdAndChatRoomIdWithChatRoom(userId, chatRoomId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_FORBIDDEN)
+                () -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS)
         );
 
         List<Message> messages = messageRepository.findByChatRoomId(chatRoomId, pageable).getContent();
@@ -140,7 +140,7 @@ public class ChatService {
         );
 
         ChatUser chatUser = chatUserRepository.findByUserIdAndChatRoomId(message.getSenderId(), message.getChatRoomId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_FORBIDDEN));
+                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
 
         chatUser.updateLastMessage(message.getId(), chatUser.getLastReadMessageIndex() + 1);
         return new ChatResponse.ReadMessageDTO(messageId);
@@ -149,7 +149,7 @@ public class ChatService {
     private void validateChatAuthorization(Long senderId, Long chatRoomId) {
         boolean isMemberOfChatRoom = chatUserRepository.existsByUserIdAndChatRoomId(senderId, chatRoomId);
         if (!isMemberOfChatRoom) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 

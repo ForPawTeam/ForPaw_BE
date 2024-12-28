@@ -55,7 +55,7 @@ public class InquiryService {
 
     private void checkAuthority(Long userId, User writer) {
         if (writer.isNotSameUser(userId)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 }

@@ -96,7 +96,7 @@ public class CommentLikeHandler implements LikeHandler {
 
     private void validateNotSelfLike(Long ownerId, Long userId) {
         if (ownerId.equals(userId)) {
-            throw new CustomException(ExceptionCode.CANT_LIKE_MY_POST);
+            throw new CustomException(ExceptionCode.CANNOT_LIKE_OWN_POST);
         }
     }
 }

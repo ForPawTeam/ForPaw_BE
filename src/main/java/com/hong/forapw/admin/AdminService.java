@@ -191,12 +191,12 @@ public class AdminService {
 
         // 현재 유저의 Role과 동일한 값이 요청으로 들어옴
         if (requestDTO.role().equals(user.getRole())) {
-            throw new CustomException(ExceptionCode.SAME_STATUS);
+            throw new CustomException(ExceptionCode.DUPLICATE_STATUS);
         }
 
         // Supser로의 권한 변경은 불가능
         if (requestDTO.role().equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
 
         // Admin은 Super를 건들일 수 없음
@@ -212,7 +212,7 @@ public class AdminService {
 
         // 이미 정지되어 있음
         if (!userStatus.isActive()) {
-            throw new CustomException(ExceptionCode.USER_ALREADY_SUSPENDED);
+            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
 
         checkAdminPrivileges(adminRole, userStatus.getUser().getRole());
@@ -227,7 +227,7 @@ public class AdminService {
 
         // 이미 활성화된 상태
         if (userStatus.isActive()) {
-            throw new CustomException(ExceptionCode.USER_ALREADY_SUSPENDED);
+            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
 
         checkAdminPrivileges(adminRole, userStatus.getUser().getRole());
@@ -272,12 +272,12 @@ public class AdminService {
     @Transactional
     public void changeApplyStatus(AdminRequest.ChangeApplyStatusDTO requestDTO, Long adminId) {
         Apply apply = applyRepository.findByIdWithAnimal(requestDTO.id()).orElseThrow(
-                () -> new CustomException(ExceptionCode.APPLY_NOT_FOUND)
+                () -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND)
         );
 
         // 이미 처리 됌
         if (apply.getStatus().equals(ApplyStatus.PROCESSED)) {
-            throw new CustomException(ExceptionCode.ANIMAL_APPLY_PROCESSED);
+            throw new CustomException(ExceptionCode.APPLICATION_ALREADY_PROCESSED);
         }
 
         // 지원서 상태 변경
@@ -318,14 +318,14 @@ public class AdminService {
 
         // 이미 처리함
         if (report.getStatus().equals(ReportStatus.PROCESSED)) {
-            throw new CustomException(ExceptionCode.ALREADY_REPORTED);
+            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
         }
 
         // 유저 정지 처리
         if (requestDTO.hasSuspension()) {
             // SUPER를 정지 시킬 수는 없다 (악용 방지)
             if (report.getOffender().getRole().equals(UserRole.SUPER)) {
-                throw new CustomException(ExceptionCode.REPORT_NOT_APPLY_TO_SUPER);
+                throw new CustomException(ExceptionCode.ADMIN_CANNOT_BE_REPORTED);
             }
 
             report.getOffender().getStatus()
@@ -381,7 +381,7 @@ public class AdminService {
 
         // 답변은 하나만 할 수 있음
         if (inquiry.getAnswer() != null) {
-            throw new CustomException(ExceptionCode.INQUIRY_ALREADY_ANSWER);
+            throw new CustomException(ExceptionCode.INQUIRY_ALREADY_ANSWERED);
         }
 
         User admin = userRepository.getReferenceById(adminId);
@@ -418,18 +418,18 @@ public class AdminService {
 
     private void checkSuperAuthority(Long userId) {
         UserRole role = userRepository.findRoleById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_FORBIDDEN)
+                () -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS)
         );
 
         if (!role.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 
     private void checkAdminPrivileges(UserRole adminRole, UserRole userRole) {
         // ADMIN 권한의 관리자가 SUPER 권한의 유저를 변경 방지
         if (adminRole.equals(UserRole.ADMIN) && userRole.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 

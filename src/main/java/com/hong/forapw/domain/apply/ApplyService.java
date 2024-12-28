@@ -61,7 +61,7 @@ public class ApplyService {
         validateUserIsApplicant(applyId, userId);
 
         Apply apply = applyRepository.findById(applyId).orElseThrow(
-                () -> new CustomException(ExceptionCode.APPLY_NOT_FOUND)
+                () -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND)
         );
 
         apply.updateApply(requestDTO.name(),
@@ -92,13 +92,13 @@ public class ApplyService {
 
     private void validateNoPreviousApplication(Long userId, Long animalId) {
         if (applyRepository.existsByUserIdAndAnimalId(userId, animalId)) {
-            throw new CustomException(ExceptionCode.ANIMAL_ALREADY_APPLY);
+            throw new CustomException(ExceptionCode.ANIMAL_ALREADY_APPLIED);
         }
     }
 
     private void validateUserIsApplicant(Long applyId, Long userId) {
         if (!applyRepository.existsByApplyIdAndUserId(applyId, userId)) {
-            throw new CustomException(ExceptionCode.APPLY_NOT_FOUND);
+            throw new CustomException(ExceptionCode.APPLICATION_NOT_FOUND);
         }
     }
 }

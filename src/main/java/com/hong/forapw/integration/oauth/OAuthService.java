@@ -76,7 +76,7 @@ public class OAuthService {
             response.sendRedirect(redirectUri);
         } catch (IOException e) {
             log.error("소셜 로그인 증 리다이렉트 에러 발생", e);
-            throw new CustomException(ExceptionCode.REDIRECT_FAILED);
+            throw new CustomException(ExceptionCode.REDIRECT_ERROR);
         }
     }
 

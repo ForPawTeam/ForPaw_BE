@@ -434,11 +434,11 @@ public class PostService {
 
     private void validateReportRequest(Long contentId, ContentType contentType, Long userId) {
         if (reportRepository.existsByReporterIdAndContentId(userId, contentId, contentType)) {
-            throw new CustomException(ExceptionCode.ALREADY_REPORTED);
+            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
         }
 
         if (contentType.isNotValidTypeForReport()) {
-            throw new CustomException(ExceptionCode.WRONG_REPORT_TARGET);
+            throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
         }
     }
 
@@ -450,7 +450,7 @@ public class PostService {
             return commentRepository.findUserById(request.contentId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
         }
-        throw new CustomException(ExceptionCode.WRONG_REPORT_TARGET);
+        throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
     }
 
     private void validateNotSelfReport(Long userId, User reportedUser) {
@@ -512,7 +512,7 @@ public class PostService {
             return;
         }
         if (accessor.isNotSameUser(writerId)) {
-            throw new CustomException(ExceptionCode.USER_FORBIDDEN);
+            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
     }
 

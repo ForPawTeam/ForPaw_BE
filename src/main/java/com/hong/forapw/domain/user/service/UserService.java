@@ -90,7 +90,7 @@ public class UserService {
     @Transactional
     public LoginResult login(LoginReq request, HttpServletRequest servletRequest) {
         User user = userRepository.findByEmailWithRemoved(request.email()).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_ACCOUNT_WRONG)
+                () -> new CustomException(ExceptionCode.INVALID_CREDENTIALS)
         );
 
         validateUserNotExited(user);
@@ -220,7 +220,7 @@ public class UserService {
 
     public TokenDTO updateAccessToken(String refreshToken) {
         Long userId = jwtUtils.getUserIdFromToken(refreshToken)
-                .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
+                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_TOKEN));
 
         User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
@@ -249,7 +249,7 @@ public class UserService {
 
     public ValidateAccessTokenRes validateAccessToken(String accessToken) {
         Long userId = jwtUtils.getUserIdFromToken(accessToken)
-                .orElseThrow(() -> new CustomException(ExceptionCode.TOKEN_INVALID));
+                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_TOKEN));
 
         userCacheService.validateAccessToken(accessToken, userId);
 
@@ -299,7 +299,7 @@ public class UserService {
 
         long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
         if (currentLoginFailures >= CURRENT_FAILURE_LIMIT) {
-            throw new CustomException(ExceptionCode.LOGIN_ATTEMPT_EXCEEDED);
+            throw new CustomException(ExceptionCode.LOGIN_LIMIT_EXCEEDED);
         }
     }
 
@@ -312,14 +312,14 @@ public class UserService {
             if (dailyFailures == 3L) {
                 emailService.sendMail(user.getEmail(), ACCOUNT_SUSPENSION.getSubject(), MAIL_TEMPLATE_FOR_LOCK_ACCOUNT, new BlankTemplate());
             }
-            throw new CustomException(ExceptionCode.LOGIN_ATTEMPT_EXCEEDED);
+            throw new CustomException(ExceptionCode.LOGIN_LIMIT_EXCEEDED);
         }
     }
 
     private void infoLoginFail(User user) {
         Long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
         String message = String.format("로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해 주세요. (%d회 실패)", currentLoginFailures);
-        throw new CustomException(ExceptionCode.USER_ACCOUNT_WRONG, message);
+        throw new CustomException(ExceptionCode.INVALID_CREDENTIALS, message);
     }
 
     private String generatePassword() {
@@ -353,7 +353,7 @@ public class UserService {
 
     private void updateNewPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_EMAIL_NOT_FOUND)
+                () -> new CustomException(ExceptionCode.EMAIL_NOT_FOUND)
         );
 
         user.updatePassword(passwordEncoder.encode(newPassword));
@@ -379,7 +379,7 @@ public class UserService {
 
     private void checkNotLocalJoined(User user) {
         if (user.isLocalJoined()) {
-            throw new CustomException(ExceptionCode.JOINED_BY_LOCAL);
+            throw new CustomException(ExceptionCode.LOCAL_SIGNUP_ACCOUNT);
         }
     }
 
@@ -389,39 +389,39 @@ public class UserService {
                 .filter(GroupUser::isCreator)
                 .findFirst()
                 .ifPresent(groupUser -> {
-                    throw new CustomException(ExceptionCode.CREATOR_CANT_EXIT);
+                    throw new CustomException(ExceptionCode.GROUP_CREATOR_CANNOT_LEAVE);
                 });
     }
 
     private void validateConfirmPasswordMatch(String password, String confirmPassword) {
         if (!password.equals(confirmPassword))
-            throw new CustomException(ExceptionCode.USER_PASSWORD_MATCH_WRONG);
+            throw new CustomException(ExceptionCode.PASSWORD_MISMATCH);
     }
 
     private void validatePasswordMatch(User user, String inputPassword) {
         if (!passwordEncoder.matches(user.getPassword(), inputPassword))
-            throw new CustomException(ExceptionCode.USER_PASSWORD_MATCH_WRONG);
+            throw new CustomException(ExceptionCode.PASSWORD_MISMATCH);
     }
 
     private void checkEmailNotRegistered(String email) {
         userRepository.findAuthProviderByEmail(email).ifPresent(authProvider -> {
             if (authProvider == AuthProvider.LOCAL) {
-                throw new CustomException(ExceptionCode.JOINED_BY_LOCAL);
+                throw new CustomException(ExceptionCode.LOCAL_SIGNUP_ACCOUNT);
             }
             if (authProvider == AuthProvider.GOOGLE || authProvider == AuthProvider.KAKAO) {
-                throw new CustomException(ExceptionCode.JOINED_BY_SOCIAL);
+                throw new CustomException(ExceptionCode.SOCIAL_SIGNUP_ACCOUNT);
             }
         });
     }
 
     private void validateNicknameUniqueness(String nickName) {
         if (userRepository.existsByNicknameWithRemoved(nickName))
-            throw new CustomException(ExceptionCode.USER_NICKNAME_EXIST);
+            throw new CustomException(ExceptionCode.NICKNAME_DUPLICATE);
     }
 
     private void validateUserNotExited(User user) {
         if (user.isExitMember()) {
-            throw new CustomException(ExceptionCode.USER_ALREADY_EXIT);
+            throw new CustomException(ExceptionCode.ACCOUNT_DEACTIVATED);
         }
     }
 
@@ -431,7 +431,7 @@ public class UserService {
 
     private void validateUserActive(User user) {
         if (user.isUnActive()) {
-            throw new CustomException(ExceptionCode.USER_SUSPENDED);
+            throw new CustomException(ExceptionCode.ACCOUNT_SUSPENDED);
         }
     }
 
@@ -498,7 +498,7 @@ public class UserService {
     private void validateNickname(User user, String newNickname) {
         if (user.isNickNameUnequal(newNickname) // 현재 닉네임을 유지하고 있으면 굳이 DB까지 접근해서 검증 필요 X
                 && userRepository.existsByNicknameWithRemoved(newNickname)) {
-            throw new CustomException(ExceptionCode.USER_NICKNAME_EXIST);
+            throw new CustomException(ExceptionCode.NICKNAME_DUPLICATE);
         }
     }
 
