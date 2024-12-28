@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.home.model.response;
 
 import com.hong.forapw.domain.animal.entity.Animal;
-import com.hong.forapw.domain.group.model.GroupResponse;
+import com.hong.forapw.domain.group.model.response.RecommendGroupDTO;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.region.constant.District;
@@ -37,38 +37,6 @@ public record FindHomeRes(
                     animal.getInquiryNum(),
                     likeNum,
                     animal.getProfileURL());
-        }
-    }
-
-    public record RecommendGroupDTO(
-            Long id,
-            String name,
-            String description,
-            Long participationNum,
-            String category,
-            Province province,
-            District district,
-            String profileURL,
-            Long likeNum,
-            boolean isLike,
-            boolean isShelterOwns,
-            String shelterName
-    ) {
-        public RecommendGroupDTO(GroupResponse.RecommendGroupDTO group) {
-            this(
-                    group.id(),
-                    group.name(),
-                    group.description(),
-                    group.participationNum(),
-                    group.category(),
-                    group.province(),
-                    group.district(),
-                    group.profileURL(),
-                    group.likeNum(),
-                    group.isLike(),
-                    group.isShelterOwns(),
-                    group.shelterName()
-            );
         }
     }
 

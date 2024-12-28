@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.home;
 
 import com.hong.forapw.domain.animal.AnimalService;
+import com.hong.forapw.domain.group.model.response.RecommendGroupDTO;
 import com.hong.forapw.domain.home.model.response.FindHomeRes;
 import com.hong.forapw.domain.post.entity.PopularPost;
 import com.hong.forapw.domain.region.constant.Province;
@@ -41,7 +42,7 @@ public class HomeService {
     public FindHomeRes findHomePageData(Long userId) {
         List<FindHomeRes.AnimalDTO> recommendedAnimals = findRecommendedAnimals(userId);
         List<FindHomeRes.PostDTO> popularPosts = findPopularPosts();
-        List<FindHomeRes.RecommendGroupDTO> recommendedGroups = findRecommendedGroups(userId);
+        List<RecommendGroupDTO> recommendedGroups = findRecommendedGroups(userId);
 
         return new FindHomeRes(recommendedAnimals, recommendedGroups, popularPosts);
     }
@@ -71,15 +72,12 @@ public class HomeService {
                 .toList();
     }
 
-    private List<FindHomeRes.RecommendGroupDTO> findRecommendedGroups(Long userId) {
+    private List<RecommendGroupDTO> findRecommendedGroups(Long userId) {
         List<Long> likedGroupIds = Optional.ofNullable(userId)
                 .map(favoriteGroupRepository::findGroupIdByUserId)
                 .orElse(Collections.emptyList());
 
-        return groupService.findRecommendGroups(userId, DEFAULT_PROVINCE, likedGroupIds)
-                .stream()
-                .map(FindHomeRes.RecommendGroupDTO::new)
-                .toList();
+        return groupService.findRecommendGroups(userId, DEFAULT_PROVINCE, likedGroupIds);
     }
 
     private String extractFirstImageUrl(Post post) {

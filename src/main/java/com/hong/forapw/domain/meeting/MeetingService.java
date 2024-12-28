@@ -13,7 +13,7 @@ import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
 import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
 import com.hong.forapw.domain.meeting.model.response.CreateMeetingRes;
 import com.hong.forapw.domain.meeting.model.response.FindMeetingByIdRes;
-import com.hong.forapw.domain.meeting.model.response.MeetingRes;
+import com.hong.forapw.domain.meeting.model.response.MeetingDTO;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
@@ -122,12 +122,12 @@ public class MeetingService {
         meetingRepository.deleteById(meetingId);
     }
 
-    public List<MeetingRes> findMeetings(Long groupId, Pageable pageable) {
+    public List<MeetingDTO> findMeetings(Long groupId, Pageable pageable) {
         Page<Meeting> meetingPage = meetingRepository.findByGroupId(groupId, pageable);
         Map<Long, List<String>> meetingUserProfiles = getMeetingUserProfilesByGroupId(groupId);
 
         return meetingPage.getContent().stream()
-                .map(meeting -> MeetingRes.fromEntity(meeting, meetingUserProfiles.getOrDefault(meeting.getId(), Collections.emptyList())))
+                .map(meeting -> MeetingDTO.fromEntity(meeting, meetingUserProfiles.getOrDefault(meeting.getId(), Collections.emptyList())))
                 .toList();
     }
 

@@ -1,22 +1,21 @@
 package com.hong.forapw.domain.group.service;
 
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.group.model.GroupResponse;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.model.request.*;
+import com.hong.forapw.domain.group.model.response.*;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
-import com.hong.forapw.domain.meeting.model.response.MeetingRes;
+import com.hong.forapw.domain.meeting.model.response.MeetingDTO;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
 import com.hong.forapw.domain.meeting.MeetingService;
 import com.hong.forapw.domain.meeting.repository.MeetingUserRepository;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.domain.group.GroupMapper;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.domain.chat.entity.ChatRoom;
 import com.hong.forapw.domain.chat.entity.ChatUser;
@@ -40,8 +39,6 @@ import java.util.*;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-
-import static com.hong.forapw.domain.group.GroupMapper.*;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +75,7 @@ public class GroupService {
     private static final Sort DEFAULT_SORT = Sort.by(Sort.Order.desc(SORT_BY_PARTICIPANT_NUM));
 
     @Transactional
-    public GroupResponse.CreateGroupDTO createGroup(CreateGroupReq request, Long creatorId) {
+    public CreateGroupRes createGroup(CreateGroupReq request, Long creatorId) {
         validateGroupNameNotDuplicate(request.name());
 
         Group group = request.toEntity();
@@ -91,11 +88,11 @@ public class GroupService {
         likeService.initGroupLikeCount(group.getId());
         configureRabbitMQForChatRoom(chatRoom);
 
-        return new GroupResponse.CreateGroupDTO(group.getId());
+        return new CreateGroupRes(group.getId());
     }
 
     // 클라이언트단에서 수정할 때 사용하는 API
-    public GroupResponse.FindGroupByIdDTO findGroupById(Long groupId, Long userId) {
+    public FindGroupByIdRes findGroupById(Long groupId, Long userId) {
         User groupAdmin = userRepository.getReferenceById(userId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
@@ -103,7 +100,7 @@ public class GroupService {
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        return toFindGroupByIdDTO(group);
+        return new FindGroupByIdRes(group);
     }
 
     @Transactional
@@ -122,7 +119,7 @@ public class GroupService {
                 request.description(), request.category(), request.profileURL(), request.maxNum());
     }
 
-    public GroupResponse.FindGroupMemberListDTO findGroupMembers(Long userId, Long groupId) {
+    public FindGroupMemberListRes findGroupMembers(Long userId, Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
@@ -130,51 +127,51 @@ public class GroupService {
         User groupAdmin = userRepository.getReferenceById(userId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
-        List<GroupResponse.MemberDetailDTO> memberDetails = getMemberDetails(groupId);
-        return new GroupResponse.FindGroupMemberListDTO(group.getParticipantNum(), group.getMaxNum(), memberDetails);
+        List<FindGroupMemberListRes.MemberDetailDTO> memberDetails = getMemberDetails(groupId);
+        return new FindGroupMemberListRes(group.getParticipantNum(), group.getMaxNum(), memberDetails);
     }
 
-    public GroupResponse.FindAllGroupListDTO findGroups(Long userId) {
+    public FindAllGroupListRes findGroups(Long userId) {
         Province province = determineProvince(userId);
 
         List<Long> likedGroupIdList = findLikedGroupIds(userId);
-        List<GroupResponse.RecommendGroupDTO> recommendGroupDTOS = findRecommendGroups(userId, province, likedGroupIdList);
-        List<GroupResponse.NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, DEFAULT_PAGE_REQUEST);
-        List<GroupResponse.MyGroupDTO> myGroupDTOS = findMyGroups(userId, likedGroupIdList);
+        List<RecommendGroupDTO> recommendGroupDTOS = findRecommendGroups(userId, province, likedGroupIdList);
+        List<NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, DEFAULT_PAGE_REQUEST);
+        List<MyGroupDTO> myGroupDTOS = findMyGroups(userId, likedGroupIdList);
 
-        return new GroupResponse.FindAllGroupListDTO(recommendGroupDTOS, newGroupDTOS, myGroupDTOS);
+        return new FindAllGroupListRes(recommendGroupDTOS, newGroupDTOS, myGroupDTOS);
     }
 
     // 1. 같은 지역의 그룹  2. 좋아요, 사용자 순
-    public List<GroupResponse.RecommendGroupDTO> findRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
-        List<GroupResponse.RecommendGroupDTO> recommendedGroups = fetchGroupsByProvince(province, userId, likedGroupIds);
-        List<GroupResponse.RecommendGroupDTO> additionalGroups = fetchAdditionalGroupsIfNeeded(userId, likedGroupIds, recommendedGroups);
+    public List<RecommendGroupDTO> findRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
+        List<RecommendGroupDTO> recommendedGroups = fetchGroupsByProvince(province, userId, likedGroupIds);
+        List<RecommendGroupDTO> additionalGroups = fetchAdditionalGroupsIfNeeded(userId, likedGroupIds, recommendedGroups);
 
-        List<GroupResponse.RecommendGroupDTO> finalRecommendations = mergeAndRandomizeGroups(recommendedGroups, additionalGroups);
+        List<RecommendGroupDTO> finalRecommendations = mergeAndRandomizeGroups(recommendedGroups, additionalGroups);
 
         return finalRecommendations.stream()
                 .limit(DEFAULT_RECOMMENDATION_LIMIT)
                 .toList();
     }
 
-    public List<GroupResponse.LocalGroupDTO> findLocalGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
+    public List<LocalGroupDTO> findLocalGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
         List<Group> localGroups = groupRepository.findByProvinceAndDistrictWithoutMyGroup(province, district, userId, GroupRole.TEMP, pageable).getContent();
 
         return localGroups.stream()
-                .map(group -> toLocalGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+                .map(group -> new LocalGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
                 .toList();
     }
 
-    public List<GroupResponse.NewGroupDTO> findNewGroups(Long userId, Province inputProvince, Pageable pageable) {
+    public List<NewGroupDTO> findNewGroups(Long userId, Province inputProvince, Pageable pageable) {
         Province province = resolveProvince(userId, inputProvince);
         List<Group> newGroups = groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent();
 
         return newGroups.stream()
-                .map(GroupMapper::toNewGroupDTO)
+                .map(NewGroupDTO::new)
                 .toList();
     }
 
-    private List<GroupResponse.MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds) {
+    private List<MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds) {
         if (userId == null) {
             return Collections.emptyList();
         }
@@ -182,39 +179,41 @@ public class GroupService {
         return findMyGroups(userId, likedGroupIds, DEFAULT_PAGE_REQUEST);
     }
 
-    public GroupResponse.FindLocalAndNewGroupListDTO findLocalAndNewGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
-        List<GroupResponse.LocalGroupDTO> localGroupDTOS = findLocalGroups(userId, province, district, likedGroupIds, pageable);
-        List<GroupResponse.NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, pageable);
+    public FindLocalAndNewGroupListRes findLocalAndNewGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
+        List<LocalGroupDTO> localGroupDTOS = findLocalGroups(userId, province, district, likedGroupIds, pageable);
+        List<NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, pageable);
 
-        return new GroupResponse.FindLocalAndNewGroupListDTO(localGroupDTOS, newGroupDTOS);
+        return new FindLocalAndNewGroupListRes(localGroupDTOS, newGroupDTOS);
     }
 
-    public List<GroupResponse.MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
+    public List<MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
         List<Group> joinedGroups = groupUserRepository.findGroupByUserId(userId, pageable).getContent();
 
         return joinedGroups.stream()
-                .map(group -> toMyGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+                .map(group -> new MyGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
                 .toList();
     }
 
-    public GroupResponse.FindGroupDetailByIdDTO findGroupDetailById(Long userId, Long groupId) {
+    public FindGroupDetailByIdRes findGroupDetailById(Long userId, Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        List<MeetingRes> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGE_REQUEST);
-        List<GroupResponse.NoticeDTO> noticeDTOs = findNotices(userId, groupId, DEFAULT_PAGE_REQUEST);
-        List<GroupResponse.MemberDTO> memberDTOs = findMembers(groupId);
+        List<MeetingDTO> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGE_REQUEST);
+        List<FindGroupDetailByIdRes.MeetingDTO> convertedMeetingDTOs = FindGroupDetailByIdRes.fromMeetingResList(meetingDTOs);
 
-        return new GroupResponse.FindGroupDetailByIdDTO(group.getProfileURL(), group.getName(), group.getDescription(), noticeDTOs, meetingDTOs, memberDTOs);
+        List<NoticeDTO> noticeDTOs = findNotices(userId, groupId, DEFAULT_PAGE_REQUEST);
+        List<MemberDTO> memberDTOs = findMembers(groupId);
+
+        return new FindGroupDetailByIdRes(group, noticeDTOs, convertedMeetingDTOs, memberDTOs);
     }
 
-    public List<GroupResponse.NoticeDTO> findNotices(Long userId, Long groupId, Pageable pageable) {
+    public List<NoticeDTO> findNotices(Long userId, Long groupId, Pageable pageable) {
         List<Post> notices = postRepository.findNoticeByGroupIdWithUser(groupId, pageable).getContent();
         Set<String> readPostIds = groupCacheService.getReadPostIds(userId);
 
         return notices.stream()
-                .map(notice -> toNoticeDTO(notice, readPostIds.contains(notice.getId().toString())))
+                .map(notice -> new NoticeDTO(notice, readPostIds.contains(notice.getId().toString())))
                 .toList();
     }
 
@@ -264,16 +263,16 @@ public class GroupService {
         meetingRepository.decrementParticipantCountForUserMeetings(groupId, memberId);
     }
 
-    public GroupResponse.FindApplicantListDTO findApplicants(Long adminId, Long groupId) {
+    public FindApplicantListRes findApplicants(Long adminId, Long groupId) {
         validateGroupExists(groupId);
 
         User groupAdmin = userRepository.getReferenceById(adminId);
         validateGroupAdminAuthorization(groupAdmin, groupId);
 
         List<GroupUser> applicants = groupUserRepository.findByGroupRole(groupId, GroupRole.TEMP);
-        List<GroupResponse.ApplicantDTO> applicantDTOS = toApplicantDTOS(applicants);
+        List<FindApplicantListRes.ApplicantDTO> applicantDTOS = FindApplicantListRes.ApplicantDTO.toDTOs(applicants);
 
-        return new GroupResponse.FindApplicantListDTO(applicantDTOS);
+        return new FindApplicantListRes(applicantDTOS);
     }
 
     @Transactional
@@ -309,7 +308,7 @@ public class GroupService {
     }
 
     @Transactional
-    public GroupResponse.CreateNoticeDTO createNotice(CreateNoticeReq request, Long userId, Long groupId) {
+    public CreateNoticeRes createNotice(CreateNoticeReq request, Long userId, Long groupId) {
         validateGroupExists(groupId);
 
         User groupAdmin = userRepository.getReferenceById(userId);
@@ -323,7 +322,7 @@ public class GroupService {
         postRepository.save(notice);
         sendNoticeAlarms(groupId, userId, request.title(), notice.getId());
 
-        return new GroupResponse.CreateNoticeDTO(notice.getId());
+        return new CreateNoticeRes(notice.getId());
     }
 
     @Transactional
@@ -405,27 +404,27 @@ public class GroupService {
         return favoriteGroupRepository.findGroupIdByUserId(userId);
     }
 
-    private List<GroupResponse.RecommendGroupDTO> fetchGroupsByProvince(Province province, Long userId, List<Long> likedGroupIds) {
+    private List<RecommendGroupDTO> fetchGroupsByProvince(Province province, Long userId, List<Long> likedGroupIds) {
         Pageable pageable = PageRequest.of(0, ADDITIONAL_GROUP_FETCH_LIMIT, DEFAULT_SORT);
         return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent().stream()
-                .map(group -> toRecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+                .map(group -> new RecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
                 .toList();
     }
 
-    private List<GroupResponse.RecommendGroupDTO> fetchAdditionalGroupsIfNeeded(Long userId, List<Long> likedGroupIds, List<GroupResponse.RecommendGroupDTO> existingGroups) {
+    private List<RecommendGroupDTO> fetchAdditionalGroupsIfNeeded(Long userId, List<Long> likedGroupIds, List<RecommendGroupDTO> existingGroups) {
         if (existingGroups.size() >= DEFAULT_RECOMMENDATION_LIMIT) {
             return Collections.emptyList();
         }
 
         Pageable pageable = PageRequest.of(0, ADDITIONAL_GROUP_FETCH_LIMIT, DEFAULT_SORT);
         return groupRepository.findAllWithoutMyGroup(userId, pageable).stream()
-                .map(group -> toRecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+                .map(group -> new RecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
                 .filter(newGroup -> existingGroups.stream().noneMatch(existingGroup -> existingGroup.id().equals(newGroup.id())))
                 .toList();
     }
 
-    private List<GroupResponse.RecommendGroupDTO> mergeAndRandomizeGroups(List<GroupResponse.RecommendGroupDTO> recommendedGroups, List<GroupResponse.RecommendGroupDTO> additionalGroups) {
-        List<GroupResponse.RecommendGroupDTO> mergedGroups = new ArrayList<>(recommendedGroups);
+    private List<RecommendGroupDTO> mergeAndRandomizeGroups(List<RecommendGroupDTO> recommendedGroups, List<RecommendGroupDTO> additionalGroups) {
+        List<RecommendGroupDTO> mergedGroups = new ArrayList<>(recommendedGroups);
         mergedGroups.addAll(additionalGroups);
         Collections.shuffle(mergedGroups); // 랜덤화
 
@@ -508,10 +507,10 @@ public class GroupService {
         chatRoom.updateName(groupName);
     }
 
-    private List<GroupResponse.MemberDetailDTO> getMemberDetails(Long groupId) {
+    private List<FindGroupMemberListRes.MemberDetailDTO> getMemberDetails(Long groupId) {
         return groupUserRepository.findByGroupIdWithGroup(groupId).stream()
                 .filter(GroupUser::isActiveMember)
-                .map(GroupMapper::toMemberDetailDTO)
+                .map(FindGroupMemberListRes.MemberDetailDTO::new)
                 .toList();
     }
 
@@ -554,12 +553,12 @@ public class GroupService {
         }
     }
 
-    private List<GroupResponse.MemberDTO> findMembers(Long groupId) {
+    private List<MemberDTO> findMembers(Long groupId) {
         List<GroupUser> groupUsers = groupUserRepository.findByGroupIdWithUserInAsc(groupId);
 
         return groupUsers.stream()
                 .filter(GroupUser::isActiveMember)
-                .map(GroupMapper::toMemberDTO)
+                .map(MemberDTO::new)
                 .toList();
     }
 

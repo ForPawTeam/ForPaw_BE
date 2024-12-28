@@ -5,7 +5,7 @@ import com.hong.forapw.domain.meeting.entity.Meeting;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record MeetingRes(
+public record MeetingDTO(
         Long id,
         String name,
         LocalDateTime meetDate,
@@ -17,8 +17,8 @@ public record MeetingRes(
         String description,
         List<String> participants) {
 
-    public static MeetingRes fromEntity(Meeting meeting, List<String> participants) {
-        return new MeetingRes(
+    public static MeetingDTO fromEntity(Meeting meeting, List<String> participants) {
+        return new MeetingDTO(
                 meeting.getId(),
                 meeting.getName(),
                 meeting.getMeetDate(),

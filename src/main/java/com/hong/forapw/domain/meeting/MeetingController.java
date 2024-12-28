@@ -5,7 +5,7 @@ import com.hong.forapw.domain.meeting.model.request.UpdateMeetingReq;
 import com.hong.forapw.domain.meeting.model.response.CreateMeetingRes;
 import com.hong.forapw.domain.meeting.model.response.FindMeetingByIdRes;
 import com.hong.forapw.domain.meeting.model.response.FindMeetingListRes;
-import com.hong.forapw.domain.meeting.model.response.MeetingRes;
+import com.hong.forapw.domain.meeting.model.response.MeetingDTO;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.group.service.GroupService;
@@ -71,7 +71,7 @@ public class MeetingController {
     public ResponseEntity<?> findMeetingList(@PathVariable Long groupId,
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         groupService.checkGroupAndIsMember(groupId, userDetails.user().getId());
-        List<MeetingRes> meetingDTOS = meetingService.findMeetings(groupId, pageable);
+        List<MeetingDTO> meetingDTOS = meetingService.findMeetings(groupId, pageable);
         FindMeetingListRes responseDTO = new FindMeetingListRes(meetingDTOS);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
