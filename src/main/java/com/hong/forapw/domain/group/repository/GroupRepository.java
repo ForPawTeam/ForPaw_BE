@@ -1,7 +1,5 @@
 package com.hong.forapw.domain.group.repository;
 
-import com.hong.forapw.common.exceptions.CustomException;
-import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.group.constant.GroupRole;
@@ -13,8 +11,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface GroupRepository extends JpaRepository<Group, Long> {

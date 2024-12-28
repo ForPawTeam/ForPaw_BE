@@ -130,36 +130,9 @@ public class AdminService {
         userStatus.updateForUnSuspend();
     }
 
-    public FindApplyListRes findApplyList(ApplyStatus status, Pageable pageable) {
-        Page<Apply> applyPage = applyRepository.findAllByStatusWithAnimal(status, pageable);
-
-        // Apply의 animalId를 리스트로 만듦 => shleter와 fetch 조인해서 Animal 객체를 조회 => <animalId, Anmal 객체> 맵 생성
-        List<Long> animalIds = applyPage.getContent().stream()
-                .map(apply -> apply.getAnimal().getId())
-                .toList();
-
-        List<Animal> animals = animalRepository.findByIdsWithShelter(animalIds);
-        Map<Long, Animal> animalMap = animals.stream()
-                .collect(Collectors.toMap(Animal::getId, animal -> animal));
-
-        List<FindApplyListRes.ApplyDTO> applyDTOS = applyPage.getContent().stream()
-                .map(apply -> {
-                    Animal animal = animalMap.get(apply.getAnimal().getId());
-                    return new FindApplyListRes.ApplyDTO(
-                            apply.getId(),
-                            apply.getCreatedDate(),
-                            animal.getId(),
-                            animal.getKind(),
-                            animal.getGender(),
-                            animal.getAge(),
-                            apply.getName(),
-                            apply.getTel(),
-                            apply.getAddressDetail(),
-                            animal.getShelter().getName(),
-                            animal.getShelter().getCareTel(),
-                            apply.getStatus()
-                    );
-                }).toList();
+    public FindApplyListRes findApplies(ApplyStatus status, Pageable pageable) {
+        Page<Apply> applyPage = applyRepository.findByStatusWithAnimalAndShelter(status, pageable);
+        List<FindApplyListRes.ApplyDTO> applyDTOS = FindApplyListRes.ApplyDTO.fromEntities(applyPage.getContent());
 
         return new FindApplyListRes(applyDTOS, applyPage.getTotalPages());
     }

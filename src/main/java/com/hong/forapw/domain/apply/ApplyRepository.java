@@ -39,9 +39,9 @@ public interface ApplyRepository extends JpaRepository<Apply, Long> {
             "WHERE a.id = :applyId AND a.removedAt IS NULL")
     Optional<Animal> findAnimalIdById(@Param("applyId") Long applyId);
 
-    @EntityGraph(attributePaths = {"animal"})
+    @EntityGraph(attributePaths = {"animal.shelter"})
     @Query("SELECT a From Apply a WHERE (:status IS NULL OR a.status = :status) AND a.removedAt IS NULL")
-    Page<Apply> findAllByStatusWithAnimal(@Param("status") ApplyStatus status, Pageable pageable);
+    Page<Apply> findByStatusWithAnimalAndShelter(@Param("status") ApplyStatus status, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM Apply a WHERE a.status = :applyStatus AND a.removedAt IS NULL")
     Long countByStatus(@Param("applyStatus") ApplyStatus applyStatus);

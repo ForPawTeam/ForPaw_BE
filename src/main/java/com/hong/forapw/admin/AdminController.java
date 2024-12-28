@@ -67,9 +67,9 @@ public class AdminController {
     }
 
     @GetMapping("/admin/adoption")
-    public ResponseEntity<?> findApplyList(@RequestParam(required = false) ApplyStatus status,
-                                           @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindApplyListRes response = authenticationService.findApplyList(status, pageable);
+    public ResponseEntity<?> findApplies(@RequestParam(required = false) ApplyStatus status,
+                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        FindApplyListRes response = authenticationService.findApplies(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
