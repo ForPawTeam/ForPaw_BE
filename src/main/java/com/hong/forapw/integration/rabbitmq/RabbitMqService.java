@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
+import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
 import static com.hong.forapw.integration.rabbitmq.RabbitMqMapper.*;
 
 @Component
@@ -39,8 +41,6 @@ public class RabbitMqService {
     private final MessageConverter converter;
     private final AlarmService alarmService;
 
-    private static final String CHAT_EXCHANGE = "chat.exchange";
-    private static final String ROOM_QUEUE_PREFIX = "room.";
 
     @Transactional
     public void initChatListener() {

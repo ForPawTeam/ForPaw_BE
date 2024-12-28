@@ -70,6 +70,7 @@ public enum ExceptionCode {
     GROUP_NOT_APPLIED(HttpStatus.BAD_REQUEST, "그룹 가입 신청 내역이 없습니다."),
     NOT_GROUP_MEMBER(HttpStatus.BAD_REQUEST, "그룹 멤버가 아닙니다."),
     NOT_GROUP_ADMIN(HttpStatus.BAD_REQUEST, "그룹 관리자가 아닙니다."),
+    NOT_GROUP_CREATOR(HttpStatus.BAD_REQUEST, "그룹 생성자가 아닙니다."),
     GROUP_FULL(HttpStatus.BAD_REQUEST, "그룹 인원이 초과되었습니다."),
     ROLE_CANT_UPDATE(HttpStatus.BAD_REQUEST, "그룹장으로의 변경은 불가능합니다."),
     CREATOR_ROLE_UPDATE_FORBIDDEN(HttpStatus.BAD_REQUEST, "그룹장은 자신의 역할을 변경할 수 없습니다."),

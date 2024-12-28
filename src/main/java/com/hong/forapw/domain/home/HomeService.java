@@ -77,7 +77,7 @@ public class HomeService {
                 .map(favoriteGroupRepository::findGroupIdByUserId)
                 .orElse(Collections.emptyList());
 
-        return groupService.findRecommendGroups(userId, DEFAULT_PROVINCE, likedGroupIds);
+        return groupService.getRecommendGroups(userId, DEFAULT_PROVINCE, likedGroupIds);
     }
 
     private String extractFirstImageUrl(Post post) {

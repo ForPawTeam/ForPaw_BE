@@ -37,8 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
+import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
+import static com.hong.forapw.common.utils.PaginationUtils.*;
 
 @Service
 @RequiredArgsConstructor
@@ -65,14 +66,7 @@ public class GroupService {
     private final GroupCacheService groupCacheService;
 
     private static final Province DEFAULT_PROVINCE = Province.DAEGU;
-    private static final String SORT_BY_ID = "id";
-    private static final String SORT_BY_PARTICIPANT_NUM = "participantNum";
-    private static final String ROOM_QUEUE_PREFIX = "room.";
-    private static final String CHAT_EXCHANGE = "chat.exchange";
-    private static final Pageable DEFAULT_PAGE_REQUEST = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, SORT_BY_ID));
     private static final int DEFAULT_RECOMMENDATION_LIMIT = 5;
-    private static final int ADDITIONAL_GROUP_FETCH_LIMIT = 30;
-    private static final Sort DEFAULT_SORT = Sort.by(Sort.Order.desc(SORT_BY_PARTICIPANT_NUM));
 
     @Transactional
     public CreateGroupRes createGroup(CreateGroupReq request, Long creatorId) {
@@ -128,63 +122,58 @@ public class GroupService {
     public FindAllGroupListRes findGroups(Long userId) {
         Province province = determineProvince(userId);
 
-        List<Long> likedGroupIdList = findLikedGroupIds(userId);
-        List<RecommendGroupDTO> recommendGroupDTOS = findRecommendGroups(userId, province, likedGroupIdList);
-        List<NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, DEFAULT_PAGE_REQUEST);
-        List<MyGroupDTO> myGroupDTOS = findMyGroups(userId, likedGroupIdList);
+        List<Long> likedGroupIdList = getLikedGroupIds(userId);
+        List<RecommendGroupDTO> recommendGroupDTOS = getRecommendGroups(userId, province, likedGroupIdList);
+        List<NewGroupDTO> newGroupDTOS = getNewGroups(userId, province, DEFAULT_PAGEABLE);
+        List<MyGroupDTO> myGroupDTOS = getMyGroups(userId, likedGroupIdList, DEFAULT_PAGEABLE);
 
         return new FindAllGroupListRes(recommendGroupDTOS, newGroupDTOS, myGroupDTOS);
     }
 
     // 1. 같은 지역의 그룹  2. 좋아요, 사용자 순
-    public List<RecommendGroupDTO> findRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
+    public List<RecommendGroupDTO> getRecommendGroups(Long userId, Province province, List<Long> likedGroupIds) {
         List<RecommendGroupDTO> recommendedGroups = fetchGroupsByProvince(province, userId, likedGroupIds);
         List<RecommendGroupDTO> additionalGroups = fetchAdditionalGroupsIfNeeded(userId, likedGroupIds, recommendedGroups);
 
-        List<RecommendGroupDTO> finalRecommendations = mergeAndRandomizeGroups(recommendedGroups, additionalGroups);
-
-        return finalRecommendations.stream()
+        return mergeAndRandomizeGroups(recommendedGroups, additionalGroups).stream()
                 .limit(DEFAULT_RECOMMENDATION_LIMIT)
                 .toList();
     }
 
-    public List<LocalGroupDTO> findLocalGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
-        List<Group> localGroups = groupRepository.findByProvinceAndDistrictWithoutMyGroup(province, district, userId, GroupRole.TEMP, pageable).getContent();
-
-        return localGroups.stream()
-                .map(group -> new LocalGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
-                .toList();
-    }
-
-    public List<NewGroupDTO> findNewGroups(Long userId, Province inputProvince, Pageable pageable) {
+    public List<NewGroupDTO> getNewGroups(Long userId, Province inputProvince, Pageable pageable) {
         Province province = resolveProvince(userId, inputProvince);
-        List<Group> newGroups = groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent();
 
-        return newGroups.stream()
+        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent().stream()
                 .map(NewGroupDTO::new)
                 .toList();
     }
 
-    private List<MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds) {
+    public List<MyGroupDTO> getMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
         if (userId == null) {
             return Collections.emptyList();
         }
 
-        return findMyGroups(userId, likedGroupIds, DEFAULT_PAGE_REQUEST);
+        return groupUserRepository.findGroupByUserId(userId, pageable).getContent().stream()
+                .map(group -> new MyGroupDTO(
+                        group,
+                        likeService.getGroupLikeCount(group.getId()),
+                        likedGroupIds.contains(group.getId()))
+                )
+                .toList();
     }
 
     public FindLocalAndNewGroupListRes findLocalAndNewGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
-        List<LocalGroupDTO> localGroupDTOS = findLocalGroups(userId, province, district, likedGroupIds, pageable);
-        List<NewGroupDTO> newGroupDTOS = findNewGroups(userId, province, pageable);
+        List<LocalGroupDTO> localGroupDTOS = getLocalGroups(userId, province, district, likedGroupIds, pageable);
+        List<NewGroupDTO> newGroupDTOS = getNewGroups(userId, province, pageable);
 
         return new FindLocalAndNewGroupListRes(localGroupDTOS, newGroupDTOS);
     }
 
-    public List<MyGroupDTO> findMyGroups(Long userId, List<Long> likedGroupIds, Pageable pageable) {
-        List<Group> joinedGroups = groupUserRepository.findGroupByUserId(userId, pageable).getContent();
+    public List<LocalGroupDTO> getLocalGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
+        List<Group> localGroups = groupRepository.findByProvinceAndDistrictWithoutMyGroup(province, district, userId, GroupRole.TEMP, pageable).getContent();
 
-        return joinedGroups.stream()
-                .map(group -> new MyGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+        return localGroups.stream()
+                .map(group -> new LocalGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
                 .toList();
     }
 
@@ -193,20 +182,19 @@ public class GroupService {
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        List<MeetingDTO> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGE_REQUEST);
+        List<MeetingDTO> meetingDTOs = meetingService.findMeetings(groupId, DEFAULT_PAGEABLE);
         List<FindGroupDetailByIdRes.MeetingDTO> convertedMeetingDTOs = FindGroupDetailByIdRes.fromMeetingResList(meetingDTOs);
 
-        List<NoticeDTO> noticeDTOs = findNotices(userId, groupId, DEFAULT_PAGE_REQUEST);
-        List<MemberDTO> memberDTOs = findMembers(groupId);
+        List<NoticeDTO> noticeDTOs = getNotices(userId, groupId, DEFAULT_PAGEABLE);
+        List<MemberDTO> memberDTOs = getMembers(groupId);
 
         return new FindGroupDetailByIdRes(group, noticeDTOs, convertedMeetingDTOs, memberDTOs);
     }
 
-    public List<NoticeDTO> findNotices(Long userId, Long groupId, Pageable pageable) {
-        List<Post> notices = postRepository.findNoticeByGroupIdWithUser(groupId, pageable).getContent();
+    public List<NoticeDTO> getNotices(Long userId, Long groupId, Pageable pageable) {
         Set<String> readPostIds = groupCacheService.getReadPostIds(userId);
 
-        return notices.stream()
+        return postRepository.findNoticeByGroupIdWithUser(groupId, pageable).getContent().stream()
                 .map(notice -> new NoticeDTO(notice, readPostIds.contains(notice.getId().toString())))
                 .toList();
     }
@@ -264,7 +252,7 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
 
-        GroupUser groupUser = findGroupUser(groupId, applicantId);
+        GroupUser groupUser = getGroupUser(groupId, applicantId);
         validateNotAlreadyMember(groupUser);
 
         approveMembership(groupUser, group);
@@ -332,7 +320,7 @@ public class GroupService {
                 .orElse(DEFAULT_PROVINCE);
     }
 
-    private List<Long> findLikedGroupIds(Long userId) {
+    private List<Long> getLikedGroupIds(Long userId) {
         if (userId == null) {
             return Collections.emptyList();
         }
@@ -341,9 +329,12 @@ public class GroupService {
     }
 
     private List<RecommendGroupDTO> fetchGroupsByProvince(Province province, Long userId, List<Long> likedGroupIds) {
-        Pageable pageable = PageRequest.of(0, ADDITIONAL_GROUP_FETCH_LIMIT, DEFAULT_SORT);
-        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, pageable).getContent().stream()
-                .map(group -> new RecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, RECOMMEND_GROUP_PAGEABLE).getContent().stream()
+                .map(group -> new RecommendGroupDTO(
+                        group,
+                        likeService.getGroupLikeCount(group.getId()),
+                        likedGroupIds.contains(group.getId()))
+                )
                 .toList();
     }
 
@@ -352,9 +343,12 @@ public class GroupService {
             return Collections.emptyList();
         }
 
-        Pageable pageable = PageRequest.of(0, ADDITIONAL_GROUP_FETCH_LIMIT, DEFAULT_SORT);
-        return groupRepository.findAllWithoutMyGroup(userId, pageable).stream()
-                .map(group -> new RecommendGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+        return groupRepository.findAllWithoutMyGroup(userId, RECOMMEND_GROUP_PAGEABLE).stream()
+                .map(group -> new RecommendGroupDTO(
+                        group,
+                        likeService.getGroupLikeCount(group.getId()),
+                        likedGroupIds.contains(group.getId()))
+                )
                 .filter(newGroup -> existingGroups.stream().noneMatch(existingGroup -> existingGroup.id().equals(newGroup.id())))
                 .toList();
     }
@@ -367,7 +361,6 @@ public class GroupService {
         return mergedGroups;
     }
 
-    // 1. 로그인된 상태고 province가 요청값으로 들어오지 않으면 프로필에서 설정한 province 사용, 2. 로그인도 되지 않으면 디폴트 값 사용
     private Province resolveProvince(Long userId, Province inputProvince) {
         if (inputProvince != null) {
             return inputProvince;
@@ -456,28 +449,21 @@ public class GroupService {
     }
 
     private void validateIsGroupMember(Long groupId, Long userId) {
-        Set<GroupRole> groupRoles = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
-        groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .filter(groupUser -> groupRoles.contains(groupUser.getGroupRole()))
+        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
+
+        if(groupUser.isNotMember()) {
+            throw new CustomException(ExceptionCode.NOT_GROUP_MEMBER);
+        }
     }
 
     private void validateGroupCreatorPrivileges(Long groupId, Long userId) {
-        if (hasServiceAdminPrivileges(userId)) {
-            return;
+        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
+
+        if(groupUser.isNotCreator()){
+            throw new CustomException(ExceptionCode.NOT_GROUP_CREATOR);
         }
-
-        groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .filter(groupUser -> EnumSet.of(GroupRole.CREATOR).contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
-    }
-
-    private boolean hasServiceAdminPrivileges(Long userId) {
-        UserRole role = userRepository.findRoleById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
-
-        return role.equals(UserRole.ADMIN) || role.equals(UserRole.SUPER);
     }
 
     private void validateNotAlreadyMember(GroupUser groupUser) {
@@ -492,10 +478,8 @@ public class GroupService {
         }
     }
 
-    private List<MemberDTO> findMembers(Long groupId) {
-        List<GroupUser> groupUsers = groupUserRepository.findByGroupIdWithUserInAsc(groupId);
-
-        return groupUsers.stream()
+    private List<MemberDTO> getMembers(Long groupId) {
+        return groupUserRepository.findByGroupIdWithUserInAsc(groupId).stream()
                 .filter(GroupUser::isActiveMember)
                 .map(MemberDTO::new)
                 .toList();
@@ -521,20 +505,18 @@ public class GroupService {
                 .group(group)
                 .greeting(greeting)
                 .build();
-
         groupUserRepository.save(groupUser);
     }
 
     private void configureRabbitMQForChatRoom(ChatRoom chatRoom) {
-        // 그룹 채팅방의 exchange 등록 후 그룹장에 대한 큐와 리스너 등록
         String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
-        String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
-
         rabbitMqService.bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
+
+        String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
         rabbitMqService.registerChatListener(listenerId, queueName);
     }
 
-    private GroupUser findGroupUser(Long groupId, Long userId) {
+    private GroupUser getGroupUser(Long groupId, Long userId) {
         return groupUserRepository.findByGroupIdAndUserId(groupId, userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.GROUP_NOT_APPLIED)
         );

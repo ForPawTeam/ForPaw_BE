@@ -52,8 +52,16 @@ public class GroupUser extends BaseEntity {
         return groupRole.equals(GroupRole.USER) || groupRole.equals(GroupRole.ADMIN) || groupRole.equals(GroupRole.CREATOR);
     }
 
+    public boolean isNotMember() {
+        return groupRole.equals(GroupRole.TEMP);
+    }
+
     public boolean isCreator() {
         return groupRole == GroupRole.CREATOR;
+    }
+
+    public boolean isNotCreator() {
+        return groupRole != GroupRole.CREATOR;
     }
 
     public boolean isActiveMember() {
