@@ -124,12 +124,9 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        // 이미 활성화된 상태
-        if (userStatus.isActive()) {
-            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
-        }
-
+        validateNotAlreadyUnsuspended(userStatus);
         validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
+
         userStatus.updateForUnSuspend();
     }
 
@@ -446,6 +443,12 @@ public class AdminService {
 
     private void validateNotAlreadySuspended(UserStatus userStatus) {
         if (userStatus.isNotActive()) {
+            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
+        }
+    }
+
+    private void validateNotAlreadyUnsuspended(UserStatus userStatus) {
+        if (userStatus.isActive()) {
             throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
         }
     }
