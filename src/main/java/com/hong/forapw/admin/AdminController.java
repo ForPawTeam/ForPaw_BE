@@ -1,7 +1,7 @@
 package com.hong.forapw.admin;
 
-import com.hong.forapw.admin.model.AdminResponse;
 import com.hong.forapw.admin.model.request.*;
+import com.hong.forapw.admin.model.response.*;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.apply.constant.ApplyStatus;
@@ -32,14 +32,14 @@ public class AdminController {
 
     @GetMapping("/admin/dashboard")
     public ResponseEntity<?> findDashboardStats() {
-        AdminResponse.FindDashboardStatsDTO responseDTO = authenticationService.findDashboardStats();
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindDashboardStatsRes response = authenticationService.findDashboardStats();
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/admin/user")
     public ResponseEntity<?> findUsers(@PageableDefault(sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindUserListDTO responseDTO = authenticationService.findUsers(pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindUserListRes response = authenticationService.findUsers(pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/admin/user/role")
@@ -55,22 +55,22 @@ public class AdminController {
     }
 
     @PostMapping("/admin/user/unsuspend")
-    public ResponseEntity<?> unSuspendUser(@RequestBody @Valid AdminResponse.UnSuspendUserDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        authenticationService.unSuspendUser(requestDTO.userId(), userDetails.user().getRole());
+    public ResponseEntity<?> unSuspendUser(@RequestBody @Valid UnSuspendUserReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        authenticationService.unSuspendUser(request.userId(), userDetails.user().getRole());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @DeleteMapping("/admin/user")
-    public ResponseEntity<?> withdrawUser(@RequestBody @Valid AdminResponse.WithdrawUserDTO requestDTO) {
-        userService.withdrawMember(requestDTO.userId());
+    public ResponseEntity<?> withdrawUser(@RequestBody @Valid WithdrawUserReq request) {
+        userService.withdrawMember(request.userId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/admin/adoption")
     public ResponseEntity<?> findApplyList(@RequestParam(required = false) ApplyStatus status,
                                            @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindApplyListDTO responseDTO = authenticationService.findApplyList(status, pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindApplyListRes response = authenticationService.findApplyList(status, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/admin/adoption")
@@ -82,8 +82,8 @@ public class AdminController {
     @GetMapping("/admin/reports")
     public ResponseEntity<?> findReportList(@RequestParam(required = false) ReportStatus status,
                                             @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindReportListDTO responseDTO = authenticationService.findReportList(status, pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindReportListRes response = authenticationService.findReportList(status, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/admin/reports")
@@ -95,26 +95,26 @@ public class AdminController {
     @GetMapping("/admin/supports")
     public ResponseEntity<?> findSupportList(@RequestParam(required = false) InquiryStatus status,
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindSupportListDTO responseDTO = authenticationService.findSupportList(status, pageable);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindSupportListRes response = authenticationService.findSupportList(status, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/admin/supports/{inquiryId}")
     public ResponseEntity<?> findSupportById(@PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindSupportByIdDTO responseDTO = authenticationService.findSupportById(inquiryId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindSupportByIdRes response = authenticationService.findSupportById(inquiryId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/admin/supports/{inquiryId}/answer")
     public ResponseEntity<?> answerInquiry(@RequestBody @Valid AnswerInquiryReq request, @PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.AnswerInquiryDTO responseDTO = authenticationService.answerInquiry(request, userDetails.user().getId(), inquiryId);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        AnswerInquiryRes response = authenticationService.answerInquiry(request, userDetails.user().getId(), inquiryId);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/faq")
     public ResponseEntity<?> findFAQList() {
-        AdminResponse.FindFAQListDTO responseDTO = authenticationService.findFAQList();
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        FindFAQListRes response = authenticationService.findFAQList();
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/faq")

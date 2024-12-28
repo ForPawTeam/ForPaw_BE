@@ -1,10 +1,9 @@
 package com.hong.forapw.admin;
 
 import com.hong.forapw.admin.model.request.*;
+import com.hong.forapw.admin.model.response.*;
 import com.hong.forapw.admin.repository.ReportRepository;
 import com.hong.forapw.domain.apply.ApplyRepository;
-import com.hong.forapw.admin.model.AdminResponse;
-import com.hong.forapw.admin.model.AdminResponse.ApplyDTO;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.animal.entity.Animal;
@@ -63,23 +62,23 @@ public class AdminService {
     private static final String COMMENT_SCREENED = "커뮤니티 규정을 위반하여 가려진 댓글입니다.";
 
 
-    public AdminResponse.FindDashboardStatsDTO findDashboardStats() {
+    public FindDashboardStatsRes findDashboardStats() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfDay = truncateToMidnight(now);
 
-        AdminResponse.UserStatsDTO userStatsDTO = getUserStats();
+        FindDashboardStatsRes.UserStatsDTO userStatsDTO = getUserStats();
 
-        AdminResponse.AnimalStatsDTO animalStatsDTO = getAnimalStats(now);
+        FindDashboardStatsRes.AnimalStatsDTO animalStatsDTO = getAnimalStats(now);
 
-        List<AdminResponse.DailyVisitorDTO> dailyVisitorDTOS = getDailyVisitors(now.minusWeeks(1));
-        List<AdminResponse.HourlyVisitorDTO> hourlyVisitorDTOS = getHourlyVisitors(startOfDay);
+        List<FindDashboardStatsRes.DailyVisitorDTO> dailyVisitorDTOS = getDailyVisitors(now.minusWeeks(1));
+        List<FindDashboardStatsRes.HourlyVisitorDTO> hourlyVisitorDTOS = getHourlyVisitors(startOfDay);
 
-        AdminResponse.DailySummaryDTO dailySummaryDTO = getDailySummary(startOfDay);
+        FindDashboardStatsRes.DailySummaryDTO dailySummaryDTO = getDailySummary(startOfDay);
 
-        return new AdminResponse.FindDashboardStatsDTO(userStatsDTO, animalStatsDTO, dailyVisitorDTOS, hourlyVisitorDTOS, dailySummaryDTO);
+        return new FindDashboardStatsRes(userStatsDTO, animalStatsDTO, dailyVisitorDTOS, hourlyVisitorDTOS, dailySummaryDTO);
     }
 
-    public AdminResponse.FindUserListDTO findUsers(Pageable pageable) {
+    public FindUserListRes findUsers(Pageable pageable) {
         Map<Long, Visit> latestVisitMap = getLatestVisits();
 
         Map<Long, Long> processingApplyMap = getApplyCountByStatus(ApplyStatus.PROCESSING);
@@ -87,11 +86,11 @@ public class AdminService {
 
         Page<User> userPage = userRepository.findAll(pageable);
 
-        List<AdminResponse.ApplicantDTO> applicantDTOS = userPage.getContent().stream()
+        List<FindUserListRes.ApplicantDTO> applicantDTOS = userPage.getContent().stream()
                 .map(user -> mapToApplicantDTO(user, latestVisitMap, processingApplyMap, processedApplyMap))
                 .toList();
 
-        return new AdminResponse.FindUserListDTO(applicantDTOS, userPage.getTotalPages());
+        return new FindUserListRes(applicantDTOS, userPage.getTotalPages());
     }
 
     @Transactional
@@ -131,7 +130,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void gunSuspendUser(Long userId, UserRole adminRole) {
+    public void unSuspendUser(Long userId, UserRole adminRole) {
         UserStatus userStatus = userStatusRepository.findByUserId(userId).orElseThrow(
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
@@ -145,8 +144,7 @@ public class AdminService {
         userStatus.updateForUnSuspend();
     }
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindApplyListDTO findApplyList(ApplyStatus status, Pageable pageable) {
+    public FindApplyListRes findApplyList(ApplyStatus status, Pageable pageable) {
         Page<Apply> applyPage = applyRepository.findAllByStatusWithAnimal(status, pageable);
 
         // Apply의 animalId를 리스트로 만듦 => shleter와 fetch 조인해서 Animal 객체를 조회 => <animalId, Anmal 객체> 맵 생성
@@ -158,10 +156,10 @@ public class AdminService {
         Map<Long, Animal> animalMap = animals.stream()
                 .collect(Collectors.toMap(Animal::getId, animal -> animal));
 
-        List<ApplyDTO> applyDTOS = applyPage.getContent().stream()
+        List<FindApplyListRes.ApplyDTO> applyDTOS = applyPage.getContent().stream()
                 .map(apply -> {
                     Animal animal = animalMap.get(apply.getAnimal().getId());
-                    return new ApplyDTO(
+                    return new FindApplyListRes.ApplyDTO(
                             apply.getId(),
                             apply.getCreatedDate(),
                             animal.getId(),
@@ -177,7 +175,7 @@ public class AdminService {
                     );
                 }).toList();
 
-        return new AdminResponse.FindApplyListDTO(applyDTOS, applyPage.getTotalPages());
+        return new FindApplyListRes(applyDTOS, applyPage.getTotalPages());
     }
 
     @Transactional
@@ -200,12 +198,11 @@ public class AdminService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindReportListDTO findReportList(ReportStatus status, Pageable pageable) {
+    public FindReportListRes findReportList(ReportStatus status, Pageable pageable) {
         Page<Report> reportPage = reportRepository.findAllByStatus(status, pageable);
 
-        List<AdminResponse.ReportDTO> reportDTOS = reportPage.getContent().stream()
-                .map(report -> new AdminResponse.ReportDTO(
+        List<FindReportListRes.ReportDTO> reportDTOS = reportPage.getContent().stream()
+                .map(report -> new FindReportListRes.ReportDTO(
                         report.getId(),
                         report.getCreatedDate(),
                         report.getContentType(),
@@ -218,7 +215,7 @@ public class AdminService {
                         report.getStatus())
                 ).toList();
 
-        return new AdminResponse.FindReportListDTO(reportDTOS, reportPage.getTotalPages());
+        return new FindReportListRes(reportDTOS, reportPage.getTotalPages());
     }
 
     @Transactional
@@ -252,12 +249,11 @@ public class AdminService {
         report.updateStatus(ReportStatus.PROCESSED);
     }
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindSupportListDTO findSupportList(InquiryStatus status, Pageable pageable) {
+    public FindSupportListRes findSupportList(InquiryStatus status, Pageable pageable) {
         Page<Inquiry> inquiryPage = inquiryRepository.findByStatusWithUser(status, pageable);
 
-        List<AdminResponse.InquiryDTO> inquiryDTOS = inquiryPage.getContent().stream()
-                .map(inquiry -> new AdminResponse.InquiryDTO(
+        List<FindSupportListRes.InquiryDTO> inquiryDTOS = inquiryPage.getContent().stream()
+                .map(inquiry -> new FindSupportListRes.InquiryDTO(
                         inquiry.getId(),
                         inquiry.getCreatedDate(),
                         inquiry.getQuestioner().getNickname(),
@@ -267,16 +263,15 @@ public class AdminService {
                 )
                 .toList();
 
-        return new AdminResponse.FindSupportListDTO(inquiryDTOS, inquiryPage.getTotalPages());
+        return new FindSupportListRes(inquiryDTOS, inquiryPage.getTotalPages());
     }
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindSupportByIdDTO findSupportById(Long inquiryId) {
+    public FindSupportByIdRes findSupportById(Long inquiryId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
 
-        return new AdminResponse.FindSupportByIdDTO(
+        return new FindSupportByIdRes(
                 inquiry.getId(),
                 inquiry.getQuestioner().getNickname(),
                 inquiry.getTitle(),
@@ -285,7 +280,7 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminResponse.AnswerInquiryDTO answerInquiry(AnswerInquiryReq request, Long adminId, Long inquiryId) {
+    public AnswerInquiryRes answerInquiry(AnswerInquiryReq request, Long adminId, Long inquiryId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
                 () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
         );
@@ -301,18 +296,18 @@ public class AdminService {
         // 문의글은 처리 완료
         inquiry.updateStatus(InquiryStatus.PROCESSED);
 
-        return new AdminResponse.AnswerInquiryDTO(inquiryId);
+        return new AnswerInquiryRes(inquiryId);
     }
 
     @Transactional(readOnly = true)
-    public AdminResponse.FindFAQListDTO findFAQList() {
+    public FindFAQListRes findFAQList() {
         List<FAQ> faqs = faqRepository.findAll();
 
-        List<AdminResponse.FaqDTO> faqDTOS = faqs.stream()
-                .map(faq -> new AdminResponse.FaqDTO(faq.getQuestion(), faq.getAnswer(), faq.getType(), faq.isTop()))
+        List<FindFAQListRes.FaqDTO> faqDTOS = faqs.stream()
+                .map(faq -> new FindFAQListRes.FaqDTO(faq.getQuestion(), faq.getAnswer(), faq.getType(), faq.isTop()))
                 .toList();
 
-        return new AdminResponse.FindFAQListDTO(faqDTOS);
+        return new FindFAQListRes(faqDTOS);
     }
 
     @Transactional
@@ -331,20 +326,20 @@ public class AdminService {
         return dateTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
     }
 
-    private AdminResponse.UserStatsDTO getUserStats() {
+    private FindDashboardStatsRes.UserStatsDTO getUserStats() {
         Long activeUserCount = userRepository.countActiveUsers();
         Long notActiveUserCount = userRepository.countNotActiveUsers();
 
-        return new AdminResponse.UserStatsDTO(activeUserCount, notActiveUserCount);
+        return new FindDashboardStatsRes.UserStatsDTO(activeUserCount, notActiveUserCount);
     }
 
-    private AdminResponse.AnimalStatsDTO getAnimalStats(LocalDateTime now) {
+    private FindDashboardStatsRes.AnimalStatsDTO getAnimalStats(LocalDateTime now) {
         Long waitingForAdoptionCount = animalRepository.countAnimal();
         Long adoptionProcessingCount = applyRepository.countByStatus(ApplyStatus.PROCESSING);
         Long adoptedRecentlyCount = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSED, now.minusWeeks(1));
         Long adoptedTotalCount = applyRepository.countByStatus(ApplyStatus.PROCESSED);
 
-        return new AdminResponse.AnimalStatsDTO(
+        return new FindDashboardStatsRes.AnimalStatsDTO(
                 waitingForAdoptionCount,
                 adoptionProcessingCount,
                 adoptedRecentlyCount,
@@ -352,7 +347,7 @@ public class AdminService {
         );
     }
 
-    private List<AdminResponse.DailyVisitorDTO> getDailyVisitors(LocalDateTime startDate) {
+    private List<FindDashboardStatsRes.DailyVisitorDTO> getDailyVisitors(LocalDateTime startDate) {
         List<Visit> visits = visitRepository.findALlWithinDate(startDate);
         Map<LocalDate, Long> dailyVisitors = visits.stream()
                 .collect(Collectors.groupingBy(
@@ -361,12 +356,12 @@ public class AdminService {
                 ));
 
         return dailyVisitors.entrySet().stream()
-                .map(entry -> new AdminResponse.DailyVisitorDTO(entry.getKey(), entry.getValue()))
-                .sorted(Comparator.comparing(AdminResponse.DailyVisitorDTO::date))
+                .map(entry -> new FindDashboardStatsRes.DailyVisitorDTO(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(FindDashboardStatsRes.DailyVisitorDTO::date))
                 .toList();
     }
 
-    private List<AdminResponse.HourlyVisitorDTO> getHourlyVisitors(LocalDateTime startOfDay) {
+    private List<FindDashboardStatsRes.HourlyVisitorDTO> getHourlyVisitors(LocalDateTime startOfDay) {
         List<Visit> visits = visitRepository.findALlWithinDate(startOfDay);
         Map<LocalTime, Long> hourlyVisitors = visits.stream()
                 .filter(visit -> visit.getDate().toLocalDate().isEqual(LocalDate.now()))
@@ -376,21 +371,21 @@ public class AdminService {
                 ));
 
         return hourlyVisitors.entrySet().stream()
-                .map(entry -> new AdminResponse.HourlyVisitorDTO(
+                .map(entry -> new FindDashboardStatsRes.HourlyVisitorDTO(
                         LocalDateTime.of(LocalDate.now(), entry.getKey()),
                         entry.getValue()
                 ))
-                .sorted(Comparator.comparing(AdminResponse.HourlyVisitorDTO::hour))
+                .sorted(Comparator.comparing(FindDashboardStatsRes.HourlyVisitorDTO::hour))
                 .toList();
     }
 
-    private AdminResponse.DailySummaryDTO getDailySummary(LocalDateTime startOfDay) {
+    private FindDashboardStatsRes.DailySummaryDTO getDailySummary(LocalDateTime startOfDay) {
         Long entryNum = userRepository.countAllUsersCreatedAfter(startOfDay);
         Long newPostNum = postRepository.countALlWithinDate(startOfDay);
         Long newCommentNum = commentRepository.countALlWithinDate(startOfDay);
         Long newAdoptApplicationNum = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSING, startOfDay);
 
-        return new AdminResponse.DailySummaryDTO(
+        return new FindDashboardStatsRes.DailySummaryDTO(
                 entryNum,
                 newPostNum,
                 newCommentNum,
@@ -417,13 +412,13 @@ public class AdminService {
                 ));
     }
 
-    private AdminResponse.ApplicantDTO mapToApplicantDTO(
+    private FindUserListRes.ApplicantDTO mapToApplicantDTO(
             User user,
             Map<Long, Visit> latestVisitMap,
             Map<Long, Long> processingApplyMap,
             Map<Long, Long> processedApplyMap
     ) {
-        return new AdminResponse.ApplicantDTO(
+        return new FindUserListRes.ApplicantDTO(
                 user.getId(),
                 user.getNickname(),
                 user.getCreatedDate(),
