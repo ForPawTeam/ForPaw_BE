@@ -1,7 +1,8 @@
 package com.hong.forapw.domain.apply;
 
-import com.hong.forapw.domain.apply.model.ApplyRequest;
 import com.hong.forapw.domain.apply.model.ApplyResponse;
+import com.hong.forapw.domain.apply.model.request.ApplyAdoptionReq;
+import com.hong.forapw.domain.apply.model.request.UpdateApplyReq;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import jakarta.validation.Valid;
@@ -20,20 +21,20 @@ public class ApplyController {
     private final ApplyService applyService;
 
     @PostMapping("/animals/{animalId}/apply")
-    public ResponseEntity<?> applyAdoption(@RequestBody @Valid ApplyRequest.ApplyAdoptionDTO requestDTO, @PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.CreateApplyDTO responseDTO = applyService.applyAdoption(requestDTO, userDetails.user().getId(), animalId);
+    public ResponseEntity<?> applyAdoption(@RequestBody @Valid ApplyAdoptionReq request, @PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        ApplyResponse.CreateApplyDTO responseDTO = applyService.applyAdoption(request, userDetails.user().getId(), animalId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 
     @GetMapping("/applies")
     public ResponseEntity<?> findApplyList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        ApplyResponse.FindApplyListDTO responseDTO = applyService.findApplyList(userDetails.user().getId());
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        ApplyResponse.FindApplyListDTO response = applyService.findApplyList(userDetails.user().getId());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/applies/{applyId}")
-    public ResponseEntity<?> updateApply(@RequestBody @Valid ApplyRequest.UpdateApplyDTO requestDTO, @PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        applyService.updateApply(requestDTO, applyId, userDetails.user().getId());
+    public ResponseEntity<?> updateApply(@RequestBody @Valid UpdateApplyReq request, @PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        applyService.updateApply(request, applyId, userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

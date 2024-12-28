@@ -1,11 +1,12 @@
 package com.hong.forapw.domain.apply;
 
-import com.hong.forapw.domain.apply.model.ApplyRequest;
 import com.hong.forapw.domain.apply.model.ApplyResponse;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.apply.entity.Apply;
+import com.hong.forapw.domain.apply.model.request.ApplyAdoptionReq;
+import com.hong.forapw.domain.apply.model.request.UpdateApplyReq;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.animal.repository.AnimalRepository;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.hong.forapw.domain.apply.ApplyMapper.buildApply;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +29,7 @@ public class ApplyService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ApplyResponse.CreateApplyDTO applyAdoption(ApplyRequest.ApplyAdoptionDTO requestDTO, Long userId, Long animalId) {
+    public ApplyResponse.CreateApplyDTO applyAdoption(ApplyAdoptionReq request, Long userId, Long animalId) {
         Animal animal = animalRepository.findById(animalId).orElseThrow(
                 () -> new CustomException(ExceptionCode.ANIMAL_NOT_FOUND)
         );
@@ -38,7 +38,7 @@ public class ApplyService {
         validateNoPreviousApplication(userId, animalId);
 
         User user = userRepository.getReferenceById(userId);
-        Apply apply = buildApply(requestDTO, user, animal);
+        Apply apply = request.fromEntity(user, animal);
         applyRepository.save(apply);
 
         animal.incrementInquiryNum();
@@ -57,18 +57,19 @@ public class ApplyService {
     }
 
     @Transactional
-    public void updateApply(ApplyRequest.UpdateApplyDTO requestDTO, Long applyId, Long userId) {
+    public void updateApply(UpdateApplyReq request, Long applyId, Long userId) {
         validateUserIsApplicant(applyId, userId);
 
         Apply apply = applyRepository.findById(applyId).orElseThrow(
                 () -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND)
         );
 
-        apply.updateApply(requestDTO.name(),
-                requestDTO.tel(),
-                requestDTO.roadNameAddress(),
-                requestDTO.addressDetail(),
-                requestDTO.zipCode()
+        apply.updateApply(
+                request.name(),
+                request.tel(),
+                request.roadNameAddress(),
+                request.addressDetail(),
+                request.zipCode()
         );
     }
 
