@@ -2,8 +2,9 @@ package com.hong.forapw.integration.rabbitmq;
 
 import com.hong.forapw.domain.alarm.AlarmService;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
-import com.hong.forapw.domain.chat.model.ChatRequest;
 import com.hong.forapw.domain.chat.entity.Message;
+import com.hong.forapw.domain.chat.model.request.ChatObjectDTO;
+import com.hong.forapw.domain.chat.model.request.MessageDTO;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
@@ -25,7 +26,6 @@ import java.util.Optional;
 
 import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
 import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
-import static com.hong.forapw.integration.rabbitmq.RabbitMqMapper.*;
 
 @Component
 @RequiredArgsConstructor
@@ -73,7 +73,7 @@ public class RabbitMqService {
         SimpleRabbitListenerEndpoint endpoint = createRabbitListenerEndpoint(listenerId, queueName);
 
         endpoint.setMessageListener(m -> {
-            ChatRequest.MessageDTO messageDTO = convertToMessageDTO(m);
+            MessageDTO messageDTO = convertToMessageDTO(m);
             saveMessage(messageDTO);
             notifyChatRoomUsers(messageDTO);
         });
@@ -81,7 +81,7 @@ public class RabbitMqService {
         rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
     }
 
-    public void sendChatMessageToRoom(Long chatRoomId, ChatRequest.MessageDTO message) {
+    public void sendChatMessageToRoom(Long chatRoomId, MessageDTO message) {
         String routingKey = ROOM_QUEUE_PREFIX + chatRoomId;
         rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, message);
     }
@@ -90,27 +90,27 @@ public class RabbitMqService {
         amqpAdmin.deleteQueue(queueName);
     }
 
-    private ChatRequest.MessageDTO convertToMessageDTO(org.springframework.amqp.core.Message m) {
-        return (ChatRequest.MessageDTO) converter.fromMessage(m);
+    private MessageDTO convertToMessageDTO(org.springframework.amqp.core.Message m) {
+        return (MessageDTO) converter.fromMessage(m);
     }
 
-    private void saveMessage(ChatRequest.MessageDTO messageDTO) {
+    private void saveMessage(MessageDTO messageDTO) {
         List<String> objectURLs = Optional.ofNullable(messageDTO.objects())
                 .orElse(Collections.emptyList())
                 .stream()
-                .map(ChatRequest.ChatObjectDTO::objectURL)
+                .map(ChatObjectDTO::objectURL)
                 .toList();
 
-        Message message = buildMessage(messageDTO, objectURLs);
+        Message message = messageDTO.toEntity(objectURLs);
         messageRepository.save(message);
     }
 
-    private void notifyChatRoomUsers(ChatRequest.MessageDTO messageDTO) {
+    private void notifyChatRoomUsers(MessageDTO messageDTO) {
         List<User> users = chatRoomRepository.findUsersByChatRoomIdExcludingRole(messageDTO.chatRoomId(), GroupRole.TEMP);
         users.forEach(user -> sendAlarmForNewMessage(user, messageDTO));
     }
 
-    private void sendAlarmForNewMessage(User user, ChatRequest.MessageDTO messageDTO) {
+    private void sendAlarmForNewMessage(User user, MessageDTO messageDTO) {
         String content = "새로운 메시지: " + messageDTO.content();
         String redirectURL = "/chatting/" + messageDTO.chatRoomId();
         alarmService.sendAlarm(user.getId(), content, redirectURL, AlarmType.CHATTING);

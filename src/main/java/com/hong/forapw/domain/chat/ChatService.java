@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.chat;
 
-import com.hong.forapw.domain.chat.model.ChatRequest;
 import com.hong.forapw.domain.chat.model.ChatResponse;
 import com.hong.forapw.domain.chat.model.MessageDetailDTO;
 import com.hong.forapw.common.exceptions.CustomException;
@@ -10,6 +9,8 @@ import com.hong.forapw.domain.chat.entity.ChatUser;
 import com.hong.forapw.domain.chat.entity.LinkMetadata;
 import com.hong.forapw.domain.chat.entity.Message;
 import com.hong.forapw.domain.chat.constant.MessageType;
+import com.hong.forapw.domain.chat.model.request.MessageDTO;
+import com.hong.forapw.domain.chat.model.request.SendMessageReq;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import com.hong.forapw.domain.chat.repository.ChatUserRepository;
@@ -48,15 +49,15 @@ public class ChatService {
     private static final Pageable DEFAULT_IMAGE_PAGEABLE = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, SORT_BY_MESSAGE_DATE));
 
     @Transactional
-    public ChatResponse.SendMessageDTO sendMessage(ChatRequest.SendMessageDTO requestDTO, Long senderId, String senderNickName) {
-        validateChatAuthorization(senderId, requestDTO.chatRoomId());
+    public ChatResponse.SendMessageDTO sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
+        validateChatAuthorization(senderId, request.chatRoomId());
 
         String messageId = UUID.randomUUID().toString();
-        LinkMetadata metadata = extractMetadataIfApplicable(requestDTO);
+        LinkMetadata metadata = extractMetadataIfApplicable(request);
         String senderProfileURL = getUserProfileURL(senderId);
 
-        ChatRequest.MessageDTO messageDTO = toMessageDTO(requestDTO, senderNickName, messageId, metadata, senderProfileURL, senderId);
-        publishMessageToBroker(requestDTO.chatRoomId(), messageDTO);
+        MessageDTO messageDTO = new MessageDTO(request, senderNickName, messageId, metadata, senderProfileURL, senderId);
+        publishMessageToBroker(request.chatRoomId(), messageDTO);
 
         return new ChatResponse.SendMessageDTO(messageId);
     }
@@ -159,9 +160,9 @@ public class ChatService {
         );
     }
 
-    private LinkMetadata extractMetadataIfApplicable(ChatRequest.SendMessageDTO requestDTO) {
-        if (requestDTO.messageType() == MessageType.TEXT) {
-            String metadataURL = extractFirstURL(requestDTO.content());
+    private LinkMetadata extractMetadataIfApplicable(SendMessageReq request) {
+        if (request.messageType() == MessageType.TEXT) {
+            String metadataURL = extractFirstURL(request.content());
             return (metadataURL != null) ? MetaDataUtils.fetchMetadata(metadataURL) : null;
         }
         return null;
@@ -175,8 +176,8 @@ public class ChatService {
         return null;
     }
 
-    private void publishMessageToBroker(Long chatRoomId, ChatRequest.MessageDTO messageDTO) {
-        CompletableFuture.runAsync(() -> brokerService.sendChatMessageToRoom(chatRoomId, messageDTO));
+    private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
+        CompletableFuture.runAsync(() -> brokerService.sendChatMessageToRoom(chatRoomId, message));
     }
 
     private ChatResponse.RoomDTO buildRoomDTO(ChatUser chatUser) {

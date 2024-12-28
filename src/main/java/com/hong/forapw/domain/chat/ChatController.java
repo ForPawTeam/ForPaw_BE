@@ -1,7 +1,7 @@
 package com.hong.forapw.domain.chat;
 
-import com.hong.forapw.domain.chat.model.ChatRequest;
 import com.hong.forapw.domain.chat.model.ChatResponse;
+import com.hong.forapw.domain.chat.model.request.SendMessageReq;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,8 @@ public class ChatController {
     private static final String SORT_BY_ID = "id";
 
     @PostMapping("/chat/send")
-    public ResponseEntity<?> sendMessage(@RequestBody ChatRequest.SendMessageDTO requestDTO, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ChatResponse.SendMessageDTO responseDTO = chatService.sendMessage(requestDTO, userDetails.user().getId(), userDetails.getUsername());
+    public ResponseEntity<?> sendMessage(@RequestBody SendMessageReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        ChatResponse.SendMessageDTO responseDTO = chatService.sendMessage(request, userDetails.user().getId(), userDetails.getUsername());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 

@@ -1,11 +1,9 @@
 package com.hong.forapw.domain.chat;
 
-import com.hong.forapw.domain.chat.model.ChatRequest;
 import com.hong.forapw.domain.chat.model.ChatResponse;
 import com.hong.forapw.domain.chat.entity.ChatUser;
 import com.hong.forapw.domain.chat.entity.LinkMetadata;
 import com.hong.forapw.domain.chat.entity.Message;
-import com.hong.forapw.domain.chat.constant.MessageType;
 import com.hong.forapw.domain.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -14,20 +12,6 @@ import java.util.List;
 public class ChatMapper {
 
     private ChatMapper() {
-    }
-
-    public static ChatRequest.MessageDTO toMessageDTO(ChatRequest.SendMessageDTO requestDTO, String senderNickName, String messageId, LinkMetadata metadata, String profileURL, Long senderId) {
-        return new ChatRequest.MessageDTO(
-                messageId,
-                senderNickName,
-                profileURL,
-                requestDTO.content(),
-                (metadata != null) ? MessageType.LINK : requestDTO.messageType(),
-                requestDTO.objects(),
-                LocalDateTime.now(),
-                requestDTO.chatRoomId(),
-                senderId,
-                metadata);
     }
 
     public static ChatResponse.MessageDTO toMessageDTO(Message message, Long userId) {
