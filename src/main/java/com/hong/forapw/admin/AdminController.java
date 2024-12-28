@@ -20,6 +20,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -27,11 +29,10 @@ public class AdminController {
 
     private final AdminService authenticationService;
     private final UserService userService;
-    private static final String SORT_BY_ID = "id";
 
     @GetMapping("/admin/dashboard")
-    public ResponseEntity<?> findDashboardStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        AdminResponse.FindDashboardStatsDTO responseDTO = authenticationService.findDashboardStats(userDetails.user().getId());
+    public ResponseEntity<?> findDashboardStats() {
+        AdminResponse.FindDashboardStatsDTO responseDTO = authenticationService.findDashboardStats();
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
     }
 

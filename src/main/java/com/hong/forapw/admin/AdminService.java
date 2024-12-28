@@ -62,73 +62,19 @@ public class AdminService {
     private static final String POST_SCREENED = "이 게시글은 커뮤니티 규정을 위반하여 숨겨졌습니다.";
     private static final String COMMENT_SCREENED = "커뮤니티 규정을 위반하여 가려진 댓글입니다.";
 
-    @Transactional(readOnly = true)
-    public AdminResponse.FindDashboardStatsDTO findDashboardStats(Long userId) {
+
+    public AdminResponse.FindDashboardStatsDTO findDashboardStats() {
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfDay = truncateToMidnight(now);
 
-        // 유저 통계
-        Long activeUserCount = userRepository.countActiveUsers();
-        Long notActiveUserCount = userRepository.countNotActiveUsers();
+        AdminResponse.UserStatsDTO userStatsDTO = getUserStats();
 
-        AdminResponse.UserStatsDTO userStatsDTO = new AdminResponse.UserStatsDTO(activeUserCount, notActiveUserCount);
+        AdminResponse.AnimalStatsDTO animalStatsDTO = getAnimalStats(now);
 
-        // 유기 동물 통계
-        Long waitingForAdoptionNum = animalRepository.countAnimal();
-        Long adoptionProcessingNum = applyRepository.countByStatus(ApplyStatus.PROCESSING);
-        Long adoptedRecentlyNum = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSED, now.minusWeeks(1));
-        Long adoptedTotalNum = applyRepository.countByStatus(ApplyStatus.PROCESSED);
+        List<AdminResponse.DailyVisitorDTO> dailyVisitorDTOS = getDailyVisitors(now.minusWeeks(1));
+        List<AdminResponse.HourlyVisitorDTO> hourlyVisitorDTOS = getHourlyVisitors(startOfDay);
 
-        AdminResponse.AnimalStatsDTO animalStatsDTO = new AdminResponse.AnimalStatsDTO(
-                waitingForAdoptionNum,
-                adoptionProcessingNum,
-                adoptedRecentlyNum,
-                adoptedTotalNum
-        );
-
-        // 일주일 전까지의 Vist 엔티티 불러오기
-        LocalDateTime nowDateOnly = now.minusHours(0).withMinute(0).withSecond(0).withNano(0);
-        List<Visit> visits = visitRepository.findALlWithinDate(nowDateOnly.minusWeeks(1));
-
-        // 일별 방문자 수 집계
-        Map<LocalDate, Long> dailyVisitors = visits.stream()
-                .collect(Collectors.groupingBy(
-                        visit -> visit.getDate().toLocalDate(),
-                        Collectors.counting()
-                ));
-
-        List<AdminResponse.DailyVisitorDTO> dailyVisitorDTOS = dailyVisitors.entrySet().stream()
-                .map(entry -> new AdminResponse.DailyVisitorDTO(entry.getKey(), entry.getValue()))
-                .sorted(Comparator.comparing(AdminResponse.DailyVisitorDTO::date))
-                .collect(Collectors.toList());
-
-        // 시간별 방문자 수 집계 (오늘 날짜)
-        Map<LocalTime, Long> hourlyVisitors = visits.stream()
-                .filter(visit -> visit.getDate().toLocalDate().isEqual(LocalDate.now()))
-                .collect(Collectors.groupingBy(
-                        visit -> visit.getDate().toLocalTime().truncatedTo(ChronoUnit.HOURS),
-                        Collectors.counting()
-                ));
-
-        List<AdminResponse.HourlyVisitorDTO> hourlyVisitorDTOS = hourlyVisitors.entrySet().stream()
-                .map(entry -> new AdminResponse.HourlyVisitorDTO(
-                        LocalDateTime.of(LocalDate.now(),
-                                entry.getKey()),
-                        entry.getValue()))
-                .sorted(Comparator.comparing(AdminResponse.HourlyVisitorDTO::hour))
-                .collect(Collectors.toList());
-
-        // 오늘 발생한 이벤트 요약
-        Long entryNum = userRepository.countAllUsersCreatedAfter(nowDateOnly);
-        Long newPostNum = postRepository.countALlWithinDate(nowDateOnly);
-        Long newCommentNum = commentRepository.countALlWithinDate(nowDateOnly);
-        Long newAdoptApplicationNum = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSING, nowDateOnly);
-
-        AdminResponse.DailySummaryDTO dailySummaryDTO = new AdminResponse.DailySummaryDTO(
-                entryNum,
-                newPostNum,
-                newCommentNum,
-                newAdoptApplicationNum
-        );
+        AdminResponse.DailySummaryDTO dailySummaryDTO = getDailySummary(startOfDay);
 
         return new AdminResponse.FindDashboardStatsDTO(userStatsDTO, animalStatsDTO, dailyVisitorDTOS, hourlyVisitorDTOS, dailySummaryDTO);
     }
@@ -416,14 +362,75 @@ public class AdminService {
         faqRepository.save(faq);
     }
 
-    private void checkSuperAuthority(Long userId) {
-        UserRole role = userRepository.findRoleById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS)
-        );
+    private LocalDateTime truncateToMidnight(LocalDateTime dateTime) {
+        return dateTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
+    }
 
-        if (!role.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
+    private AdminResponse.UserStatsDTO getUserStats() {
+        Long activeUserCount = userRepository.countActiveUsers();
+        Long notActiveUserCount = userRepository.countNotActiveUsers();
+
+        return new AdminResponse.UserStatsDTO(activeUserCount, notActiveUserCount);
+    }
+
+    private AdminResponse.AnimalStatsDTO getAnimalStats(LocalDateTime now) {
+        Long waitingForAdoptionCount = animalRepository.countAnimal();
+        Long adoptionProcessingCount = applyRepository.countByStatus(ApplyStatus.PROCESSING);
+        Long adoptedRecentlyCount = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSED, now.minusWeeks(1));
+        Long adoptedTotalCount = applyRepository.countByStatus(ApplyStatus.PROCESSED);
+
+        return new AdminResponse.AnimalStatsDTO(
+                waitingForAdoptionCount,
+                adoptionProcessingCount,
+                adoptedRecentlyCount,
+                adoptedTotalCount
+        );
+    }
+
+    private List<AdminResponse.DailyVisitorDTO> getDailyVisitors(LocalDateTime startDate) {
+        List<Visit> visits = visitRepository.findALlWithinDate(startDate);
+        Map<LocalDate, Long> dailyVisitors = visits.stream()
+                .collect(Collectors.groupingBy(
+                        visit -> visit.getDate().toLocalDate(),
+                        Collectors.counting()
+                ));
+
+        return dailyVisitors.entrySet().stream()
+                .map(entry -> new AdminResponse.DailyVisitorDTO(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(AdminResponse.DailyVisitorDTO::date))
+                .toList();
+    }
+
+    private List<AdminResponse.HourlyVisitorDTO> getHourlyVisitors(LocalDateTime startOfDay) {
+        List<Visit> visits = visitRepository.findALlWithinDate(startOfDay);
+        Map<LocalTime, Long> hourlyVisitors = visits.stream()
+                .filter(visit -> visit.getDate().toLocalDate().isEqual(LocalDate.now()))
+                .collect(Collectors.groupingBy(
+                        visit -> visit.getDate().toLocalTime().truncatedTo(ChronoUnit.HOURS),
+                        Collectors.counting()
+                ));
+
+        return hourlyVisitors.entrySet().stream()
+                .map(entry -> new AdminResponse.HourlyVisitorDTO(
+                        LocalDateTime.of(LocalDate.now(), entry.getKey()),
+                        entry.getValue()
+                ))
+                .sorted(Comparator.comparing(AdminResponse.HourlyVisitorDTO::hour))
+                .toList();
+    }
+
+    private AdminResponse.DailySummaryDTO getDailySummary(LocalDateTime startOfDay) {
+        Long entryNum = userRepository.countAllUsersCreatedAfter(startOfDay);
+        Long newPostNum = postRepository.countALlWithinDate(startOfDay);
+        Long newCommentNum = commentRepository.countALlWithinDate(startOfDay);
+        Long newAdoptApplicationNum = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSING, startOfDay);
+
+        return new AdminResponse.DailySummaryDTO(
+                entryNum,
+                newPostNum,
+                newCommentNum,
+                newAdoptApplicationNum
+        );
     }
 
     private void checkAdminPrivileges(UserRole adminRole, UserRole userRole) {
