@@ -327,35 +327,13 @@ public class GroupService {
 
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
-        // 존재하지 않는 그룹이면 에러
         validateGroupExists(groupId);
 
-        // 권한체크
         checkGroupCreatorAuthority(groupId, userId);
 
-        // 그룹, 미팅 연관 데이터 삭제
-        meetingUserRepository.deleteByGroupId(groupId);
-        meetingRepository.deleteByGroupId(groupId);
-        favoriteGroupRepository.deleteByGroupId(groupId);
-        groupUserRepository.deleteByGroupId(groupId);
-
-        // 그룹과 관련된 게시글, 댓글 관련 데이터 삭제
-        postLikeRepository.deleteByGroupId(groupId);
-        commentLikeRepository.deleteByGroupId(groupId);
-        commentRepository.hardDeleteChildByGroupId(groupId);
-        commentRepository.hardDeleteParentByGroupId(groupId);
-        postImageRepository.deleteByGroupId(groupId);
-        postRepository.hardDeleteByGroupId(groupId);
-        likeService.clearGroupLikeData(groupId);
-
-        // 그룹 채팅방 삭제
-        ChatRoom chatRoom = chatRoomRepository.findByGroupId(groupId).orElseThrow(
-                () -> new CustomException(ExceptionCode.CHAT_ROOM_NOT_FOUND)
-        );
-        String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
-        chatUserRepository.deleteByGroupId(groupId);
-        chatRoomRepository.delete(chatRoom);
-        rabbitMqService.deleteQueue(queueName); // 채팅방 큐 삭제
+        deleteGroupRelatedData(groupId);
+        deleteGroupPostsAndComments(groupId);
+        deleteGroupChatRoom(groupId);
 
         groupRepository.deleteById(groupId);
     }
@@ -653,6 +631,32 @@ public class GroupService {
         String redirectURL = "/volunteer/" + groupId + "/notices/" + noticeId;
 
         groupMembers.forEach(member -> alarmService.sendAlarm(member.getId(), content, redirectURL, AlarmType.NOTICE));
+    }
+
+    private void deleteGroupRelatedData(Long groupId) {
+        meetingUserRepository.deleteByGroupId(groupId);
+        meetingRepository.deleteByGroupId(groupId);
+        favoriteGroupRepository.deleteByGroupId(groupId);
+        groupUserRepository.deleteByGroupId(groupId);
+    }
+
+    private void deleteGroupPostsAndComments(Long groupId) {
+        postLikeRepository.deleteByGroupId(groupId);
+        commentLikeRepository.deleteByGroupId(groupId);
+        commentRepository.hardDeleteChildByGroupId(groupId);
+        commentRepository.hardDeleteParentByGroupId(groupId);
+        postImageRepository.deleteByGroupId(groupId);
+        postRepository.hardDeleteByGroupId(groupId);
+        likeService.clearGroupLikeData(groupId);
+    }
+
+    private void deleteGroupChatRoom(Long groupId) {
+        ChatRoom chatRoom = chatRoomRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.CHAT_ROOM_NOT_FOUND));
+        String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
+        chatUserRepository.deleteByGroupId(groupId);
+        chatRoomRepository.delete(chatRoom);
+        rabbitMqService.deleteQueue(queueName); // 채팅방 큐 삭제
     }
 
 
