@@ -46,4 +46,15 @@ public class GlobalConstants {
     // Url Pattern
     public static final String URL_REGEX = "(https?://[\\w\\-\\._~:/?#\\[\\]@!$&'()*+,;=%]+)";
     public static final Pattern URL_PATTERN = Pattern.compile(URL_REGEX);
+
+    // Mail Template
+    public static final String MAIL_TEMPLATE_FOR_CODE = "verification_code_email.html";
+    public static final String MAIL_TEMPLATE_FOR_LOCK_ACCOUNT = "lock_account.html";
+
+    // Login Failure Limit
+    public static final long CURRENT_FAILURE_LIMIT = 3L;
+    public static final long DAILY_FAILURE_LIMIT = 3L;
+
+    // else
+    public static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 }

@@ -1,5 +1,6 @@
 package com.hong.forapw.domain.user.service;
 
+import com.hong.forapw.domain.user.UserValidator;
 import com.hong.forapw.domain.user.model.*;
 import com.hong.forapw.domain.post.model.query.PostTypeCountDTO;
 import com.hong.forapw.common.exceptions.CustomException;
@@ -7,7 +8,6 @@ import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.admin.entity.LoginAttempt;
 import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.post.constant.PostType;
-import com.hong.forapw.domain.user.constant.AuthProvider;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.entity.UserStatus;
 import com.hong.forapw.domain.alarm.repository.AlarmRepository;
@@ -29,7 +29,6 @@ import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
 import com.hong.forapw.integration.email.model.BlankTemplate;
 import com.hong.forapw.integration.email.model.EmailVerificationTemplate;
-import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.integration.email.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -44,8 +43,7 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.IP_HEADER_CANDIDATES;
-import static com.hong.forapw.common.constants.GlobalConstants.USER_AGENT_HEADER;
+import static com.hong.forapw.common.constants.GlobalConstants.*;
 import static com.hong.forapw.integration.email.EmailService.generateVerificationCode;
 import static com.hong.forapw.integration.email.EmailTemplate.ACCOUNT_SUSPENSION;
 import static com.hong.forapw.integration.email.EmailTemplate.VERIFICATION_CODE;
@@ -74,24 +72,19 @@ public class UserService {
     private final EmailService emailService;
     private final UserCacheService userCacheService;
     private final JwtUtils jwtUtils;
+    private final UserValidator validator;
 
-    private static final String MAIL_TEMPLATE_FOR_CODE = "verification_code_email.html";
-    private static final String MAIL_TEMPLATE_FOR_LOCK_ACCOUNT = "lock_account.html";
-    private static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final String UNKNOWN = "unknown";
     private static final String CODE_TYPE_RECOVERY = "recovery";
-    private static final long CURRENT_FAILURE_LIMIT = 3L;
-    private static final long DAILY_FAILURE_LIMIT = 3L;
 
     @Transactional
     public LoginResult login(LoginReq request, HttpServletRequest servletRequest) {
-        User user = userRepository.findByEmailWithRemoved(request.email()).orElseThrow(
-                () -> new CustomException(ExceptionCode.INVALID_CREDENTIALS)
-        );
+        User user = userRepository.findByEmailWithRemoved(request.email())
+                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_CREDENTIALS));
 
-        validateUserNotExited(user);
-        validateUserActive(user);
-        validateLoginAttempts(user);
+        validator.validateUserNotExited(user);
+        validator.validateUserActive(user);
+        validator.validateLoginAttempts(user);
 
         if (isPasswordUnmatched(user, request.password())) {
             handleLoginFailures(user);
@@ -104,9 +97,9 @@ public class UserService {
 
     @Transactional
     public void join(JoinReq request) {
-        validateConfirmPasswordMatch(request.password(), request.passwordConfirm());
-        checkEmailNotRegistered(request.email());
-        validateNicknameUniqueness(request.nickName());
+        validator.validateConfirmPasswordMatch(request.password(), request.passwordConfirm());
+        validator.validateEmailNotRegistered(request.email());
+        validator.validateNicknameUniqueness(request.nickName());
 
         User user = request.toEntity(passwordEncoder.encode(request.password()));
         userRepository.save(user);
@@ -116,8 +109,8 @@ public class UserService {
 
     @Transactional
     public void socialJoin(SocialJoinReq request) {
-        checkEmailNotRegistered(request.email());
-        validateNicknameUniqueness(request.nickName());
+        validator.validateEmailNotRegistered(request.email());
+        validator.validateNicknameUniqueness(request.nickName());
 
         User user = request.toEntity(passwordEncoder.encode(generatePassword()));
         userRepository.save(user);
@@ -174,9 +167,8 @@ public class UserService {
     }
 
     public VerifyPasswordRes verifyPassword(CurPasswordReq request, Long userId) {
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
         if (isPasswordUnmatched(user, request.password())) {
             return new VerifyPasswordRes(false);
@@ -187,30 +179,27 @@ public class UserService {
 
     @Transactional
     public void updatePassword(UpdatePasswordReq request, Long userId) {
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        validatePasswordMatch(user, request.curPassword());
-        validateConfirmPasswordMatch(request.curPassword(), request.newPasswordConfirm());
+        validator.validatePasswordMatch(user, request.curPassword());
+        validator.validateConfirmPasswordMatch(request.curPassword(), request.newPasswordConfirm());
 
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 
     public ProfileRes findProfile(Long userId) {
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
         return new ProfileRes(user);
     }
 
     @Transactional
     public void updateProfile(UpdateProfileReq request, Long userId) {
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        validateNickname(user, request.nickName());
+        validator.validateNickname(user, request.nickName());
         user.updateProfile(request.nickName(), request.province(), request.district(), request.subDistrict(), request.profileURL());
     }
 
@@ -218,9 +207,8 @@ public class UserService {
         Long userId = jwtUtils.getUserIdFromToken(refreshToken)
                 .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_TOKEN));
 
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
         return createAccessToken(user);
     }
@@ -228,12 +216,11 @@ public class UserService {
     // 게시글, 댓글, 좋아요은 남겨둔다. (정책에 따라 변경 가능)
     @Transactional
     public void withdrawMember(Long userId) {
-        User user = userRepository.findByIdWithRemoved(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findByIdWithRemoved(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        validateUserNotExited(user);
-        checkIsGroupCreator(user);
+        validator.validateUserNotExited(user);
+        validator.validateUserIsNotGroupCreator(user);
 
         deleteUserRelatedData(userId);
         deleteUserAssociations(userId);
@@ -254,9 +241,8 @@ public class UserService {
     }
 
     public FindCommunityRecordRes findCommunityStats(Long userId) {
-        User user = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        User user = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
         List<PostTypeCountDTO> postTypeCounts = postRepository.countByUserIdAndType(userId, List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER));
         Map<PostType, Long> postCountMap = postTypeCounts.stream()
@@ -278,25 +264,13 @@ public class UserService {
         }
 
         User user = userOP.get();
-        validateUserNotExited(user);
-        validateUserActive(user);
-        checkNotLocalJoined(user);
+        validator.validateUserNotExited(user);
+        validator.validateUserActive(user);
+        validator.validateNotLocalSignupAccount(user);
 
         recordLoginAttempt(user, request);
 
         return createToken(user);
-    }
-
-    private void validateLoginAttempts(User user) {
-        long dailyLoginFailures = userCacheService.getDailyLoginFailures(user.getId());
-        if (dailyLoginFailures >= DAILY_FAILURE_LIMIT) {
-            throw new CustomException(ExceptionCode.ACCOUNT_LOCKED);
-        }
-
-        long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
-        if (currentLoginFailures >= CURRENT_FAILURE_LIMIT) {
-            throw new CustomException(ExceptionCode.LOGIN_LIMIT_EXCEEDED);
-        }
     }
 
     private void handleLoginFailures(User user) {
@@ -373,62 +347,8 @@ public class UserService {
         return new TokenDTO(accessToken, refreshToken);
     }
 
-    private void checkNotLocalJoined(User user) {
-        if (user.isLocalJoined()) {
-            throw new CustomException(ExceptionCode.LOCAL_SIGNUP_ACCOUNT);
-        }
-    }
-
-    private void checkIsGroupCreator(User user) {
-        groupUserRepository.findAllByUser(user)
-                .stream()
-                .filter(GroupUser::isCreator)
-                .findFirst()
-                .ifPresent(groupUser -> {
-                    throw new CustomException(ExceptionCode.GROUP_CREATOR_CANNOT_LEAVE);
-                });
-    }
-
-    private void validateConfirmPasswordMatch(String password, String confirmPassword) {
-        if (!password.equals(confirmPassword))
-            throw new CustomException(ExceptionCode.PASSWORD_MISMATCH);
-    }
-
-    private void validatePasswordMatch(User user, String inputPassword) {
-        if (!passwordEncoder.matches(user.getPassword(), inputPassword))
-            throw new CustomException(ExceptionCode.PASSWORD_MISMATCH);
-    }
-
-    private void checkEmailNotRegistered(String email) {
-        userRepository.findAuthProviderByEmail(email).ifPresent(authProvider -> {
-            if (authProvider == AuthProvider.LOCAL) {
-                throw new CustomException(ExceptionCode.LOCAL_SIGNUP_ACCOUNT);
-            }
-            if (authProvider == AuthProvider.GOOGLE || authProvider == AuthProvider.KAKAO) {
-                throw new CustomException(ExceptionCode.SOCIAL_SIGNUP_ACCOUNT);
-            }
-        });
-    }
-
-    private void validateNicknameUniqueness(String nickName) {
-        if (userRepository.existsByNicknameWithRemoved(nickName))
-            throw new CustomException(ExceptionCode.NICKNAME_DUPLICATE);
-    }
-
-    private void validateUserNotExited(User user) {
-        if (user.isExitMember()) {
-            throw new CustomException(ExceptionCode.ACCOUNT_DEACTIVATED);
-        }
-    }
-
     private boolean isPasswordUnmatched(User user, String inputPassword) {
         return !passwordEncoder.matches(inputPassword, user.getPassword());
-    }
-
-    private void validateUserActive(User user) {
-        if (user.isUnActive()) {
-            throw new CustomException(ExceptionCode.ACCOUNT_SUSPENDED);
-        }
     }
 
     private void deleteUserRelatedData(Long userId) {
@@ -479,23 +399,15 @@ public class UserService {
     }
 
     private String getClientIP(HttpServletRequest request) {
-        // IP_HEADER_CANDIDATES에 IP 주소를 얻기 위해 참조할 수 있는 헤더 이름 목록 존재
         for (String header : IP_HEADER_CANDIDATES) {
             String ip = request.getHeader(header);
 
             // 해당 헤더가 비어 있지 않고, "unknown"이라는 값이 아닌 경우에만 해당 IP를 반환
-            if (ip != null && ip.length() != 0 && !UNKNOWN.equalsIgnoreCase(ip)) {
+            if (ip != null && !ip.isEmpty() && !UNKNOWN.equalsIgnoreCase(ip)) {
                 return ip;
             }
         }
         return request.getRemoteAddr();
-    }
-
-    private void validateNickname(User user, String newNickname) {
-        if (user.isNickNameUnequal(newNickname) // 현재 닉네임을 유지하고 있으면 굳이 DB까지 접근해서 검증 필요 X
-                && userRepository.existsByNicknameWithRemoved(newNickname)) {
-            throw new CustomException(ExceptionCode.NICKNAME_DUPLICATE);
-        }
     }
 
     private void setUserStatus(User user) {
