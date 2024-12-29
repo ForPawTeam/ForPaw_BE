@@ -165,34 +165,18 @@ public class AdminService {
         report.updateStatus(ReportStatus.PROCESSED);
     }
 
-    public FindSupportListRes findSupportList(InquiryStatus status, Pageable pageable) {
+    public FindSupportListRes findSupports(InquiryStatus status, Pageable pageable) {
         Page<Inquiry> inquiryPage = inquiryRepository.findByStatusWithUser(status, pageable);
+        List<FindSupportListRes.InquiryDTO> inquiryDTOs = FindSupportListRes.InquiryDTO.fromEntities(inquiryPage.getContent());
 
-        List<FindSupportListRes.InquiryDTO> inquiryDTOS = inquiryPage.getContent().stream()
-                .map(inquiry -> new FindSupportListRes.InquiryDTO(
-                        inquiry.getId(),
-                        inquiry.getCreatedDate(),
-                        inquiry.getQuestioner().getNickname(),
-                        inquiry.getType(),
-                        inquiry.getTitle(),
-                        inquiry.getStatus())
-                )
-                .toList();
-
-        return new FindSupportListRes(inquiryDTOS, inquiryPage.getTotalPages());
+        return new FindSupportListRes(inquiryDTOs, inquiryPage.getTotalPages());
     }
 
     public FindSupportByIdRes findSupportById(Long inquiryId) {
-        Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
-                () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
-        );
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND));
 
-        return new FindSupportByIdRes(
-                inquiry.getId(),
-                inquiry.getQuestioner().getNickname(),
-                inquiry.getTitle(),
-                inquiry.getDescription()
-        );
+        return new FindSupportByIdRes(inquiry);
     }
 
     @Transactional

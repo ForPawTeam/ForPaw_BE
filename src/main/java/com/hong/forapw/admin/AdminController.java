@@ -95,7 +95,7 @@ public class AdminController {
     @GetMapping("/admin/supports")
     public ResponseEntity<?> findSupportList(@RequestParam(required = false) InquiryStatus status,
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindSupportListRes response = authenticationService.findSupportList(status, pageable);
+        FindSupportListRes response = authenticationService.findSupports(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
