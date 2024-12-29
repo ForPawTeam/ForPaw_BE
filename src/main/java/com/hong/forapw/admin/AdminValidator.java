@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AdminValidator {
 
-
     public void validateRoleIsDifferent(UserRole requestedRole, UserRole currentRole) {
         if (requestedRole.equals(currentRole)) {
             throw new CustomException(ExceptionCode.DUPLICATE_STATUS);

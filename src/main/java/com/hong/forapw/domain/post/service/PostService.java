@@ -1,5 +1,6 @@
 package com.hong.forapw.domain.post.service;
 
+import com.hong.forapw.domain.post.PostValidator;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.post.entity.Comment;
 import com.hong.forapw.domain.post.entity.PopularPost;
@@ -49,13 +50,14 @@ public class PostService {
     private final PostCacheService postCacheService;
     private final LikeService likeService;
     private final AlarmService alarmService;
+    private final PostValidator validator;
 
     private static final String POST_SCREENED = "이 게시글은 커뮤니티 규정을 위반하여 숨겨졌습니다.";
     private static final String COMMENT_DELETED = "삭제된 댓글 입니다.";
 
     @Transactional
     public CreatePostRes createPost(CreatePostReq request, Long userId) {
-        validatePostRequest(request);
+        validator.validatePostRequest(request);
 
         List<PostImage> postImages = PostImageDTO.fromDTOs(request.images());
 
@@ -72,10 +74,10 @@ public class PostService {
 
     @Transactional
     public CreateAnswerRes createAnswer(CreateAnswerReq request, Long questionPostId, Long userId) {
-        Post question = postRepository.findByIdWithUser(questionPostId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateQuestionType(question);
+        Post question = postRepository.findByIdWithUser(questionPostId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateQuestionType(question);
 
         List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
 
@@ -91,7 +93,6 @@ public class PostService {
         return new CreateAnswerRes(answer.getId());
     }
 
-    @Transactional(readOnly = true)
     public FindPostListRes findPostsByType(Pageable pageable, PostType postType) {
         Page<Post> postPage = postRepository.findByPostTypeWithUser(postType, pageable);
         List<FindPostListRes.PostDTO> postDTOS = postPage.getContent().stream()
@@ -101,7 +102,6 @@ public class PostService {
         return new FindPostListRes(postDTOS, postPage.isLast());
     }
 
-    @Transactional(readOnly = true)
     public FindPostListRes findPopularPostsByType(Pageable pageable, PostType postType) {
         Page<PopularPost> popularPostPage = popularPostRepository.findByPostTypeWithPost(postType, pageable);
         List<FindPostListRes.PostDTO> postDTOS = popularPostPage.getContent().stream()
@@ -112,13 +112,11 @@ public class PostService {
         return new FindPostListRes(postDTOS, popularPostPage.isLast());
     }
 
-    @Transactional(readOnly = true)
     public FindQnaListRes findQuestions(Pageable pageable) {
         Page<Post> questionPage = postRepository.findByPostTypeWithUser(PostType.QUESTION, pageable);
         return new FindQnaListRes(questionPage);
     }
 
-    @Transactional(readOnly = true)
     public FindMyPostListRes findMyPosts(Long userId, Pageable pageable) {
         List<PostType> postTypes = List.of(PostType.ADOPTION, PostType.FOSTERING);
         Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, postTypes, pageable);
@@ -129,31 +127,27 @@ public class PostService {
         return new FindMyPostListRes(postDTOS, postPage.isLast());
     }
 
-    @Transactional(readOnly = true)
     public FindQnaListRes findMyQuestions(Long userId, Pageable pageable) {
         List<PostType> postTypes = List.of(PostType.QUESTION);
         Page<Post> questionPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, postTypes, pageable);
         return new FindQnaListRes(questionPage);
     }
 
-    @Transactional(readOnly = true)
     public FindQnaListRes findQuestionsAnsweredByMe(Long userId, Pageable pageable) {
         Page<Post> questionPage = postRepository.findQnaOfAnswerByUserIdWithUser(userId, pageable);
         return new FindQnaListRes(questionPage);
     }
 
-    @Transactional(readOnly = true)
     public FindMyCommentListRes findMyComments(Long userId, Pageable pageable) {
         Page<Comment> myCommentPage = commentRepository.findByUserIdWithPost(userId, pageable);
         return new FindMyCommentListRes(myCommentPage);
     }
 
-    @Transactional(readOnly = true)
     public FindPostByIdRes findPostById(Long postId, Long userId) {
-        Post post = postRepository.findByIdWithUser(postId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validatePost(post);
+        Post post = postRepository.findByIdWithUser(postId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validatePost(post);
 
         Long likeCount = likeService.getPostLikeCount(postId);
         List<FindPostByIdRes.CommentDTO> commentDTOs = buildCommentDTOs(postId, userId);
@@ -164,12 +158,11 @@ public class PostService {
         return new FindPostByIdRes(post, commentDTOs, userId, likeCount, isPostLiked(postId, userId));
     }
 
-    @Transactional(readOnly = true)
     public FindQnaByIdRes findQnaById(Long qnaId, Long userId) {
-        Post qna = postRepository.findById(qnaId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateQna(qna);
+        Post qna = postRepository.findById(qnaId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateQna(qna);
 
         List<Post> answers = postRepository.findByParentIdWithUser(qnaId);
 
@@ -177,22 +170,21 @@ public class PostService {
         return new FindQnaByIdRes(qna, answers, userId);
     }
 
-    @Transactional(readOnly = true)
     public FindAnswerByIdRes findAnswerById(Long postId, Long userId) {
-        Post answer = postRepository.findById(postId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateAnswer(answer);
+        Post answer = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateAnswer(answer);
 
         return new FindAnswerByIdRes(answer, userId);
     }
 
     @Transactional
     public void updatePost(UpdatePostReq request, User user, Long postId) {
-        Post post = postRepository.findByIdWithUser(postId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateAccessorAuthorization(user, post.getWriterId());
+        Post post = postRepository.findByIdWithUser(postId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateAccessorAuthorization(user, post.getWriterId());
 
         post.updateContent(request.title(), request.content());
 
@@ -202,10 +194,10 @@ public class PostService {
 
     @Transactional
     public void deletePost(Long postId, User user) {
-        Post post = postRepository.findByIdWithUserAndParent(postId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateAccessorAuthorization(user, post.getWriterId());
+        Post post = postRepository.findByIdWithUserAndParent(postId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateAccessorAuthorization(user, post.getWriterId());
 
         postLikeRepository.deleteAllByPostId(postId);
         commentLikeRepository.deleteByPostId(postId);
@@ -217,11 +209,11 @@ public class PostService {
 
     @Transactional
     public void deleteAnswer(Long answerId, User user) {
-        Post answer = postRepository.findByIdWithUserAndParent(answerId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validateAnswer(answer);
-        validateAccessorAuthorization(user, answer.getWriterId());
+        Post answer = postRepository.findByIdWithUserAndParent(answerId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validateAnswer(answer);
+        validator.validateAccessorAuthorization(user, answer.getWriterId());
 
         decrementAnswerCount(answer);
         postImageRepository.deleteByPostId(answerId);
@@ -230,17 +222,17 @@ public class PostService {
 
     @Transactional
     public CreateCommentRes createComment(CreateCommentReq request, Long userId, Long postId) {
-        Post post = postRepository.findByIdWithUser(postId).orElseThrow(
-                () -> new CustomException(ExceptionCode.POST_NOT_FOUND)
-        );
-        validatePostType(post);
+        Post post = postRepository.findByIdWithUser(postId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
+
+        validator.validatePost(post);
 
         User writer = userRepository.getReferenceById(userId);
         Comment comment = request.toEntity(request.content(), post, writer);
 
         commentRepository.save(comment);
 
-        incrementCommentCount(postId);
+        postRepository.incrementCommentCount(postId);
         postCacheService.initializeCommentCache(comment.getId());
         notifyNewComment(request.content(), postId, post.getPostType(), post.getWriterId());
 
@@ -249,10 +241,10 @@ public class PostService {
 
     @Transactional
     public CreateCommentRes createReply(CreateCommentReq request, Long postId, Long userId, Long parentCommentId) {
-        Comment parentComment = commentRepository.findByIdWithPost(parentCommentId).orElseThrow(
-                () -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND)
-        );
-        validateParentComment(parentComment, userId);
+        Comment parentComment = commentRepository.findByIdWithPost(parentCommentId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
+
+        validator.validateParentComment(parentComment, userId);
 
         Post post = postRepository.getReferenceById(postId);
         User writer = userRepository.getReferenceById(userId);
@@ -261,7 +253,7 @@ public class PostService {
 
         commentRepository.save(reply);
 
-        incrementCommentCount(postId);
+        postRepository.incrementCommentCount(postId);
         postCacheService.initializeCommentCache(reply.getId());
         notifyNewReply(request.content(), postId, parentComment);
 
@@ -270,22 +262,22 @@ public class PostService {
 
     @Transactional
     public void updateComment(UpdateCommentReq request, Long postId, Long commentId, User user) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(
-                () -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND)
-        );
-        validateCommentBelongsToPost(comment, postId);
-        validateAccessorAuthorization(user, comment.getWriterId());
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
+
+        validator.validateCommentBelongsToPost(comment, postId);
+        validator.validateAccessorAuthorization(user, comment.getWriterId());
 
         comment.updateContent(request.content());
     }
 
     @Transactional
     public void deleteComment(Long postId, Long commentId, User user) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(
-                () -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND)
-        );
-        validateCommentBelongsToPost(comment, postId);
-        validateAccessorAuthorization(user, comment.getWriterId());
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
+
+        validator.validateCommentBelongsToPost(comment, postId);
+        validator.validateAccessorAuthorization(user, comment.getWriterId());
 
         comment.updateContent(COMMENT_DELETED);
         commentRepository.deleteById(commentId);
@@ -296,13 +288,13 @@ public class PostService {
 
     @Transactional
     public void submitReport(SubmitReportReq request, Long userId) {
-        User reporter = userRepository.findNonWithdrawnById(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
-        validateReportRequest(request.contentId(), request.contentType(), userId);
+        User reporter = userRepository.findNonWithdrawnById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        User reportedUser = findOffendingUser(request);
-        validateNotSelfReport(userId, reportedUser);
+        validator.validateReportRequest(request.contentId(), request.contentType(), userId);
+
+        User reportedUser = getOffendingUser(request);
+        validator.validateNotSelfReport(userId, reportedUser);
 
         Report report = request.toEntity(reporter, reportedUser);
         reportRepository.save(report);
@@ -314,22 +306,6 @@ public class PostService {
         processPopularPosts(posts, postType);
     }
 
-    private void validatePostRequest(CreatePostReq request) {
-        if (request.type() == PostType.ANSWER) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-
-        if (request.type().isImageRequired() && request.images().isEmpty()) {
-            throw new CustomException(ExceptionCode.POST_MUST_CONTAIN_IMAGE);
-        }
-    }
-
-    private void validateQuestionType(Post question) {
-        if (question.isNotQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-    }
-
     private void sendNewAnswerAlarm(Post questionPost, String answerContent, Long questionPostId) {
         String content = "새로운 답변: " + answerContent;
         String redirectURL = "/community/question/" + questionPostId;
@@ -337,34 +313,8 @@ public class PostService {
         alarmService.sendAlarm(questionPost.getUser().getId(), content, redirectURL, AlarmType.ANSWER);
     }
 
-    private void validatePost(Post post) {
-        if (post.isQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-
-        if (post.isScreened()) {
-            throw new CustomException(ExceptionCode.SCREENED_POST);
-        }
-    }
-
     private boolean isPostLiked(Long postId, Long userId) {
         return postLikeRepository.existsByPostIdAndUserId(postId, userId);
-    }
-
-    private void validateQna(Post qna) {
-        if (qna.isNotQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-
-        if (qna.isScreened()) {
-            throw new CustomException(ExceptionCode.SCREENED_POST);
-        }
-    }
-
-    private void validateAnswer(Post answer) {
-        if (answer.isNotAnswerType()) {
-            throw new CustomException(ExceptionCode.NOT_ANSWER_TYPE);
-        }
     }
 
     private void removeUnretainedImages(List<Long> retainedImageIds, Long postId) {
@@ -376,13 +326,7 @@ public class PostService {
     }
 
     private void saveNewPostImages(List<PostImageDTO> newImageDTOs, Post post) {
-        List<PostImage> newPostImages = newImageDTOs.stream()
-                .map(request -> PostImage.builder()
-                        .post(post)
-                        .imageURL(request.imageURL())
-                        .build())
-                .toList();
-
+        List<PostImage> newPostImages = PostImageDTO.fromDTDs(newImageDTOs, post);
         postImageRepository.saveAll(newPostImages);
     }
 
@@ -393,31 +337,11 @@ public class PostService {
         }
     }
 
-    private void validatePostType(Post post) {
-        if (post.isQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-    }
-
-    private void incrementCommentCount(Long postId) {
-        postRepository.incrementCommentNum(postId);
-    }
-
     private void notifyNewComment(String commentContent, Long postId, PostType postType, Long writerId) {
         String content = "새로운 댓글: " + commentContent;
         String queryParam = postType.name().toLowerCase();
         String redirectURL = "/community/" + postId + "?type=" + queryParam;
         alarmService.sendAlarm(writerId, content, redirectURL, AlarmType.COMMENT);
-    }
-
-    private void validateParentComment(Comment parentComment, Long postId) {
-        if (parentComment.isReply()) {
-            throw new CustomException(ExceptionCode.CANT_REPLY_TO_REPLY);
-        }
-
-        if (parentComment.isNotBelongToPost(postId)) {
-            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
-        }
     }
 
     private void notifyNewReply(String replyContent, Long postId, Comment parentComment) {
@@ -432,31 +356,18 @@ public class PostService {
         postRepository.decrementCommentNum(postId, 1L + replyCount);
     }
 
-    private void validateReportRequest(Long contentId, ContentType contentType, Long userId) {
-        if (reportRepository.existsByReporterIdAndContentId(userId, contentId, contentType)) {
-            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
-        }
-
-        if (contentType.isNotValidTypeForReport()) {
-            throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
-        }
-    }
-
-    private User findOffendingUser(SubmitReportReq request) {
+    private User getOffendingUser(SubmitReportReq request) {
         if (request.contentType() == ContentType.POST) {
             return postRepository.findUserById(request.contentId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-        } else if (request.contentType() == ContentType.COMMENT) {
+        }
+
+        if (request.contentType() == ContentType.COMMENT) {
             return commentRepository.findUserById(request.contentId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
         }
-        throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
-    }
 
-    private void validateNotSelfReport(Long userId, User reportedUser) {
-        if (reportedUser.isSameUser(userId)) {
-            throw new CustomException(ExceptionCode.CANNOT_REPORT_OWN_CONTENT);
-        }
+        throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
     }
 
     private void processPopularPosts(List<Post> posts, PostType postType) {
@@ -493,7 +404,7 @@ public class PostService {
                 .toList();
 
         popularPosts.addAll(remainingPosts.stream()
-                .limit(5 - popularPosts.size())
+                .limit(5L - popularPosts.size())
                 .toList());
     }
 
@@ -503,17 +414,9 @@ public class PostService {
                     .post(post)
                     .postType(postType)
                     .build();
+
             popularPostRepository.save(popularPost);
         });
-    }
-
-    private void validateAccessorAuthorization(User accessor, Long writerId) {
-        if (accessor.isAdmin()) {
-            return;
-        }
-        if (accessor.isNotSameUser(writerId)) {
-            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
     }
 
     private void ensureNotExpiredForLikes(LocalDateTime date) {
@@ -527,17 +430,11 @@ public class PostService {
         }
     }
 
-    private void validateCommentBelongsToPost(Comment comment, Long postId) {
-        if (comment.isNotBelongToPost(postId)) {
-            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
-        }
-    }
-
     private List<FindPostByIdRes.CommentDTO> buildCommentDTOs(Long postId, Long userId) {
-        List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
         List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
-
         Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>();
+
+        List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
         comments.forEach(comment -> {
             Long likeCount = likeService.getCommentLikeCount(comment.getId());
             boolean isLikedComment = likedCommentIds.contains(comment.getId());
