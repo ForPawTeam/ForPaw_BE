@@ -1,5 +1,8 @@
 package com.hong.forapw.common.constants;
 
+import com.hong.forapw.domain.post.constant.PostType;
+
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class GlobalConstants {
@@ -56,5 +59,6 @@ public class GlobalConstants {
     public static final long DAILY_FAILURE_LIMIT = 3L;
 
     // else
+    public static final List<PostType> ALL_POST_TYPE = List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER);
     public static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 }

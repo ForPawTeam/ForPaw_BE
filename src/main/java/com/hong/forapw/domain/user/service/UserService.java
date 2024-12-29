@@ -44,6 +44,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.common.utils.PasswordGenerator.generatePassword;
 import static com.hong.forapw.integration.email.EmailService.generateVerificationCode;
 import static com.hong.forapw.integration.email.EmailTemplate.ACCOUNT_SUSPENSION;
 import static com.hong.forapw.integration.email.EmailTemplate.VERIFICATION_CODE;
@@ -191,6 +192,7 @@ public class UserService {
     public ProfileRes findProfile(Long userId) {
         User user = userRepository.findNonWithdrawnById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
+
         return new ProfileRes(user);
     }
 
@@ -244,7 +246,7 @@ public class UserService {
         User user = userRepository.findNonWithdrawnById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        List<PostTypeCountDTO> postTypeCounts = postRepository.countByUserIdAndType(userId, List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER));
+        List<PostTypeCountDTO> postTypeCounts = postRepository.countByUserIdAndType(userId, ALL_POST_TYPE);
         Map<PostType, Long> postCountMap = postTypeCounts.stream()
                 .collect(Collectors.toMap(PostTypeCountDTO::postType, PostTypeCountDTO::count));
 
@@ -278,10 +280,10 @@ public class UserService {
 
         if (currentFailures >= 3L) {
             long dailyFailures = userCacheService.incrementDailyLoginFailures(user);
-
             if (dailyFailures == 3L) {
                 emailService.sendMail(user.getEmail(), ACCOUNT_SUSPENSION.getSubject(), MAIL_TEMPLATE_FOR_LOCK_ACCOUNT, new BlankTemplate());
             }
+
             throw new CustomException(ExceptionCode.LOGIN_LIMIT_EXCEEDED);
         }
     }
@@ -289,36 +291,8 @@ public class UserService {
     private void infoLoginFail(User user) {
         Long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
         String message = String.format("로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해 주세요. (%d회 실패)", currentLoginFailures);
+
         throw new CustomException(ExceptionCode.INVALID_CREDENTIALS, message);
-    }
-
-    private String generatePassword() {
-        SecureRandom random = new SecureRandom();
-        StringBuilder password = new StringBuilder()
-                .append(pickRandomChar(random, 8, 0))  // 특수 문자
-                .append(pickRandomChar(random, 10, 8)) // 숫자
-                .append(pickRandomChar(random, 26, 18)) // 대문자
-                .append(pickRandomChar(random, 26, 44)); // 소문자
-
-        for (int i = 4; i < 8; i++) {
-            password.append(pickRandomChar(random, ALL_CHARS.length(), 0));  // 나머지 문자 랜덤 추가
-        }
-
-        return shufflePassword(password);
-    }
-
-    private char pickRandomChar(SecureRandom random, int range, int offset) {
-        return ALL_CHARS.charAt(random.nextInt(range) + offset);
-    }
-
-    private String shufflePassword(StringBuilder password) {
-        List<Character> characters = password.chars()
-                .mapToObj(c -> (char) c)
-                .collect(Collectors.toList());
-        Collections.shuffle(characters);
-        return characters.stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining());
     }
 
     private void updateNewPassword(String email, String newPassword) {
