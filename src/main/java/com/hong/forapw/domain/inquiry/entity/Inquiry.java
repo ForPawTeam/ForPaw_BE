@@ -64,18 +64,15 @@ public class Inquiry extends BaseEntity {
         this.answer = answer;
     }
 
-    public void updateAnswer(String answer, User answerer) {
+    public void updateInquiryWithAnswer(String answer, User answerer, InquiryStatus status) {
         this.answer = answer;
         this.answerer = answerer;
+        this.status = status;
     }
 
     public void updateInquiry(String title, String description, String contactMail) {
         this.title = title;
         this.description = description;
         this.contactMail = contactMail;
-    }
-
-    public void updateStatus(InquiryStatus status) {
-        this.status = status;
     }
 }

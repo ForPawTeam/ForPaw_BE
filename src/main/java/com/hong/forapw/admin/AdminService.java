@@ -181,43 +181,27 @@ public class AdminService {
 
     @Transactional
     public AnswerInquiryRes answerInquiry(AnswerInquiryReq request, Long adminId, Long inquiryId) {
-        Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
-                () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
-        );
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND));
 
-        // 답변은 하나만 할 수 있음
-        if (inquiry.getAnswer() != null) {
-            throw new CustomException(ExceptionCode.INQUIRY_ALREADY_ANSWERED);
-        }
+        validateInquiryNotAnswered(inquiry);
 
         User admin = userRepository.getReferenceById(adminId);
-        inquiry.updateAnswer(request.content(), admin);
-
-        // 문의글은 처리 완료
-        inquiry.updateStatus(InquiryStatus.PROCESSED);
+        inquiry.updateInquiryWithAnswer(request.content(), admin, InquiryStatus.PROCESSED);
 
         return new AnswerInquiryRes(inquiryId);
     }
 
     public FindFAQListRes findFAQList() {
         List<FAQ> faqs = faqRepository.findAll();
+        List<FindFAQListRes.FaqDTO> faqDTOs = FindFAQListRes.FaqDTO.fromEntities(faqs);
 
-        List<FindFAQListRes.FaqDTO> faqDTOS = faqs.stream()
-                .map(faq -> new FindFAQListRes.FaqDTO(faq.getQuestion(), faq.getAnswer(), faq.getType(), faq.isTop()))
-                .toList();
-
-        return new FindFAQListRes(faqDTOS);
+        return new FindFAQListRes(faqDTOs);
     }
 
     @Transactional
     public void createFAQ(CreateFaqReq request) {
-        FAQ faq = FAQ.builder()
-                .question(request.question())
-                .answer(request.answer())
-                .type(request.type())
-                .isTop(request.isTop())
-                .build();
-
+        FAQ faq = request.toEntity();
         faqRepository.save(faq);
     }
 
@@ -392,5 +376,11 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.BAD_APPROACH)
         );
         comment.updateContent(COMMENT_SCREENED);
+    }
+
+    private void validateInquiryNotAnswered(Inquiry inquiry) {
+        if (inquiry.getAnswer() != null) {
+            throw new CustomException(ExceptionCode.INQUIRY_ALREADY_ANSWERED);
+        }
     }
 }
