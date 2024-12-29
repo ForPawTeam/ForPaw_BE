@@ -47,4 +47,8 @@ public class Visit {
     public LocalDate getTruncatedDate() {
         return date.toLocalDate();
     }
+
+    public Visit getLatestVisit(Visit other) {
+        return this.date.isAfter(other.date) ? this : other;
+    }
 }

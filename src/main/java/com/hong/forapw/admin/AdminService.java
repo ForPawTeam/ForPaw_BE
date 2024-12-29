@@ -55,6 +55,7 @@ public class AdminService {
     private final InquiryRepository inquiryRepository;
     private final UserStatusRepository userStatusRepository;
     private final FaqRepository faqRepository;
+    private final AdminValidator validator;
 
     private static final String POST_SCREENED = "이 게시글은 커뮤니티 규정을 위반하여 숨겨졌습니다.";
     private static final String COMMENT_SCREENED = "커뮤니티 규정을 위반하여 가려진 댓글입니다.";
@@ -65,7 +66,6 @@ public class AdminService {
         LocalDateTime startOfDay = truncateToMidnight(now);
 
         FindDashboardStatsRes.UserStatsDTO userStatsDTO = getUserStats();
-
         FindDashboardStatsRes.AnimalStatsDTO animalStatsDTO = getAnimalStats(now);
 
         List<FindDashboardStatsRes.DailyVisitorDTO> dailyVisitorDTOS = getDailyVisitors(now.minusWeeks(1));
@@ -83,9 +83,9 @@ public class AdminService {
         Map<Long, Long> processedApplyMap = getApplyCountByStatus(ApplyStatus.PROCESSED);
 
         Page<User> userPage = userRepository.findAll(pageable);
-        List<FindUserListRes.ApplicantDTO> applicantDTOS = FindUserListRes.ApplicantDTO.fromEntities(userPage.getContent(), latestVisitMap, processingApplyMap, processedApplyMap);
+        List<FindUserListRes.ApplicantDTO> applicantDTOs = FindUserListRes.ApplicantDTO.fromEntities(userPage.getContent(), latestVisitMap, processingApplyMap, processedApplyMap);
 
-        return new FindUserListRes(applicantDTOS, userPage.getTotalPages());
+        return new FindUserListRes(applicantDTOs, userPage.getTotalPages());
     }
 
     @Transactional
@@ -94,9 +94,9 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        validateRoleIsDifferent(request.role(), user.getRole());
-        prohibitSuperRoleAssignment(request.role());
-        validateAdminCannotModifySuper(adminRole, user.getRole());
+        validator.validateRoleIsDifferent(request.role(), user.getRole());
+        validator.prohibitSuperRoleAssignment(request.role());
+        validator.validateAdminCannotModifySuper(adminRole, user.getRole());
 
         user.updateRole(request.role());
     }
@@ -107,8 +107,8 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        validateNotAlreadySuspended(userStatus);
-        validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
+        validator.validateNotAlreadySuspended(userStatus);
+        validator.validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
 
         userStatus.suspendUser(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
     }
@@ -119,8 +119,8 @@ public class AdminService {
                 () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
         );
 
-        validateNotAlreadyUnsuspended(userStatus);
-        validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
+        validator.validateNotAlreadyUnsuspended(userStatus);
+        validator.validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
 
         userStatus.unsuspendUser();
     }
@@ -137,7 +137,7 @@ public class AdminService {
         Apply apply = applyRepository.findByIdWithAnimal(request.id())
                 .orElseThrow(() -> new CustomException(ExceptionCode.APPLICATION_NOT_FOUND));
 
-        validateNotAlreadyProcessed(apply);
+        validator.validateNotAlreadyProcessed(apply);
 
         updateApplyStatusAndHandleAdoption(apply, request.status());
     }
@@ -154,7 +154,7 @@ public class AdminService {
         Report report = reportRepository.findById(request.id())
                 .orElseThrow(() -> new CustomException(ExceptionCode.REPORT_NOT_FOUND));
 
-        validateReportNotProcessed(report);
+        validator.validateReportNotProcessed(report);
 
         if (request.hasSuspension())
             suspendOffender(report, request.suspensionDays());
@@ -184,7 +184,7 @@ public class AdminService {
         Inquiry inquiry = inquiryRepository.findById(inquiryId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND));
 
-        validateInquiryNotAnswered(inquiry);
+        validator.validateInquiryNotAnswered(inquiry);
 
         User admin = userRepository.getReferenceById(adminId);
         inquiry.updateInquiryWithAnswer(request.content(), admin, InquiryStatus.PROCESSED);
@@ -263,8 +263,8 @@ public class AdminService {
                 .collect(Collectors.toMap(
                         visit -> visit.getUser().getId(),
                         visit -> visit,
-                        (visit1, visit2) -> visit1.getDate().isAfter(visit2.getDate()) ? visit1 : visit2
-                ));
+                        Visit::getLatestVisit)
+                );
     }
 
     private Map<Long, Long> getApplyCountByStatus(ApplyStatus status) {
@@ -276,53 +276,11 @@ public class AdminService {
                 ));
     }
 
-    private void validateRoleIsDifferent(UserRole requestedRole, UserRole currentRole) {
-        if (requestedRole.equals(currentRole)) {
-            throw new CustomException(ExceptionCode.DUPLICATE_STATUS);
-        }
-    }
-
-    private void prohibitSuperRoleAssignment(UserRole requestedRole) {
-        if (requestedRole.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
-    }
-
-    private void validateAdminCannotModifySuper(UserRole adminRole, UserRole userRole) {
-        if (adminRole.equals(UserRole.ADMIN) && userRole.equals(UserRole.SUPER)) {
-            throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
-    }
-
-    private void validateNotAlreadySuspended(UserStatus userStatus) {
-        if (userStatus.isNotActive()) {
-            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
-        }
-    }
-
-    private void validateNotAlreadyUnsuspended(UserStatus userStatus) {
-        if (userStatus.isActive()) {
-            throw new CustomException(ExceptionCode.ALREADY_SUSPENDED);
-        }
-    }
-
-    private void validateNotAlreadyProcessed(Apply apply) {
-        if (apply.getStatus().equals(ApplyStatus.PROCESSED)) {
-            throw new CustomException(ExceptionCode.APPLICATION_ALREADY_PROCESSED);
-        }
-    }
-
     private void updateApplyStatusAndHandleAdoption(Apply apply, ApplyStatus status) {
         apply.updateApplyStatus(status);
 
         if (status.equals(ApplyStatus.PROCESSED)) {
             apply.finishAdoption();
-        }
-    }
-
-    private void validateReportNotProcessed(Report report) {
-        if (report.getStatus() == ReportStatus.PROCESSED) {
-            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
         }
     }
 
@@ -344,23 +302,17 @@ public class AdminService {
     }
 
     private void blockPostContent(Long contentId) {
-        Post post = postRepository.findById(contentId).orElseThrow(
-                () -> new CustomException(ExceptionCode.BAD_APPROACH)
-        );
+        Post post = postRepository.findById(contentId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.BAD_APPROACH));
+
         post.updateTitle(POST_SCREENED);
         post.processBlock();
     }
 
     private void blockCommentContent(Long contentId) {
-        Comment comment = commentRepository.findById(contentId).orElseThrow(
-                () -> new CustomException(ExceptionCode.BAD_APPROACH)
-        );
-        comment.updateContent(COMMENT_SCREENED);
-    }
+        Comment comment = commentRepository.findById(contentId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.BAD_APPROACH));
 
-    private void validateInquiryNotAnswered(Inquiry inquiry) {
-        if (inquiry.getAnswer() != null) {
-            throw new CustomException(ExceptionCode.INQUIRY_ALREADY_ANSWERED);
-        }
+        comment.updateContent(COMMENT_SCREENED);
     }
 }

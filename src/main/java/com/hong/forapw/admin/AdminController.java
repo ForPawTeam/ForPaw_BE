@@ -68,39 +68,39 @@ public class AdminController {
 
     @GetMapping("/admin/adoption")
     public ResponseEntity<?> findApplies(@RequestParam(required = false) ApplyStatus status,
-                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
         FindApplyListRes response = authenticationService.findApplies(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/admin/adoption")
-    public ResponseEntity<?> changeApplyStatus(@RequestBody @Valid ChangeApplyStatusReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> changeApplyStatus(@RequestBody @Valid ChangeApplyStatusReq request) {
         authenticationService.changeApplyStatus(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/admin/reports")
     public ResponseEntity<?> findReports(@RequestParam(required = false) ReportStatus status,
-                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                         @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
         FindReportListRes response = authenticationService.findReports(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/admin/reports")
-    public ResponseEntity<?> processReport(@RequestBody @Valid ProcessReportReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> processReport(@RequestBody @Valid ProcessReportReq request) {
         authenticationService.processReport(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/admin/supports")
     public ResponseEntity<?> findSupportList(@RequestParam(required = false) InquiryStatus status,
-                                             @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                             @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable) {
         FindSupportListRes response = authenticationService.findSupports(status, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/admin/supports/{inquiryId}")
-    public ResponseEntity<?> findSupportById(@PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> findSupportById(@PathVariable Long inquiryId) {
         FindSupportByIdRes response = authenticationService.findSupportById(inquiryId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
@@ -118,7 +118,7 @@ public class AdminController {
     }
 
     @PostMapping("/faq")
-    public ResponseEntity<?> createFAQ(@RequestBody @Valid CreateFaqReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> createFAQ(@RequestBody @Valid CreateFaqReq request) {
         authenticationService.createFAQ(request);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
