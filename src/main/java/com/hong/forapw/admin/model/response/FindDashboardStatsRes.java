@@ -2,7 +2,9 @@ package com.hong.forapw.admin.model.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 public record FindDashboardStatsRes(
         UserStatsDTO userStatsDTO,
@@ -11,6 +13,7 @@ public record FindDashboardStatsRes(
         List<HourlyVisitorDTO> hourlyVisitorDTOS,
         DailySummaryDTO dailySummaryDTO
 ) {
+
     public record UserStatsDTO(Long activeUsers, Long inactiveUsers) {
     }
 
@@ -22,9 +25,23 @@ public record FindDashboardStatsRes(
     }
 
     public record DailyVisitorDTO(LocalDate date, Long visitors) {
+
+        public DailyVisitorDTO(Map.Entry<LocalDate, Long> entry){
+            this(
+                    entry.getKey(),
+                    entry.getValue()
+            );
+        }
     }
 
     public record HourlyVisitorDTO(LocalDateTime hour, Long visitors) {
+
+        public HourlyVisitorDTO(Map.Entry<LocalTime, Long> entry){
+            this(
+                    LocalDateTime.of(LocalDate.now(), entry.getKey()),
+                    entry.getValue()
+            );
+        }
     }
 
     public record DailySummaryDTO(

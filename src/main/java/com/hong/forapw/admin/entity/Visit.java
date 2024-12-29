@@ -7,7 +7,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "visit_tb")
@@ -26,9 +29,22 @@ public class Visit {
     @Column
     private LocalDateTime date;
 
+
     @Builder
     public Visit(User user, LocalDateTime date) {
         this.user = user;
         this.date = date;
+    }
+
+    public boolean isSameDate(LocalDate targetDate) {
+        return date.toLocalDate().isEqual(targetDate);
+    }
+
+    public LocalTime getTruncatedHour() {
+        return date.toLocalTime().truncatedTo(ChronoUnit.HOURS);
+    }
+
+    public LocalDate getTruncatedDate() {
+        return date.toLocalDate();
     }
 }

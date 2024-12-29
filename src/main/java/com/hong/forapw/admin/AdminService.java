@@ -222,24 +222,16 @@ public class AdminService {
         Long adoptedRecentlyCount = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSED, now.minusWeeks(1));
         Long adoptedTotalCount = applyRepository.countByStatus(ApplyStatus.PROCESSED);
 
-        return new FindDashboardStatsRes.AnimalStatsDTO(
-                waitingForAdoptionCount,
-                adoptionProcessingCount,
-                adoptedRecentlyCount,
-                adoptedTotalCount
-        );
+        return new FindDashboardStatsRes.AnimalStatsDTO(waitingForAdoptionCount, adoptionProcessingCount, adoptedRecentlyCount, adoptedTotalCount);
     }
 
     private List<FindDashboardStatsRes.DailyVisitorDTO> getDailyVisitors(LocalDateTime startDate) {
         List<Visit> visits = visitRepository.findALlWithinDate(startDate);
         Map<LocalDate, Long> dailyVisitors = visits.stream()
-                .collect(Collectors.groupingBy(
-                        visit -> visit.getDate().toLocalDate(),
-                        Collectors.counting()
-                ));
+                .collect(Collectors.groupingBy(Visit::getTruncatedDate, Collectors.counting()));
 
         return dailyVisitors.entrySet().stream()
-                .map(entry -> new FindDashboardStatsRes.DailyVisitorDTO(entry.getKey(), entry.getValue()))
+                .map(FindDashboardStatsRes.DailyVisitorDTO::new)
                 .sorted(Comparator.comparing(FindDashboardStatsRes.DailyVisitorDTO::date))
                 .toList();
     }
@@ -247,17 +239,11 @@ public class AdminService {
     private List<FindDashboardStatsRes.HourlyVisitorDTO> getHourlyVisitors(LocalDateTime startOfDay) {
         List<Visit> visits = visitRepository.findALlWithinDate(startOfDay);
         Map<LocalTime, Long> hourlyVisitors = visits.stream()
-                .filter(visit -> visit.getDate().toLocalDate().isEqual(LocalDate.now()))
-                .collect(Collectors.groupingBy(
-                        visit -> visit.getDate().toLocalTime().truncatedTo(ChronoUnit.HOURS),
-                        Collectors.counting()
-                ));
+                .filter(visit -> visit.isSameDate(LocalDate.now()))
+                .collect(Collectors.groupingBy(Visit::getTruncatedHour, Collectors.counting()));
 
         return hourlyVisitors.entrySet().stream()
-                .map(entry -> new FindDashboardStatsRes.HourlyVisitorDTO(
-                        LocalDateTime.of(LocalDate.now(), entry.getKey()),
-                        entry.getValue()
-                ))
+                .map(FindDashboardStatsRes.HourlyVisitorDTO::new)
                 .sorted(Comparator.comparing(FindDashboardStatsRes.HourlyVisitorDTO::hour))
                 .toList();
     }
@@ -268,12 +254,7 @@ public class AdminService {
         Long newCommentNum = commentRepository.countALlWithinDate(startOfDay);
         Long newAdoptApplicationNum = applyRepository.countByStatusWithinDate(ApplyStatus.PROCESSING, startOfDay);
 
-        return new FindDashboardStatsRes.DailySummaryDTO(
-                entryNum,
-                newPostNum,
-                newCommentNum,
-                newAdoptApplicationNum
-        );
+        return new FindDashboardStatsRes.DailySummaryDTO(entryNum, newPostNum, newCommentNum, newAdoptApplicationNum);
     }
 
     private Map<Long, Visit> getLatestVisits() {
@@ -308,7 +289,6 @@ public class AdminService {
     }
 
     private void validateAdminCannotModifySuper(UserRole adminRole, UserRole userRole) {
-        // ADMIN 권한의 관리자가 SUPER 권한의 유저를 변경 방지
         if (adminRole.equals(UserRole.ADMIN) && userRole.equals(UserRole.SUPER)) {
             throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
         }
