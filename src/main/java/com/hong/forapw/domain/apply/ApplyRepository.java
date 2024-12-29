@@ -31,7 +31,7 @@ public interface ApplyRepository extends JpaRepository<Apply, Long> {
             "WHERE u.id = :userId AND a.removedAt IS NULL")
     List<Apply> findAllByUserIdWithAnimal(@Param("userId") Long userId);
 
-    @Query("SELECT a FROM Apply a WHERE a.status = :applyStatus AND a.removedAt IS NULL")
+    @Query("SELECT a FROM Apply a WHERE a.status = :status AND a.removedAt IS NULL")
     List<Apply> findByStatus(@Param("status") ApplyStatus status);
 
     @Query("SELECT an FROM Apply a " +

@@ -1,5 +1,7 @@
 package com.hong.forapw.domain.like;
 
+import com.hong.forapw.domain.like.common.LikeHandler;
+import com.hong.forapw.domain.like.common.LikeTarget;
 import com.hong.forapw.domain.like.handler.*;
 import com.hong.forapw.integration.redis.RedisService;
 import jakarta.annotation.PostConstruct;
@@ -21,20 +23,16 @@ public class LikeService {
     private final CommentLikeHandler commentLikeHandler;
     private final GroupLikeHandler groupLikeHandler;
     private final AnimalLikeHandler animalLikeHandler;
-
     private Map<LikeTarget, LikeHandler> likeHandlers;
 
     @PostConstruct
     private void initLikeHandlers() {
         likeHandlers = Map.of(
                 LikeTarget.POST, postLikeHandler,
-                LikeTarget.COMMENT, commentLikeHandler
+                LikeTarget.COMMENT, commentLikeHandler,
+                LikeTarget.ANIMAL, animalLikeHandler,
+                LikeTarget.GROUP, groupLikeHandler
         );
-    }
-
-    @Transactional
-    public void initGroupLikeCount(Long groupId) {
-        groupLikeHandler.initCount(groupId);
     }
 
     @Transactional
@@ -57,16 +55,6 @@ public class LikeService {
         handleLike(groupId, userId, LikeTarget.GROUP);
     }
 
-    @Transactional
-    public void clearAnimalLikeData(Long animalId) {
-        animalLikeHandler.clear(animalId);
-    }
-
-    @Transactional
-    public void clearGroupLikeData(Long groupId) {
-        groupLikeHandler.clear(groupId);
-    }
-
     public Long getPostLikeCount(Long postId) {
         return postLikeHandler.getLikeCount(postId);
     }
@@ -81,6 +69,18 @@ public class LikeService {
 
     public Long getGroupLikeCount(Long groupId) {
         return groupLikeHandler.getLikeCount(groupId);
+    }
+
+    public void initGroupLikeCount(Long groupId) {
+        groupLikeHandler.initCount(groupId);
+    }
+
+    public void clearAnimalLikeData(Long animalId) {
+        animalLikeHandler.clear(animalId);
+    }
+
+    public void clearGroupLikeData(Long groupId) {
+        groupLikeHandler.clear(groupId);
     }
 
     private void handleLike(Long targetId, Long userId, LikeTarget target) {

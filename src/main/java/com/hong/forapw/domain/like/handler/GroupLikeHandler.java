@@ -4,6 +4,7 @@ import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.entity.FavoriteGroup;
 import com.hong.forapw.domain.group.entity.Group;
+import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.GROUP_LIKED_SET_KEY;
+import static com.hong.forapw.common.constants.GlobalConstants.GROUP_LIKE_NUM_KEY;
+
 @Component
 @RequiredArgsConstructor
 public class GroupLikeHandler implements LikeHandler {
@@ -23,14 +27,8 @@ public class GroupLikeHandler implements LikeHandler {
     private final FavoriteGroupRepository favoriteGroupRepository;
     private final RedisService redisService;
 
-    private static final String GROUP_LIKE_NUM_KEY_PREFIX = "group:like:count";
-    private static final String GROUP_LIKED_SET_KEY_PREFIX = "user:%s:liked_groups";
     public static final Long GROUP_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90; // 세 달
 
-    @Override
-    public void initCount(Long groupId) {
-        redisService.storeValue(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString(), "0");
-    }
 
     @Override
     public void validateBeforeLike(Long groupId, Long userId) {
@@ -48,15 +46,15 @@ public class GroupLikeHandler implements LikeHandler {
     public void addLike(Long groupId, Long userId) {
         Group group = groupRepository.getReferenceById(groupId);
         User user = userRepository.getReferenceById(userId);
-
         FavoriteGroup favoriteGroup = FavoriteGroup.builder()
                 .user(user)
                 .group(group)
                 .build();
+
         favoriteGroupRepository.save(favoriteGroup);
 
         redisService.addSetElement(buildUserLikedSetKey(userId), groupId);
-        redisService.incrementValue(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString(), 1L);
+        redisService.incrementValue(GROUP_LIKE_NUM_KEY, groupId.toString(), 1L);
     }
 
     @Override
@@ -65,15 +63,15 @@ public class GroupLikeHandler implements LikeHandler {
         favoriteGroupOP.ifPresent(favoriteGroupRepository::delete);
 
         redisService.removeSetElement(buildUserLikedSetKey(userId), groupId.toString());
-        redisService.decrementValue(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString(), 1L);
+        redisService.decrementValue(GROUP_LIKE_NUM_KEY, groupId.toString(), 1L);
     }
 
     @Override
     public Long getLikeCount(Long groupId) {
-        Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString());
+        Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY, groupId.toString());
         if (likeCount == null) {
             likeCount = groupRepository.countLikesByGroupId(groupId);
-            redisService.storeValue(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString(), likeCount.toString(), GROUP_CACHE_EXPIRATION_MS);
+            redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), likeCount.toString(), GROUP_CACHE_EXPIRATION_MS);
         }
 
         return likeCount;
@@ -84,12 +82,15 @@ public class GroupLikeHandler implements LikeHandler {
         return "group:" + groupId + ":like:lock";
     }
 
-    @Override
+    public void initCount(Long groupId) {
+        redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), "0");
+    }
+
     public void clear(Long groupId) {
-        redisService.removeValue(GROUP_LIKE_NUM_KEY_PREFIX, groupId.toString());
+        redisService.removeValue(GROUP_LIKE_NUM_KEY, groupId.toString());
     }
 
     private String buildUserLikedSetKey(Long userId) {
-        return String.format(GROUP_LIKED_SET_KEY_PREFIX, userId);
+        return String.format(GROUP_LIKED_SET_KEY, userId);
     }
 }

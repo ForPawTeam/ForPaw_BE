@@ -37,7 +37,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
 
-import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_LIKE_NUM_KEY_PREFIX;
+import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_LIKE_NUM_KEY;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
 import static com.hong.forapw.common.utils.UriUtils.buildShelterOpenApiURI;
@@ -225,10 +225,10 @@ public class ShelterService {
     }
 
     private Long getCachedLikeNum(Long key) {
-        Long likeNum = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY_PREFIX, key.toString());
+        Long likeNum = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY, key.toString());
         if (likeNum == null) {
             likeNum = animalRepository.countLikesByAnimalId(key);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY_PREFIX, key.toString(), likeNum.toString(), ANIMAL_EXP);
+            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, key.toString(), likeNum.toString(), ANIMAL_EXP);
         }
 
         return likeNum;

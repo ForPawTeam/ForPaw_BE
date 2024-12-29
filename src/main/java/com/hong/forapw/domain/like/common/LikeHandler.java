@@ -1,7 +1,6 @@
-package com.hong.forapw.domain.like.handler;
+package com.hong.forapw.domain.like.common;
 
 public interface LikeHandler {
-    void initCount(Long targetId);
 
     void validateBeforeLike(Long targetId, Long userId);
 
@@ -14,7 +13,4 @@ public interface LikeHandler {
     Long getLikeCount(Long targetId);
 
     String buildLockKey(Long targetId);
-
-    void clear(Long targetId);
 }
-
