@@ -4,7 +4,9 @@ import com.hong.forapw.admin.constant.ContentType;
 import com.hong.forapw.admin.constant.ReportStatus;
 import com.hong.forapw.admin.constant.ReportType;
 import com.hong.forapw.common.entity.BaseEntity;
+import com.hong.forapw.domain.user.constant.UserRole;
 import com.hong.forapw.domain.user.entity.User;
+import com.hong.forapw.domain.user.entity.UserStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -60,5 +62,13 @@ public class Report extends BaseEntity {
 
     public void updateStatus(ReportStatus status) {
         this.status = status;
+    }
+
+    public UserStatus getOffenderStatus() {
+        return offender.getStatus();
+    }
+
+    public UserRole getOffenderRole() {
+        return offender.getRole();
     }
 }

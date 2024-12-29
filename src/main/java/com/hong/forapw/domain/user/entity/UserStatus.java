@@ -43,14 +43,14 @@ public class UserStatus {
         this.suspensionReason = suspensionReason;
     }
 
-    public void updateForSuspend(LocalDateTime suspensionStart, Long suspensionDays, String suspensionReason) {
+    public void suspendUser(LocalDateTime suspensionStart, Long suspensionDays, String suspensionReason) {
         this.isActive = false;
         this.suspensionStart = suspensionStart;
         this.suspensionDays = suspensionDays;
         this.suspensionReason = suspensionReason;
     }
 
-    public void updateForUnSuspend() {
+    public void unsuspendUser() {
         this.isActive = true;
         this.suspensionStart = null;
         this.suspensionDays = null;

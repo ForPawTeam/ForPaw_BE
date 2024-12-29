@@ -15,7 +15,6 @@ import com.hong.forapw.domain.inquiry.entity.Inquiry;
 import com.hong.forapw.domain.inquiry.constant.InquiryStatus;
 import com.hong.forapw.domain.post.entity.Comment;
 import com.hong.forapw.domain.post.entity.Post;
-import com.hong.forapw.admin.constant.ContentType;
 import com.hong.forapw.admin.entity.Report;
 import com.hong.forapw.admin.constant.ReportStatus;
 import com.hong.forapw.domain.user.entity.User;
@@ -85,7 +84,7 @@ public class AdminService {
 
         Page<User> userPage = userRepository.findAll(pageable);
         List<FindUserListRes.ApplicantDTO> applicantDTOS = FindUserListRes.ApplicantDTO.fromEntities(userPage.getContent(), latestVisitMap, processingApplyMap, processedApplyMap);
-        
+
         return new FindUserListRes(applicantDTOS, userPage.getTotalPages());
     }
 
@@ -111,7 +110,7 @@ public class AdminService {
         validateNotAlreadySuspended(userStatus);
         validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
 
-        userStatus.updateForSuspend(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
+        userStatus.suspendUser(LocalDateTime.now(), request.suspensionDays(), request.suspensionReason());
     }
 
     @Transactional
@@ -123,7 +122,7 @@ public class AdminService {
         validateNotAlreadyUnsuspended(userStatus);
         validateAdminCannotModifySuper(adminRole, userStatus.getUser().getRole());
 
-        userStatus.updateForUnSuspend();
+        userStatus.unsuspendUser();
     }
 
     public FindApplyListRes findApplies(ApplyStatus status, Pageable pageable) {
@@ -152,32 +151,17 @@ public class AdminService {
 
     @Transactional
     public void processReport(ProcessReportReq request) {
-        Report report = reportRepository.findById(request.id()).orElseThrow(
-                () -> new CustomException(ExceptionCode.REPORT_NOT_FOUND)
-        );
+        Report report = reportRepository.findById(request.id())
+                .orElseThrow(() -> new CustomException(ExceptionCode.REPORT_NOT_FOUND));
 
-        // 이미 처리함
-        if (report.getStatus().equals(ReportStatus.PROCESSED)) {
-            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
-        }
+        validateReportNotProcessed(report);
 
-        // 유저 정지 처리
-        if (request.hasSuspension()) {
-            // SUPER를 정지 시킬 수는 없다 (악용 방지)
-            if (report.getOffender().getRole().equals(UserRole.SUPER)) {
-                throw new CustomException(ExceptionCode.ADMIN_CANNOT_BE_REPORTED);
-            }
+        if (request.hasSuspension())
+            suspendOffender(report, request.suspensionDays());
 
-            report.getOffender().getStatus()
-                    .updateForSuspend(LocalDateTime.now(), request.suspensionDays(), report.getReason());
-        }
+        if (request.hasBlocking())
+            processContentBlocking(report);
 
-        // 가림 처리
-        if (request.hasBlocking()) {
-            processBlocking(report);
-        }
-
-        // 신고 내역 완료 처리
         report.updateStatus(ReportStatus.PROCESSED);
     }
 
@@ -388,23 +372,41 @@ public class AdminService {
         }
     }
 
-    private void processBlocking(Report report) {
-        // 게시글은 가림 처리
-        if (report.getContentType() == ContentType.POST) {
-            Post post = postRepository.findById(report.getContentId()).orElseThrow(
-                    () -> new CustomException(ExceptionCode.BAD_APPROACH)
-            );
-            post.updateTitle(POST_SCREENED);
-            post.processBlock();
+    private void validateReportNotProcessed(Report report) {
+        if (report.getStatus() == ReportStatus.PROCESSED) {
+            throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
         }
-        // 댓글은 가림 처리
-        else if (report.getContentType() == ContentType.COMMENT) {
-            Comment comment = commentRepository.findById(report.getContentId()).orElseThrow(
-                    () -> new CustomException(ExceptionCode.BAD_APPROACH)
-            );
-            comment.updateContent(COMMENT_SCREENED);
-        } else {
-            throw new CustomException(ExceptionCode.BAD_APPROACH);
+    }
+
+    private void suspendOffender(Report report, Long suspensionDays) {
+        if (report.getOffenderRole() == UserRole.SUPER) {
+            throw new CustomException(ExceptionCode.ADMIN_CANNOT_BE_REPORTED);
         }
+
+        report.getOffenderStatus()
+                .suspendUser(LocalDateTime.now(), suspensionDays, report.getReason());
+    }
+
+    private void processContentBlocking(Report report) {
+        switch (report.getContentType()) {
+            case POST -> blockPostContent(report.getContentId());
+            case COMMENT -> blockCommentContent(report.getContentId());
+            default -> throw new CustomException(ExceptionCode.BAD_APPROACH);
+        }
+    }
+
+    private void blockPostContent(Long contentId) {
+        Post post = postRepository.findById(contentId).orElseThrow(
+                () -> new CustomException(ExceptionCode.BAD_APPROACH)
+        );
+        post.updateTitle(POST_SCREENED);
+        post.processBlock();
+    }
+
+    private void blockCommentContent(Long contentId) {
+        Comment comment = commentRepository.findById(contentId).orElseThrow(
+                () -> new CustomException(ExceptionCode.BAD_APPROACH)
+        );
+        comment.updateContent(COMMENT_SCREENED);
     }
 }
