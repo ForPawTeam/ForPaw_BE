@@ -3,7 +3,6 @@ package com.hong.forapw.domain.group;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.constant.GroupRole;
-import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
@@ -16,7 +15,6 @@ public class GroupValidator {
 
     private final GroupRepository groupRepository;
     private final GroupUserRepository groupUserRepository;
-
 
     public void validateGroupNameNotDuplicate(String groupName) {
         if (groupRepository.existsByName(groupName)) {
@@ -45,12 +43,6 @@ public class GroupValidator {
         }
     }
 
-    public void validateNotAlreadyMember(GroupUser groupUser) {
-        if (groupUser.isMember()) {
-            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
-        }
-    }
-
     public void validateNotAlreadyMember(Long groupId, Long userId) {
         GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
@@ -75,12 +67,6 @@ public class GroupValidator {
 
         if(groupUser.isNotCreator()){
             throw new CustomException(ExceptionCode.NOT_GROUP_CREATOR);
-        }
-    }
-
-    public void validateGroupCapacity(Group group) {
-        if (group.isGroupFull()) {
-            throw new CustomException(ExceptionCode.GROUP_FULL);
         }
     }
 

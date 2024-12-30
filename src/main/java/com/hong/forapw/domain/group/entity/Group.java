@@ -92,4 +92,10 @@ public class Group extends BaseEntity {
     public boolean isGroupFull() {
         return maxNum.equals(participantNum);
     }
+
+    public void validateCapacity() {
+        if (isGroupFull()) {
+            throw new CustomException(ExceptionCode.GROUP_FULL);
+        }
+    }
 }

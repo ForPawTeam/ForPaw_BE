@@ -1,5 +1,7 @@
 package com.hong.forapw.domain.group.entity;
 
+import com.hong.forapw.common.exceptions.CustomException;
+import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
@@ -52,10 +54,6 @@ public class GroupUser extends BaseEntity {
         return groupRole.equals(GroupRole.USER) || groupRole.equals(GroupRole.ADMIN) || groupRole.equals(GroupRole.CREATOR);
     }
 
-    public boolean isNotMember() {
-        return groupRole.equals(GroupRole.TEMP);
-    }
-
     public boolean isCreator() {
         return groupRole == GroupRole.CREATOR;
     }
@@ -90,5 +88,11 @@ public class GroupUser extends BaseEntity {
 
     public District getUserDistrict() {
         return user.getDistrict();
+    }
+
+    public void validateNotAlreadyMember() {
+        if (this.isMember()) {
+            throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
+        }
     }
 }

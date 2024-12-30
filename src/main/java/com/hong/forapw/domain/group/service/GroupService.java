@@ -165,7 +165,7 @@ public class GroupService {
                 () -> new CustomException(ExceptionCode.GROUP_NOT_FOUND)
         );
 
-        validator.validateGroupCapacity(group);
+        group.validateCapacity();
         validator.validateNotAlreadyMember(groupId, userId);
 
         User applicant = userRepository.getReferenceById(userId);
@@ -213,7 +213,7 @@ public class GroupService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.GROUP_NOT_FOUND));
 
         GroupUser groupUser = getGroupUser(groupId, applicantId);
-        validator.validateNotAlreadyMember(groupUser);
+        groupUser.validateNotAlreadyMember();
 
         approveMembership(groupUser, group);
         notifyApplicant(applicantId, groupId);
@@ -225,7 +225,7 @@ public class GroupService {
         validator.validateGroupAdminAuthorization(groupAdminId, groupId);
 
         GroupUser groupUser = getPendingGroupUser(groupId, applicantId);
-        validator.validateNotAlreadyMember(groupUser);
+        groupUser.validateNotAlreadyMember();
 
         groupUserRepository.delete(groupUser);
 
