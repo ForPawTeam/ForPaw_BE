@@ -1,6 +1,8 @@
 package com.hong.forapw.domain.post.entity;
 
 import com.hong.forapw.common.entity.BaseEntity;
+import com.hong.forapw.common.exceptions.CustomException;
+import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -125,10 +127,6 @@ public class Comment extends BaseEntity {
         return parent == null;
     }
 
-    public boolean isChildren() {
-        return parent != null;
-    }
-
     public boolean isReply() {
         return parent != null;
     }
@@ -137,7 +135,19 @@ public class Comment extends BaseEntity {
         return !this.post.getId().equals(postId);
     }
 
-    public boolean isDeleted() {
-        return removedAt != null;
+    public void validateParentCommentState(Long postId) {
+        if (this.isReply()) {
+            throw new CustomException(ExceptionCode.CANT_REPLY_TO_REPLY);
+        }
+
+        if (this.isNotBelongToPost(postId)) {
+            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
+        }
+    }
+
+    public void validateCommentBelongsToPost(Long postId) {
+        if (this.isNotBelongToPost(postId)) {
+            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
+        }
     }
 }

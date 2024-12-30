@@ -43,7 +43,7 @@ public class GroupValidator {
         }
     }
 
-    public void validateNotAlreadyMember(Long groupId, Long userId) {
+    public void validateNotAlreadyGroupMember(Long groupId, Long userId) {
         GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
 
@@ -61,7 +61,7 @@ public class GroupValidator {
         }
     }
 
-    public void validateGroupCreatorPrivileges(Long groupId, Long userId) {
+    public void validateGroupCreatorAuthorization(Long groupId, Long userId) {
         GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
 

@@ -21,7 +21,6 @@ import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.domain.chat.entity.ChatRoom;
 import com.hong.forapw.domain.chat.entity.ChatUser;
 import com.hong.forapw.domain.post.entity.Post;
-import com.hong.forapw.domain.post.entity.PostImage;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.user.entity.User;
@@ -166,7 +165,7 @@ public class GroupService {
         );
 
         group.validateCapacity();
-        validator.validateNotAlreadyMember(groupId, userId);
+        validator.validateNotAlreadyGroupMember(groupId, userId);
 
         User applicant = userRepository.getReferenceById(userId);
         addTemporaryGroupMember(applicant, group, request.greeting());
@@ -228,7 +227,6 @@ public class GroupService {
         groupUser.validateNotAlreadyMember();
 
         groupUserRepository.delete(groupUser);
-
         sendJoinRejectionAlarm(applicantId, groupId);
     }
 
@@ -250,7 +248,7 @@ public class GroupService {
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
         validator.validateGroupExists(groupId);
-        validator.validateGroupCreatorPrivileges(groupId, userId);
+        validator.validateGroupCreatorAuthorization(groupId, userId);
 
         deleteGroupRelatedData(groupId);
         deleteGroupPostsAndComments(groupId);
@@ -264,7 +262,7 @@ public class GroupService {
         validator.validateGroupExists(groupId);
         validator.validateGroupMembership(groupId, request.userId());
 
-        validator.validateGroupCreatorPrivileges(groupId, creatorId);
+        validator.validateGroupCreatorAuthorization(groupId, creatorId);
         validator.validateRoleUpdateConstraints(request.role(), request.userId(), creatorId);
 
         groupUserRepository.updateRole(request.role(), groupId, request.userId());
@@ -447,6 +445,7 @@ public class GroupService {
                 .group(group)
                 .greeting(greeting)
                 .build();
+
         groupUserRepository.save(groupUser);
     }
 

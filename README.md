@@ -185,19 +185,18 @@ ii. 봉사자와 보호소 간 수요·공급이 불일치</br>
 | 1  | MySQL | 8.0.33 |
 | 2  | Java JDK | 17.0.9 |
 | 3  | JWT | 4.3.0 |
-| 4  | QueryDSL | 5.0.0 |
-| 5  | MongoDB | 2.2.0 |
-| 6  | RabbitMQ | 3.13.0 |
-| 7  | FastAPI | 0.110.3 |
-| 8  | Spring Boot | 3.2.0 |
-| 9  | Milvus | 2.4.1 |
-| 10 | NextJS | 12 |
-| 11 | Junit5 | 5.10.2 |
-| 12 | Nginx | 1.26 |
-| 13 | Tailwind CSS | 3.4.3 |
-| 14 | Jenkins | 2.452.2 |
-| 15 | Gradle | 8.5 |
-| 17 | Figma | UI3 |
+| 4  | MongoDB | 2.2.0 |
+| 5  | RabbitMQ | 3.13.0 |
+| 6  | FastAPI | 0.110.3 |
+| 7  | Spring Boot | 3.2.0 |
+| 8  | Milvus | 2.4.1 |
+| 9 | NextJS | 12 |
+| 10 | Junit5 | 5.10.2 |
+| 11 | Nginx | 1.26 |
+| 12 | Tailwind CSS | 3.4.3 |
+| 13 | Jenkins | 2.452.2 |
+| 14 | Gradle | 8.5 |
+| 15 | Figma | UI3 |
 </br>
 
 ## 3. 개발결과

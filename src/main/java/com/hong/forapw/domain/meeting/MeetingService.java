@@ -6,7 +6,6 @@ import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.alarm.constant.AlarmType;
 import com.hong.forapw.domain.group.entity.Group;
-import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.meeting.entity.Meeting;
 import com.hong.forapw.domain.meeting.entity.MeetingUser;
 import com.hong.forapw.domain.meeting.model.request.CreateMeetingReq;
@@ -42,15 +41,16 @@ public class MeetingService {
     private final GroupUserRepository groupUserRepository;
     private final GroupRepository groupRepository;
     private final AlarmService alarmService;
+    private final MeetingValidator validator;
 
     @Transactional
     public CreateMeetingRes createMeeting(CreateMeetingReq request, Long groupId, Long userId) {
-        validateGroupExists(groupId);
-        validateMeetingNameNotDuplicate(request, groupId);
+        validator.validateGroupExists(groupId);
+        validator.validateMeetingNameNotDuplicate(request, groupId);
 
         User creator = userRepository.findNonWithdrawnById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
-        validateGroupAdminAuthorization(creator, groupId);
+        validator.validateGroupAdminAuthorization(creator, groupId);
 
         Group group = groupRepository.getReferenceById(groupId);
         Meeting meeting = request.toEntity(group, creator);
@@ -75,10 +75,10 @@ public class MeetingService {
 
     @Transactional
     public void updateMeeting(UpdateMeetingReq request, Long groupId, Long meetingId, Long userId) {
-        validateMeetingExists(meetingId);
+        validator.validateMeetingExists(meetingId);
 
         User groupAdmin = userRepository.getReferenceById(userId);
-        validateGroupAdminAuthorization(groupAdmin, groupId);
+        validator.validateGroupAdminAuthorization(groupAdmin, groupId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
@@ -92,8 +92,8 @@ public class MeetingService {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
-        validateIsGroupMember(groupId, userId);
-        validateNotAlreadyParticipant(meetingId, userId);
+        validator.validateGroupMembership(groupId, userId);
+        validator.validateNotAlreadyMeetingParticipant(meetingId, userId);
 
         User joiner = userRepository.getReferenceById(userId);
         addParticipantToMeeting(joiner, meeting);
@@ -104,8 +104,8 @@ public class MeetingService {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
 
-        validateIsGroupMember(groupId, userId);
-        validateMeetingParticipation(meetingId, userId);
+        validator.validateGroupMembership(groupId, userId);
+        validator.validateMeetingParticipation(meetingId, userId);
 
         meetingUserRepository.deleteByMeetingIdAndUserId(meetingId, userId);
         meeting.decrementParticipantCount();
@@ -113,10 +113,10 @@ public class MeetingService {
 
     @Transactional
     public void deleteMeeting(Long groupId, Long meetingId, Long userId) {
-        validateMeetingExists(meetingId);
+        validator.validateMeetingExists(meetingId);
 
         User groupAdmin = userRepository.getReferenceById(userId);
-        validateGroupAdminAuthorization(groupAdmin, groupId);
+        validator.validateGroupAdminAuthorization(groupAdmin, groupId);
 
         meetingUserRepository.deleteAllByMeetingId(meetingId);
         meetingRepository.deleteById(meetingId);
@@ -132,8 +132,8 @@ public class MeetingService {
     }
 
     public FindMeetingByIdRes findMeetingById(Long meetingId, Long groupId, Long userId) {
-        validateGroupExists(groupId);
-        validateIsGroupMember(groupId, userId);
+        validator.validateGroupExists(groupId);
+        validator.validateGroupMembership(groupId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.MEETING_NOT_FOUND));
@@ -152,12 +152,6 @@ public class MeetingService {
         meetingRepository.save(meeting);
 
         meeting.incrementParticipantCount();
-    }
-
-    private void validateMeetingNameNotDuplicate(CreateMeetingReq request, Long groupId) {
-        if (meetingRepository.existsByNameAndGroupId(request.name(), groupId)) {
-            throw new CustomException(ExceptionCode.DUPLICATE_GROUP_NAME);
-        }
     }
 
     private void notifyGroupMembersAboutNewMeeting(Long groupId, Long creatorId, String meetingName) {
@@ -179,24 +173,6 @@ public class MeetingService {
         meeting.incrementParticipantCount();
     }
 
-    private void validateMeetingParticipation(Long meetingId, Long userId) {
-        if (!meetingUserRepository.existsByMeetingIdAndUserId(meetingId, userId)) {
-            throw new CustomException(ExceptionCode.NOT_MEETING_MEMBER);
-        }
-    }
-
-    private void validateNotAlreadyParticipant(Long meetingId, Long userId) {
-        if (meetingUserRepository.existsByMeetingIdAndUserId(meetingId, userId)) {
-            throw new CustomException(ExceptionCode.MEETING_ALREADY_JOINED);
-        }
-    }
-
-    private void validateMeetingExists(Long meetingId) {
-        if (!meetingRepository.existsById(meetingId)) {
-            throw new CustomException(ExceptionCode.MEETING_NOT_FOUND);
-        }
-    }
-
     private Map<Long, List<String>> getMeetingUserProfilesByGroupId(Long groupId) {
         // <Long meetingId, List<String> userProfiles>
         return meetingUserRepository.findMeetingUsersByGroupId(groupId).stream()
@@ -204,28 +180,5 @@ public class MeetingService {
                         MeetingUserProfileDTO::meetingId,
                         Collectors.mapping(MeetingUserProfileDTO::profileURL, Collectors.toList())
                 ));
-    }
-
-    private void validateIsGroupMember(Long groupId, Long userId) {
-        Set<GroupRole> roles = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
-        groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .filter(groupUser -> roles.contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
-    }
-
-    private void validateGroupAdminAuthorization(User user, Long groupId) {
-        if (user.isAdmin()) {
-            return;
-        }
-
-        groupUserRepository.findByGroupIdAndUserId(groupId, user.getId())
-                .filter(groupUser -> EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR).contains(groupUser.getGroupRole()))
-                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
-    }
-
-    private void validateGroupExists(Long groupId) {
-        if (!groupRepository.existsById(groupId)) {
-            throw new CustomException(ExceptionCode.GROUP_NOT_FOUND);
-        }
     }
 }

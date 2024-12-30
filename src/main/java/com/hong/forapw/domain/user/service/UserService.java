@@ -244,7 +244,7 @@ public class UserService {
         User user = userRepository.findNonWithdrawnById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        List<PostTypeCount> postTypeCounts = postRepository.countByUserIdAndType(userId, FIND_ALL_POST_TYPES);
+        List<PostTypeCount> postTypeCounts = postRepository.countByUserIdAndType(userId, ALL_POST_TYPES);
         Map<PostType, Long> postCountMap = postTypeCounts.stream()
                 .collect(Collectors.toMap(PostTypeCount::postType, PostTypeCount::count));
 

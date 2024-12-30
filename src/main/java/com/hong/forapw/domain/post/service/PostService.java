@@ -30,10 +30,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.FIND_MY_POST_TYPES;
-import static com.hong.forapw.common.constants.GlobalConstants.FIND_QUESTION_TYPES;
+import static com.hong.forapw.common.constants.GlobalConstants.MY_POST_TYPES;
+import static com.hong.forapw.common.constants.GlobalConstants.QUESTION_TYPES;
 
 @Service
 @RequiredArgsConstructor
@@ -77,7 +76,7 @@ public class PostService {
         Post question = postRepository.findByIdWithUser(questionPostId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validateQuestionType(question);
+        question.validateQuestionType();
 
         List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
 
@@ -125,7 +124,7 @@ public class PostService {
     }
 
     public FindMyPostListRes findMyPosts(Long userId, Pageable pageable) {
-        Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, FIND_MY_POST_TYPES, pageable);
+        Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, MY_POST_TYPES, pageable);
         List<Post> posts = postPage.getContent();
 
         Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(
@@ -137,7 +136,7 @@ public class PostService {
     }
 
     public FindQnaListRes findMyQuestions(Long userId, Pageable pageable) {
-        Page<Post> questionPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, FIND_QUESTION_TYPES, pageable);
+        Page<Post> questionPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, QUESTION_TYPES, pageable);
         return new FindQnaListRes(questionPage);
     }
 
@@ -155,7 +154,7 @@ public class PostService {
         Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validatePost(post);
+        post.validatePostState();
 
         Long likeCount = likeService.getPostLikeCount(postId);
         List<FindPostByIdRes.CommentDTO> commentDTOs = buildCommentDTOs(postId, userId);
@@ -170,7 +169,7 @@ public class PostService {
         Post qna = postRepository.findById(qnaId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validateQna(qna);
+        qna.validateQnaState();
 
         List<Post> answers = postRepository.findByParentIdWithUser(qnaId);
 
@@ -182,7 +181,7 @@ public class PostService {
         Post answer = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validateAnswer(answer);
+        answer.validateAnswerType();
 
         return new FindAnswerByIdRes(answer, userId);
     }
@@ -220,7 +219,7 @@ public class PostService {
         Post answer = postRepository.findByIdWithUserAndParent(answerId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validateAnswer(answer);
+        answer.validateAnswerType();
         validator.validateAccessorAuthorization(user, answer.getWriterId());
 
         decrementAnswerCount(answer);
@@ -233,7 +232,7 @@ public class PostService {
         Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
 
-        validator.validatePost(post);
+        post.validatePostState();
 
         User writer = userRepository.getReferenceById(userId);
         Comment comment = request.toEntity(request.content(), post, writer);
@@ -252,7 +251,7 @@ public class PostService {
         Comment parentComment = commentRepository.findByIdWithPost(parentCommentId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
 
-        validator.validateParentComment(parentComment, userId);
+        parentComment.validateParentCommentState(postId);
 
         Post post = postRepository.getReferenceById(postId);
         User writer = userRepository.getReferenceById(userId);
@@ -273,7 +272,7 @@ public class PostService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
 
-        validator.validateCommentBelongsToPost(comment, postId);
+        comment.validateCommentBelongsToPost(postId);
         validator.validateAccessorAuthorization(user, comment.getWriterId());
 
         comment.updateContent(request.content());
@@ -284,7 +283,7 @@ public class PostService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
 
-        validator.validateCommentBelongsToPost(comment, postId);
+        comment.validateCommentBelongsToPost(postId);
         validator.validateAccessorAuthorization(user, comment.getWriterId());
 
         comment.updateContent(COMMENT_DELETED);

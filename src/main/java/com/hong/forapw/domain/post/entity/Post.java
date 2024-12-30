@@ -1,6 +1,8 @@
 package com.hong.forapw.domain.post.entity;
 
 import com.hong.forapw.common.entity.BaseEntity;
+import com.hong.forapw.common.exceptions.CustomException;
+import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.model.request.CreateNoticeReq;
 import com.hong.forapw.domain.post.constant.PostType;
@@ -160,10 +162,6 @@ public class Post extends BaseEntity {
         return postType.toString().toLowerCase();
     }
 
-    public Long getParentId() {
-        return parent.getId();
-    }
-
     public boolean isOwner(Long userId) {
         return user.getId().equals(userId);
     }
@@ -186,5 +184,37 @@ public class Post extends BaseEntity {
 
     public boolean isScreened() {
         return title.equals("이 게시글은 커뮤니티 규정을 위반하여 숨겨졌습니다.");
+    }
+
+    public void validateQuestionType() {
+        if (this.isNotQuestionType()) {
+            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
+        }
+    }
+
+    public void validatePostState() {
+        if (this.isQuestionType()) {
+            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
+        }
+
+        if (this.isScreened()) {
+            throw new CustomException(ExceptionCode.SCREENED_POST);
+        }
+    }
+
+    public void validateQnaState() {
+        if (this.isNotQuestionType()) {
+            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
+        }
+
+        if (this.isScreened()) {
+            throw new CustomException(ExceptionCode.SCREENED_POST);
+        }
+    }
+
+    public void validateAnswerType() {
+        if (this.isNotAnswerType()) {
+            throw new CustomException(ExceptionCode.NOT_ANSWER_TYPE);
+        }
     }
 }

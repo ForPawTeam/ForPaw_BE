@@ -5,8 +5,6 @@ import com.hong.forapw.admin.repository.ReportRepository;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.post.constant.PostType;
-import com.hong.forapw.domain.post.entity.Comment;
-import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.model.request.CreatePostReq;
 import com.hong.forapw.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -25,48 +23,6 @@ public class PostValidator {
 
         if (request.type().isImageRequired() && request.images().isEmpty()) {
             throw new CustomException(ExceptionCode.POST_MUST_CONTAIN_IMAGE);
-        }
-    }
-
-    public void validateQuestionType(Post question) {
-        if (question.isNotQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-    }
-
-    public void validatePost(Post post) {
-        if (post.isQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-
-        if (post.isScreened()) {
-            throw new CustomException(ExceptionCode.SCREENED_POST);
-        }
-    }
-
-    public void validateQna(Post qna) {
-        if (qna.isNotQuestionType()) {
-            throw new CustomException(ExceptionCode.NOT_QUESTION_TYPE);
-        }
-
-        if (qna.isScreened()) {
-            throw new CustomException(ExceptionCode.SCREENED_POST);
-        }
-    }
-
-    public void validateAnswer(Post answer) {
-        if (answer.isNotAnswerType()) {
-            throw new CustomException(ExceptionCode.NOT_ANSWER_TYPE);
-        }
-    }
-
-    public void validateParentComment(Comment parentComment, Long postId) {
-        if (parentComment.isReply()) {
-            throw new CustomException(ExceptionCode.CANT_REPLY_TO_REPLY);
-        }
-
-        if (parentComment.isNotBelongToPost(postId)) {
-            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
         }
     }
 
@@ -92,12 +48,6 @@ public class PostValidator {
         }
         if (accessor.isNotSameUser(writerId)) {
             throw new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS);
-        }
-    }
-
-    public void validateCommentBelongsToPost(Comment comment, Long postId) {
-        if (comment.isNotBelongToPost(postId)) {
-            throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
         }
     }
 

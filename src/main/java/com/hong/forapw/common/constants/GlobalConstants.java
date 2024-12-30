@@ -1,8 +1,11 @@
 package com.hong.forapw.common.constants;
 
+import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.post.constant.PostType;
 
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class GlobalConstants {
@@ -59,8 +62,11 @@ public class GlobalConstants {
     public static final long DAILY_FAILURE_LIMIT = 3L;
 
     // else
-    public static final List<PostType> FIND_QUESTION_TYPES = List.of(PostType.QUESTION);
-    public static final List<PostType> FIND_MY_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING);
-    public static final List<PostType> FIND_ALL_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER);
+    public static final List<PostType> QUESTION_TYPES = List.of(PostType.QUESTION);
+    public static final List<PostType> MY_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING);
+    public static final List<PostType> ALL_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER);
+    public static final Set<GroupRole> GROUP_USER_TYPES = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
+    public static final Set<GroupRole> GROUP_ADMIN_TYPES = EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR);
+
     public static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 }
