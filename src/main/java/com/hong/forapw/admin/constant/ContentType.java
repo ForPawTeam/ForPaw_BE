@@ -13,6 +13,6 @@ public enum ContentType {
     private final String description;
 
     public boolean isNotValidTypeForReport() {
-        return !(this == ContentType.POST || this == ContentType.COMMENT);
+        return this != ContentType.POST && this != ContentType.COMMENT;
     }
 }

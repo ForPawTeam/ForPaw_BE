@@ -26,13 +26,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static com.hong.forapw.domain.post.PostMapper.*;
+import static com.hong.forapw.common.constants.GlobalConstants.FIND_MY_POST_TYPES;
+import static com.hong.forapw.common.constants.GlobalConstants.FIND_QUESTION_TYPES;
 
 @Service
 @RequiredArgsConstructor
@@ -66,7 +67,6 @@ public class PostService {
         post.setPostRelationships(postImages);
 
         postRepository.save(post);
-
         postCacheService.initializePostCache(post.getId());
 
         return new CreatePostRes(post.getId());
@@ -95,19 +95,26 @@ public class PostService {
 
     public FindPostListRes findPostsByType(Pageable pageable, PostType postType) {
         Page<Post> postPage = postRepository.findByPostTypeWithUser(postType, pageable);
-        List<FindPostListRes.PostDTO> postDTOS = postPage.getContent().stream()
-                .map(post -> toPostDTO(post, likeService.getPostLikeCount(post.getId())))
+        List<Long> postIds = postPage.getContent().stream()
+                .map(Post::getId)
                 .toList();
 
-        return new FindPostListRes(postDTOS, postPage.isLast());
+        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(postIds);
+        List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(postPage.getContent(), likeCountMap);
+
+        return new FindPostListRes(postDTOs, postPage.isLast());
     }
 
     public FindPostListRes findPopularPostsByType(Pageable pageable, PostType postType) {
         Page<PopularPost> popularPostPage = popularPostRepository.findByPostTypeWithPost(postType, pageable);
-        List<FindPostListRes.PostDTO> postDTOS = popularPostPage.getContent().stream()
-                .map(PopularPost::getPost)
-                .map(post -> toPostDTO(post, likeService.getPostLikeCount(post.getId())))
-                .toList();
+        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(
+                popularPostPage.stream().map(PopularPost::getPostId).toList()
+        );
+
+        List<FindPostListRes.PostDTO> postDTOS = FindPostListRes.PostDTO.fromEntities(
+                popularPostPage.stream().map(PopularPost::getPost).toList(),
+                likeCountMap
+        );
 
         return new FindPostListRes(postDTOS, popularPostPage.isLast());
     }
@@ -118,18 +125,19 @@ public class PostService {
     }
 
     public FindMyPostListRes findMyPosts(Long userId, Pageable pageable) {
-        List<PostType> postTypes = List.of(PostType.ADOPTION, PostType.FOSTERING);
-        Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, postTypes, pageable);
-        List<FindMyPostListRes.MyPostDTO> postDTOS = postPage.getContent().stream()
-                .map(post -> toMyPostDTO(post, likeService.getPostLikeCount(post.getId())))
-                .toList();
+        Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, FIND_MY_POST_TYPES, pageable);
+        List<Post> posts = postPage.getContent();
 
-        return new FindMyPostListRes(postDTOS, postPage.isLast());
+        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(
+                posts.stream().map(Post::getId).toList()
+        );
+
+        List<FindMyPostListRes.MyPostDTO> postDTOs = FindMyPostListRes.MyPostDTO.fromEntities(posts, likeCountMap);
+        return new FindMyPostListRes(postDTOs, postPage.isLast());
     }
 
     public FindQnaListRes findMyQuestions(Long userId, Pageable pageable) {
-        List<PostType> postTypes = List.of(PostType.QUESTION);
-        Page<Post> questionPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, postTypes, pageable);
+        Page<Post> questionPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, FIND_QUESTION_TYPES, pageable);
         return new FindQnaListRes(questionPage);
     }
 
@@ -287,16 +295,15 @@ public class PostService {
     }
 
     @Transactional
-    public void submitReport(SubmitReportReq request, Long userId) {
-        User reporter = userRepository.findNonWithdrawnById(userId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
-
-        validator.validateReportRequest(request.contentId(), request.contentType(), userId);
+    public void submitReport(SubmitReportReq request, Long reporterId) {
+        validator.validateReportRequest(request.contentId(), request.contentType(), reporterId);
 
         User reportedUser = getOffendingUser(request);
-        validator.validateNotSelfReport(userId, reportedUser);
+        validator.validateNotSelfReport(reporterId, reportedUser);
 
+        User reporter = userRepository.getReferenceById(reporterId);
         Report report = request.toEntity(reporter, reportedUser);
+
         reportRepository.save(report);
     }
 

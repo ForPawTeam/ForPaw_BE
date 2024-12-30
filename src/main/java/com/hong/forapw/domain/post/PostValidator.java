@@ -71,7 +71,7 @@ public class PostValidator {
     }
 
     public void validateReportRequest(Long contentId, ContentType contentType, Long userId) {
-        if (reportRepository.existsByReporterIdAndContentId(userId, contentId, contentType)) {
+        if (isAlreadyReported(contentId, contentType, userId)) {
             throw new CustomException(ExceptionCode.REPORT_DUPLICATE);
         }
 
@@ -99,5 +99,9 @@ public class PostValidator {
         if (comment.isNotBelongToPost(postId)) {
             throw new CustomException(ExceptionCode.NOT_POSTS_COMMENT);
         }
+    }
+
+    private boolean isAlreadyReported(Long contentId, ContentType contentType, Long userId) {
+        return reportRepository.existsByReporterIdAndContentId(userId, contentId, contentType);
     }
 }

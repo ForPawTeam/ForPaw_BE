@@ -59,6 +59,8 @@ public class GlobalConstants {
     public static final long DAILY_FAILURE_LIMIT = 3L;
 
     // else
-    public static final List<PostType> ALL_POST_TYPE = List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER);
+    public static final List<PostType> FIND_QUESTION_TYPES = List.of(PostType.QUESTION);
+    public static final List<PostType> FIND_MY_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING);
+    public static final List<PostType> FIND_ALL_POST_TYPES = List.of(PostType.ADOPTION, PostType.FOSTERING, PostType.QUESTION, PostType.ANSWER);
     public static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 }

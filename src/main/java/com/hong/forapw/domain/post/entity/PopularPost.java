@@ -31,4 +31,8 @@ public class PopularPost extends BaseEntity {
         this.post = post;
         this.postType = postType;
     }
+
+    public Long getPostId() {
+        return post.getId();
+    }
 }

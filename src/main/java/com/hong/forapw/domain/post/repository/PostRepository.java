@@ -1,6 +1,8 @@
 package com.hong.forapw.domain.post.repository;
 
-import com.hong.forapw.domain.post.model.query.PostTypeCountDTO;
+import com.hong.forapw.domain.like.handler.PostLikeHandler;
+import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
+import com.hong.forapw.domain.post.model.query.PostTypeCount;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.user.entity.User;
@@ -108,10 +110,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT COUNT(p) FROM Post p WHERE p.createdDate >= :date AND p.removedAt IS NULL")
     Long countALlWithinDate(LocalDateTime date);
 
-    @Query("SELECT new com.hong.forapw.domain.post.model.query.PostTypeCountDTO(p.postType, COUNT(p)) " +
+    @Query("SELECT new com.hong.forapw.domain.post.model.query.PostTypeCount(p.postType, COUNT(p)) " +
             "FROM Post p " +
             "WHERE p.user.id = :userId AND p.removedAt IS NULL AND p.postType IN :postTypes GROUP BY p.postType")
-    List<PostTypeCountDTO> countByUserIdAndType(@Param("userId") Long userId, @Param("postTypes") List<PostType> postTypes);
+    List<PostTypeCount> countByUserIdAndType(@Param("userId") Long userId, @Param("postTypes") List<PostType> postTypes);
 
     @Query("SELECT COUNT(pl) FROM PostLike pl WHERE pl.post.id = :postId")
     Long countLikesByPostId(@Param("postId") Long postId);
@@ -140,4 +142,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("DELETE FROM Post p WHERE p.id = :postId AND p.removedAt IS NULL")
     void deleteById(@Param("postId") Long postId);
+
+    @Query("SELECT new com.hong.forapw.domain.post.model.query.PostIdAndLikeCount(p.id, COUNT(pl.id)) " +
+            "FROM Post p " +
+            "LEFT JOIN PostLike pl on p.id = pl.post.id " +
+            "WHERE p.id IN (:missingIds) " +
+            "GROUP BY p.id ")
+    List<PostIdAndLikeCount> findLikeCountsByIds(List<Long> missingIds);
 }

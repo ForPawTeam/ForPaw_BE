@@ -2,11 +2,10 @@ package com.hong.forapw.domain.user.service;
 
 import com.hong.forapw.domain.user.UserValidator;
 import com.hong.forapw.domain.user.model.*;
-import com.hong.forapw.domain.post.model.query.PostTypeCountDTO;
+import com.hong.forapw.domain.post.model.query.PostTypeCount;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.admin.entity.LoginAttempt;
-import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.entity.UserStatus;
@@ -39,7 +38,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.hong.forapw.security.jwt.JwtUtils;
 
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -246,9 +244,9 @@ public class UserService {
         User user = userRepository.findNonWithdrawnById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        List<PostTypeCountDTO> postTypeCounts = postRepository.countByUserIdAndType(userId, ALL_POST_TYPE);
+        List<PostTypeCount> postTypeCounts = postRepository.countByUserIdAndType(userId, FIND_ALL_POST_TYPES);
         Map<PostType, Long> postCountMap = postTypeCounts.stream()
-                .collect(Collectors.toMap(PostTypeCountDTO::postType, PostTypeCountDTO::count));
+                .collect(Collectors.toMap(PostTypeCount::postType, PostTypeCount::count));
 
         Long adoptionNum = postCountMap.getOrDefault(PostType.ADOPTION, 0L);
         Long fosteringNum = postCountMap.getOrDefault(PostType.FOSTERING, 0L);

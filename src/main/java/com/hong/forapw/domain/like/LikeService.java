@@ -10,6 +10,7 @@ import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +58,10 @@ public class LikeService {
 
     public Long getPostLikeCount(Long postId) {
         return postLikeHandler.getLikeCount(postId);
+    }
+
+    public Map<Long, Long> getPostLikeCounts(List<Long> postIds) {
+        return postLikeHandler.getLikeCounts(postIds);
     }
 
     public Long getCommentLikeCount(Long commentId) {
