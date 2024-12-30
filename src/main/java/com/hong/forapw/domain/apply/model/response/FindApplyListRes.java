@@ -21,6 +21,7 @@ public record FindApplyListRes(List<ApplyDTO> applies) {
             String zipCode,
             ApplyStatus status
     ) {
+
         public ApplyDTO(Apply apply) {
             this(
                     apply.getId(),
@@ -36,6 +37,12 @@ public record FindApplyListRes(List<ApplyDTO> applies) {
                     apply.getZipCode(),
                     apply.getStatus()
             );
+        }
+
+        public static List<ApplyDTO> fromEntities(List<Apply> applies) {
+            return applies.stream()
+                    .map(FindApplyListRes.ApplyDTO::new)
+                    .toList();
         }
     }
 }

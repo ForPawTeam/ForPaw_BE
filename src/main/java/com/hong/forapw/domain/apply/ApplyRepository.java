@@ -58,5 +58,5 @@ public interface ApplyRepository extends JpaRepository<Apply, Long> {
             "JOIN a.user u " +
             "JOIN a.animal an " +
             "WHERE u.id = :userId AND an.id = :animalId AND a.removedAt IS NULL")
-    boolean existsByUserIdAndAnimalId(@Param("userId") Long userId, @Param("animalId") Long animalId);
+    boolean existsByAnimalIdAndUserId(@Param("animalId") Long animalId, @Param("userId") Long userId);
 }

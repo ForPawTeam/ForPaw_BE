@@ -1,5 +1,7 @@
 package com.hong.forapw.domain.animal.entity;
 
+import com.hong.forapw.common.exceptions.CustomException;
+import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.animal.constant.AnimalType;
 import com.hong.forapw.common.entity.BaseEntity;
 import com.hong.forapw.domain.shelter.Shelter;
@@ -131,5 +133,11 @@ public class Animal extends BaseEntity {
 
     public void finishAdoption() {
         isAdopted = true;
+    }
+
+    public void validateNotAdopted() {
+        if (this.isAdopted()) {
+            throw new CustomException(ExceptionCode.ANIMAL_ALREADY_ADOPTED);
+        }
     }
 }
