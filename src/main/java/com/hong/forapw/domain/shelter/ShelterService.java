@@ -81,8 +81,8 @@ public class ShelterService {
     }
 
     @Transactional
-    public void updateShelterData(List<AnimalJsonDTO> animalJsonRespons) {
-        for (AnimalJsonDTO response : animalJsonRespons) {
+    public void updateShelterData(List<AnimalJsonDTO> animalJsonResponse) {
+        for (AnimalJsonDTO response : animalJsonResponse) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
             updateShelterByAnimalData(animalJson, shelter);

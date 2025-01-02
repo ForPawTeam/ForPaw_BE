@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -83,21 +82,23 @@ public class AnimalService {
     @Value("${openAPI.animal.uri}")
     private String animalURI;
 
+    private static final int MAX_RECOMMENDED_ANIMALS = 5;
 
     @Transactional
     @Scheduled(cron = "0 0 0 * * *")
     public void updateNewAnimals() {
         List<Long> existingAnimalIds = animalRepository.findAllIds();
+        
         List<Shelter> shelters = shelterRepository.findAllWithRegionCode();
-
         List<AnimalJsonDTO> animalJsonDTO = fetchAnimalDataFromApi(shelters);
+        
         saveNewAnimalData(animalJsonDTO, existingAnimalIds);
 
         shelterService.updateShelterData(animalJsonDTO);
         postProcessAfterAnimalUpdate();
     }
 
-    public FindAnimalListRes findAnimalList(String type, Long userId, Pageable pageable) {
+    public FindAnimalListRes findAnimals(String type, Long userId, Pageable pageable) {
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
 
         Page<Animal> animalPage = animalRepository.findByAnimalType(AnimalType.fromString(type), pageable);
@@ -111,7 +112,7 @@ public class AnimalService {
         return new FindAnimalListRes(animalDTOS, isLastPage(animalPage));
     }
 
-    public FindRecommendedAnimalListRes findRecommendedAnimalList(Long userId) {
+    public FindRecommendedAnimalListRes findRecommendedAnimals(Long userId) {
         List<Long> recommendedAnimalIds = findRecommendedAnimalIds(userId);
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
 
@@ -126,7 +127,7 @@ public class AnimalService {
         return new FindRecommendedAnimalListRes(animalDTOS);
     }
 
-    public FindLikeAnimalListRes findLikeAnimalList(Long userId) {
+    public FindLikeAnimalListRes findLikeAnimals(Long userId) {
         List<Animal> animalPage = favoriteAnimalRepository.findAnimalsByUserId(userId);
         List<AnimalDTO> animalDTOS = animalPage.stream()
                 .map(animal -> {
@@ -152,12 +153,12 @@ public class AnimalService {
     // 로그인 X => 그냥 최신순, 로그인 O => 검색 기록을 바탕으로 추천 => 검색 기록이 없다면 위치를 기준으로 주변 보호소의 동물 추천
     public List<Long> findRecommendedAnimalIds(Long userId) {
         if (userId == null) {
-            return findLatestAnimalIds();
+            return getLatestAnimalIds();
         }
 
         List<Long> recommendedAnimalIds = fetchRecommendedAnimalIds(userId);
         if (recommendedAnimalIds.isEmpty()) {
-            recommendedAnimalIds = findAnimalIdsByUserLocation(userId);
+            recommendedAnimalIds = getAnimalIdsByUserLocation(userId);
         }
 
         return recommendedAnimalIds;
@@ -181,15 +182,14 @@ public class AnimalService {
                 .block();
     }
 
-    public void saveNewAnimalData(List<AnimalJsonDTO> animalJsonRespons, List<Long> existingAnimalIds) {
-        for (AnimalJsonDTO response : animalJsonRespons) {
+    public void saveNewAnimalData(List<AnimalJsonDTO> animalJsonResponse, List<Long> existingAnimalIds) {
+        for (AnimalJsonDTO response : animalJsonResponse) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
 
             List<Animal> animals = convertAnimalJsonToAnimals(animalJson, shelter, existingAnimalIds);
             animalRepository.saveAll(animals);
         }
-
         entityManager.flush();
     }
 
@@ -202,21 +202,26 @@ public class AnimalService {
                 .orElse(Collections.emptyList())
                 .stream()
                 .filter(animalDTO -> isNewAnimal(animalDTO, existingAnimalIds))
-                .filter(this::isActiveAnimal)
+                .filter(this::isAdoptionNoticeValid)
                 .map(animalDTO -> {
                     String name = createAnimalName();
                     String kind = parseSpecies(animalDTO.kindCd());
                     return animalDTO.toEntity(name, kind, shelter);
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private boolean isNewAnimal(PublicAnimalDTO.AnimalDTO item, List<Long> existingAnimalIds) {
         return !existingAnimalIds.contains(Long.valueOf(item.desertionNo()));
     }
 
-    private boolean isActiveAnimal(PublicAnimalDTO.AnimalDTO item) {
+    private boolean isAdoptionNoticeValid(PublicAnimalDTO.AnimalDTO item) {
         return LocalDate.parse(item.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(LocalDate.now());
+    }
+
+    private String createAnimalName() {
+        int index = ThreadLocalRandom.current().nextInt(animalNames.length);
+        return animalNames[index];
     }
 
     private String parseSpecies(String input) {
@@ -226,16 +231,20 @@ public class AnimalService {
         if (matcher.find()) {
             return matcher.group(1);
         }
-
         return null;
     }
 
-    private String createAnimalName() {
-        int index = ThreadLocalRandom.current().nextInt(animalNames.length);
-        return animalNames[index];
+    private void postProcessAfterAnimalUpdate() {
+        List<Animal> expiredAnimals = handleExpiredAnimals();
+
+        Set<Shelter> updatedShelters = getUpdatedShelters(expiredAnimals);
+        updateShelterAnimalCounts(updatedShelters);
+
+        updateAnimalIntroductions();
+        resolveDuplicateShelters();
     }
 
-    private void postProcessAfterAnimalUpdate() {
+    private List<Animal> handleExpiredAnimals() {
         List<Animal> expiredAnimals = animalRepository.findAllOutOfDateWithShelter(LocalDateTime.now().toLocalDate());
 
         removeAnimalLikesFromCache(expiredAnimals);
@@ -243,11 +252,7 @@ public class AnimalService {
         favoriteAnimalRepository.deleteByAnimalIn(expiredAnimals);
         animalRepository.deleteAll(expiredAnimals);
 
-        Set<Shelter> updatedShelters = findUpdatedShelters(expiredAnimals);
-        updateShelterAnimalCounts(updatedShelters);
-
-        updateAnimalIntroductions();
-        resolveDuplicateShelters();
+        return expiredAnimals;
     }
 
     private void removeAnimalLikesFromCache(List<Animal> expiredAnimals) {
@@ -270,7 +275,7 @@ public class AnimalService {
         );
     }
 
-    private Set<Shelter> findUpdatedShelters(List<Animal> expiredAnimals) {
+    private Set<Shelter> getUpdatedShelters(List<Animal> expiredAnimals) {
         return expiredAnimals.stream()
                 .map(Animal::getShelter)
                 .collect(Collectors.toSet());
@@ -314,8 +319,8 @@ public class AnimalService {
 
     private void handleDuplicateSheltersForCareTel(String careTel) {
         List<Shelter> shelters = shelterRepository.findByCareTel(careTel);
-        Shelter targetShelter = findTargetShelter(shelters);
-        List<Long> duplicateShelterIds = findDuplicateShelterIds(shelters, targetShelter);
+        Shelter targetShelter = getTargetShelter(shelters);
+        List<Long> duplicateShelterIds = getDuplicateShelterIds(shelters, targetShelter);
 
         if (!duplicateShelterIds.isEmpty()) {
             animalRepository.updateShelterByShelterIds(targetShelter, duplicateShelterIds);
@@ -325,14 +330,14 @@ public class AnimalService {
         shelterRepository.updateIsDuplicate(targetShelter.getId(), false);
     }
 
-    private Shelter findTargetShelter(List<Shelter> shelters) {
+    private Shelter getTargetShelter(List<Shelter> shelters) {
         return shelters.stream()
                 .filter(shelter -> !shelter.isDuplicate())
                 .min(Comparator.comparingLong(Shelter::getId))
                 .orElse(shelters.get(0));
     }
 
-    private List<Long> findDuplicateShelterIds(List<Shelter> shelters, Shelter targetShelter) {
+    private List<Long> getDuplicateShelterIds(List<Shelter> shelters, Shelter targetShelter) {
         return shelters.stream()
                 .filter(shelter -> !shelter.equals(targetShelter))
                 .map(Shelter::getId)
@@ -346,7 +351,7 @@ public class AnimalService {
         }
     }
 
-    private List<Long> findLatestAnimalIds() {
+    private List<Long> getLatestAnimalIds() {
         return animalRepository.findAllIds(DEFAULT_PAGEABLE).getContent();
     }
 
@@ -366,16 +371,16 @@ public class AnimalService {
                 .block();
     }
 
-    private List<Long> findAnimalIdsByUserLocation(Long userId) {
-        List<Long> animalIds = findAnimalIdsByDistrict(userId);
-        if (animalIds.size() < 5) {
+    private List<Long> getAnimalIdsByUserLocation(Long userId) {
+        List<Long> animalIds = getAnimalIdsByDistrict(userId);
+        if (animalIds.size() < MAX_RECOMMENDED_ANIMALS) {
             addAnimalIdsFromProvince(userId, animalIds);
         }
 
-        return limitToMaxSize(animalIds, 5);
+        return limitToMaxSize(animalIds);
     }
 
-    private List<Long> findAnimalIdsByDistrict(Long userId) {
+    private List<Long> getAnimalIdsByDistrict(Long userId) {
         return userRepository.findDistrictById(userId)
                 .map(district -> animalRepository.findIdsByDistrict(district, DEFAULT_PAGEABLE))
                 .orElseGet(ArrayList::new);
@@ -388,7 +393,7 @@ public class AnimalService {
         });
     }
 
-    private List<Long> limitToMaxSize(List<Long> animalIds, int maxSize) {
-        return animalIds.size() > maxSize ? animalIds.subList(0, maxSize) : animalIds;
+    private List<Long> limitToMaxSize(List<Long> animalIds) {
+        return animalIds.size() > MAX_RECOMMENDED_ANIMALS ? animalIds.subList(0, MAX_RECOMMENDED_ANIMALS) : animalIds;
     }
 }

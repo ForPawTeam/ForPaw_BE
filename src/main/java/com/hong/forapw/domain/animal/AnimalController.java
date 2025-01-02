@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -27,7 +29,6 @@ public class AnimalController {
 
     private final AnimalService animalService;
     private final LikeService likeService;
-    private static final String SORT_BY_DATE = "createdDate";
 
     // 테스트시에만 열어둠
     @GetMapping("/animals/import")
@@ -38,20 +39,20 @@ public class AnimalController {
 
     @GetMapping("/animals/recommend")
     public ResponseEntity<?> findRecommendedAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimalList(getUserIdSafely(userDetails));
+        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimals(getUserIdSafely(userDetails));
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals")
     public ResponseEntity<?> findAnimalList(@RequestParam String type,
                                             @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnimalListRes response = animalService.findAnimalList(type, getUserIdSafely(userDetails), pageable);
+        FindAnimalListRes response = animalService.findAnimals(type, getUserIdSafely(userDetails), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals/like")
     public ResponseEntity<?> findLikeAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindLikeAnimalListRes response = animalService.findLikeAnimalList(userDetails.user().getId());
+        FindLikeAnimalListRes response = animalService.findLikeAnimals(userDetails.user().getId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 

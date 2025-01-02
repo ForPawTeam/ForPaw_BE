@@ -85,9 +85,8 @@ public class AlarmService {
 
     @Transactional
     public void updateAlarmAsRead(Long alarmId, Long userId) {
-        Alarm alarm = alarmRepository.findById(alarmId).orElseThrow(
-                () -> new CustomException(ExceptionCode.ALARM_NOT_FOUND)
-        );
+        Alarm alarm = alarmRepository.findById(alarmId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.ALARM_NOT_FOUND));
 
         validateAlarmAuthorization(userId, alarm);
         alarm.updateIsRead(true, LocalDateTime.now());
