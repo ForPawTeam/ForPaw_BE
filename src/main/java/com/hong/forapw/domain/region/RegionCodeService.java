@@ -2,8 +2,7 @@ package com.hong.forapw.domain.region;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hong.forapw.domain.region.entity.RegionCode;
-import com.hong.forapw.domain.region.model.RegionListDTO;
+import com.hong.forapw.domain.region.model.RegionsDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,9 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,32 +26,20 @@ public class RegionCodeService {
     public void fetchRegionCode() {
         try {
             Optional.ofNullable(loadRegionDtoFromFile())
-                    .map(this::convertToRegionCodes)
+                    .map(RegionsDTO::toEntities)
                     .ifPresent(regionCodeRepository::saveAll);
         } catch (IOException e) {
             log.error("지역 코드 패치 실패: {}", regionCodeFilePath, e);
         }
     }
 
-    private RegionListDTO loadRegionDtoFromFile() throws IOException {
+    private RegionsDTO loadRegionDtoFromFile() throws IOException {
         try (InputStream inputStream = TypeReference.class.getResourceAsStream(regionCodeFilePath)) {
             if (inputStream == null) {
                 return null;
             }
-            return mapper.readValue(inputStream, RegionListDTO.class);
-        }
-    }
 
-    private List<RegionCode> convertToRegionCodes(RegionListDTO regionListDTO) {
-        return regionListDTO.regions().stream()
-                .flatMap(region -> region.subRegions().stream()
-                        .map(subRegion -> RegionCode.builder()
-                                .uprCd(region.orgCd())
-                                .uprName(region.orgdownNm())
-                                .orgCd(subRegion.orgCd())
-                                .orgName(subRegion.orgdownNm())
-                                .build())
-                )
-                .collect(Collectors.toList());
+            return mapper.readValue(inputStream, RegionsDTO.class);
+        }
     }
 }

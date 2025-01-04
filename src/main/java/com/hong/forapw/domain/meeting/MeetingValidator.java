@@ -2,6 +2,7 @@ package com.hong.forapw.domain.meeting;
 
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
+import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.group.entity.GroupUser;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
@@ -12,8 +13,9 @@ import com.hong.forapw.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import static com.hong.forapw.common.constants.GlobalConstants.GROUP_ADMIN_TYPES;
-import static com.hong.forapw.common.constants.GlobalConstants.GROUP_USER_TYPES;
+import java.util.EnumSet;
+import java.util.Set;
+
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +25,9 @@ public class MeetingValidator {
     private final MeetingUserRepository meetingUserRepository;
     private final GroupUserRepository groupUserRepository;
     private final GroupRepository groupRepository;
+
+    private static final Set<GroupRole> GROUP_USER_TYPES = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
+    private static final Set<GroupRole> GROUP_ADMIN_TYPES = EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR);
 
     public void validateMeetingNameNotDuplicate(CreateMeetingReq request, Long groupId) {
         if (meetingRepository.existsByNameAndGroupId(request.name(), groupId)) {
