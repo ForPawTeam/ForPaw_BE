@@ -69,8 +69,7 @@ public class GlobalConstants {
     public static final Set<GroupRole> GROUP_USER_TYPES = EnumSet.of(GroupRole.USER, GroupRole.ADMIN, GroupRole.CREATOR);
     public static final Set<GroupRole> GROUP_ADMIN_TYPES = EnumSet.of(GroupRole.ADMIN, GroupRole.CREATOR);
 
-    // Else
+    // Default
     public static final Long DEFAULT_VALUE = 0L;
     public static final Province DEFAULT_PROVINCE = Province.DAEGU;
-    public static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 }

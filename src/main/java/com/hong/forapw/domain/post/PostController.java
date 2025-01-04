@@ -31,13 +31,13 @@ public class PostController {
 
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestBody @Valid CreatePostReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreatePostRes response = postService.createPost(request, userDetails.user().getId());
+        CreatePostRes response = postService.createPost(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/posts/{postId}/qna")
     public ResponseEntity<?> createAnswer(@RequestBody @Valid CreateAnswerReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreateAnswerRes response = postService.createAnswer(request, postId, userDetails.user().getId());
+        CreateAnswerRes response = postService.createAnswer(request, postId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -68,19 +68,19 @@ public class PostController {
 
     @GetMapping("/posts/myPost")
     public ResponseEntity<?> findMyPosts(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindMyPostListRes response = postService.findMyPosts(userDetails.user().getId(), pageable);
+        FindMyPostListRes response = postService.findMyPosts(userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myQuestion")
     public ResponseEntity<?> findMyQuestions(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindQnaListRes response = postService.findMyQuestions(userDetails.user().getId(), pageable);
+        FindQnaListRes response = postService.findMyQuestions(userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/myAnswer")
     public ResponseEntity<?> findQuestionsAnsweredByMe(@PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindQnaListRes response = postService.findQuestionsAnsweredByMe(userDetails.user().getId(), pageable);
+        FindQnaListRes response = postService.findQuestionsAnsweredByMe(userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -92,19 +92,19 @@ public class PostController {
 
     @GetMapping("/posts/{postId}")
     public ResponseEntity<?> findPostById(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindPostByIdRes response = postService.findPostById(postId, userDetails.user().getId());
+        FindPostByIdRes response = postService.findPostById(postId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/posts/{postId}/qna")
     public ResponseEntity<?> findQnaById(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindQnaByIdRes response = postService.findQnaById(postId, userDetails.user().getId());
+        FindQnaByIdRes response = postService.findQnaById(postId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/answers/{answerId}")
     public ResponseEntity<?> findAnswerById(@PathVariable Long answerId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnswerByIdRes response = postService.findAnswerById(answerId, userDetails.user().getId());
+        FindAnswerByIdRes response = postService.findAnswerById(answerId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -128,19 +128,19 @@ public class PostController {
 
     @PostMapping("/posts/{postId}/like")
     public ResponseEntity<?> likePost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.like(postId, userDetails.user().getId(), Like.POST);
+        likeService.like(postId, userDetails.getUserId(), Like.POST);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> createComment(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreateCommentRes response = postService.createComment(request, userDetails.user().getId(), postId);
+        CreateCommentRes response = postService.createComment(request, userDetails.getUserId(), postId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/posts/{postId}/comments/{commentId}/reply")
     public ResponseEntity<?> createReply(@RequestBody @Valid CreateCommentReq request, @PathVariable Long postId, @PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreateCommentRes response = postService.createReply(request, postId, userDetails.user().getId(), commentId);
+        CreateCommentRes response = postService.createReply(request, postId, userDetails.getUserId(), commentId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -158,13 +158,13 @@ public class PostController {
 
     @PostMapping("/posts/{postId}/comments/{commentId}/like")
     public ResponseEntity<?> likeComment(@PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.like(commentId, userDetails.user().getId(), Like.COMMENT);
+        likeService.like(commentId, userDetails.getUserId(), Like.COMMENT);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/reports")
     public ResponseEntity<?> submitReport(@RequestBody @Valid SubmitReportReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        postService.submitReport(request, userDetails.user().getId());
+        postService.submitReport(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

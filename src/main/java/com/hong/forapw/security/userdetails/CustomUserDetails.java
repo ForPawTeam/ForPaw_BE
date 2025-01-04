@@ -46,7 +46,11 @@ public record CustomUserDetails(User user) implements UserDetails {
         return true;
     }
 
-    public Long getUserIdSafely() {
+    public Long getUserId() {
+        return this.user.getId();
+    }
+
+    public Long getUserIdOrNull() {
         return Optional.of(this)
                 .map(CustomUserDetails::user)
                 .map(User::getId)

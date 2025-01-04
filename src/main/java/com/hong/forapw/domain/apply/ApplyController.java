@@ -23,26 +23,26 @@ public class ApplyController {
 
     @PostMapping("/animals/{animalId}/apply")
     public ResponseEntity<?> applyAdoption(@RequestBody @Valid ApplyAdoptionReq request, @PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreateApplyRes response = applyService.applyAdoption(request, userDetails.user().getId(), animalId);
+        CreateApplyRes response = applyService.applyAdoption(request, userDetails.getUserId(), animalId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/applies")
     public ResponseEntity<?> findApplyList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindApplyListRes response = applyService.findApplyList(userDetails.user().getId());
+        FindApplyListRes response = applyService.findApplyList(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/applies/{applyId}")
     public ResponseEntity<?> updateApply(@RequestBody @Valid UpdateApplyReq request, @PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        applyService.updateApply(request, applyId, userDetails.user().getId());
+        applyService.updateApply(request, applyId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     // 권한 처리가 필요함
     @DeleteMapping("/applies/{applyId}")
     public ResponseEntity<?> deleteApply(@PathVariable Long applyId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        applyService.deleteApply(applyId, userDetails.user().getId());
+        applyService.deleteApply(applyId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 }

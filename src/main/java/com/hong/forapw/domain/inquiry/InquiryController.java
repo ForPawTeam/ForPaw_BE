@@ -22,19 +22,19 @@ public class InquiryController {
 
     @PostMapping("/supports")
     public ResponseEntity<?> submitInquiry(@RequestBody @Valid SubmitInquiryReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        SubmitInquiryRes response = inquiryService.submitInquiry(request, userDetails.user().getId());
+        SubmitInquiryRes response = inquiryService.submitInquiry(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/supports/{inquiryId}")
     public ResponseEntity<?> updateInquiry(@RequestBody @Valid UpdateInquiryReq request, @PathVariable Long inquiryId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        inquiryService.updateInquiry(request, inquiryId, userDetails.user().getId());
+        inquiryService.updateInquiry(request, inquiryId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/supports")
     public ResponseEntity<?> findInquiryList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindInquiryListRes response = inquiryService.findInquiries(userDetails.user().getId());
+        FindInquiryListRes response = inquiryService.findInquiries(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }

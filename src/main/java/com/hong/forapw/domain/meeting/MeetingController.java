@@ -34,44 +34,44 @@ public class MeetingController {
 
     @PostMapping("/groups/{groupId}/meetings")
     public ResponseEntity<?> createMeeting(@RequestBody @Valid CreateMeetingReq request, @PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        CreateMeetingRes response = meetingService.createMeeting(request, groupId, userDetails.user().getId());
+        CreateMeetingRes response = meetingService.createMeeting(request, groupId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/groups/{groupId}/meetings/{meetingId}")
     public ResponseEntity<?> updateMeeting(@RequestBody @Valid UpdateMeetingReq request, @PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        meetingService.updateMeeting(request, groupId, meetingId, userDetails.user().getId());
+        meetingService.updateMeeting(request, groupId, meetingId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/groups/{groupId}/meetings/{meetingId}/join")
     public ResponseEntity<?> joinMeeting(@PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        meetingService.joinMeeting(groupId, meetingId, userDetails.user().getId());
+        meetingService.joinMeeting(groupId, meetingId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PostMapping("/groups/{groupId}/meetings/{meetingId}/withdraw")
     public ResponseEntity<?> withdrawMeeting(@PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        meetingService.withdrawMeeting(groupId, meetingId, userDetails.user().getId());
+        meetingService.withdrawMeeting(groupId, meetingId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @DeleteMapping("/groups/{groupId}/meetings/{meetingId}")
     public ResponseEntity<?> deleteMeeting(@PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        meetingService.deleteMeeting(groupId, meetingId, userDetails.user().getId());
+        meetingService.deleteMeeting(groupId, meetingId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/groups/{groupId}/meetings/{meetingId}")
     public ResponseEntity<?> findMeetingById(@PathVariable Long groupId, @PathVariable Long meetingId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindMeetingByIdRes response = meetingService.findMeetingById(meetingId, groupId, userDetails.user().getId());
+        FindMeetingByIdRes response = meetingService.findMeetingById(meetingId, groupId, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/groups/{groupId}/meetings")
     public ResponseEntity<?> findMeetingList(@PathVariable Long groupId,
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        groupService.checkGroupAndIsMember(groupId, userDetails.user().getId());
+        groupService.checkGroupAndIsMember(groupId, userDetails.getUserId());
         List<MeetingDTO> meetingDTOS = meetingService.findMeetings(groupId, pageable);
         FindMeetingListRes responseDTO = new FindMeetingListRes(meetingDTOS);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));

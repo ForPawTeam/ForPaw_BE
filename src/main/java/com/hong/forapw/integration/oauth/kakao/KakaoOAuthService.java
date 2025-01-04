@@ -27,7 +27,6 @@ public class KakaoOAuthService implements SocialOAuthService<KakaoOAuthToken, Ka
     @Value("${kakao.oauth.userInfo.uri}")
     private String kakaoUserInfoUri;
 
-
     @Override
     public KakaoOAuthToken getToken(String code) {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();

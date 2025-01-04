@@ -40,39 +40,32 @@ public class AnimalController {
 
     @GetMapping("/animals/recommend")
     public ResponseEntity<?> findRecommendedAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimals(getUserIdSafely(userDetails));
+        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimals(userDetails.getUserIdOrNull());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals")
     public ResponseEntity<?> findAnimalList(@RequestParam String type,
                                             @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnimalListRes response = animalService.findAnimals(type, getUserIdSafely(userDetails), pageable);
+        FindAnimalListRes response = animalService.findAnimals(type, userDetails.getUserIdOrNull(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals/like")
     public ResponseEntity<?> findLikeAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindLikeAnimalListRes response = animalService.findLikeAnimals(userDetails.user().getId());
+        FindLikeAnimalListRes response = animalService.findLikeAnimals(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals/{animalId}")
     public ResponseEntity<?> findAnimalById(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnimalByIdRes response = animalService.findAnimalById(animalId, getUserIdSafely(userDetails));
+        FindAnimalByIdRes response = animalService.findAnimalById(animalId, userDetails.getUserIdOrNull());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PostMapping("/animals/{animalId}/like")
     public ResponseEntity<?> likeAnimal(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.like(animalId, userDetails.user().getId(), Like.ANIMAL);
+        likeService.like(animalId, userDetails.getUserId(), Like.ANIMAL);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
-    }
-
-    private Long getUserIdSafely(CustomUserDetails userDetails) {
-        return Optional.ofNullable(userDetails)
-                .map(CustomUserDetails::user)
-                .map(User::getId)
-                .orElse(null);
     }
 }

@@ -5,12 +5,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.ALL_CHARS;
 
 public class PasswordGenerator {
 
     private PasswordGenerator() {
     }
+
+    private static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     public static String generatePassword() {
         SecureRandom random = new SecureRandom();
