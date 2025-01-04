@@ -1,13 +1,14 @@
 package com.hong.forapw.domain.search;
 
+import com.hong.forapw.domain.like.LikeService;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.meeting.model.query.GroupMeetingCountDTO;
+import com.hong.forapw.domain.post.model.query.PostProjection;
 import com.hong.forapw.domain.search.model.response.GroupDTO;
 import com.hong.forapw.domain.search.model.response.PostDTO;
 import com.hong.forapw.domain.search.model.response.SearchAllRes;
 import com.hong.forapw.domain.search.model.response.ShelterDTO;
-import com.hong.forapw.integration.redis.RedisService;
 import com.hong.forapw.domain.group.entity.Group;
-import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.shelter.Shelter;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
@@ -18,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,68 +32,42 @@ public class SearchService {
     private final PostRepository postRepository;
     private final GroupRepository groupRepository;
     private final MeetingRepository meetingRepository;
-    private final RedisService redisService;
-
-    private static final String POST_LIKE_NUM_KEY_PREFIX = "postLikeNum";
-    private static final Long POST_EXP = 1000L * 60 * 60 * 24 * 90; // 세 달
+    private final LikeService likeService;
 
     public SearchAllRes searchAll(String keyword, Pageable pageable) {
-        List<ShelterDTO> shelterDTOS = searchShelterList(keyword, pageable);
-        List<PostDTO> postDTOS = searchPostList(keyword, pageable);
-        List<GroupDTO> groupDTOS = searchGroupList(keyword, pageable);
+        List<ShelterDTO> shelterDTOs = searchShelters(keyword, pageable);
+        List<PostDTO> postDTOs = searchPosts(keyword, pageable);
+        List<GroupDTO> groupDTOs = searchGroups(keyword, pageable);
 
-        return new SearchAllRes(shelterDTOS, postDTOS, groupDTOS);
+        return new SearchAllRes(shelterDTOs, postDTOs, groupDTOs);
     }
 
-    public List<ShelterDTO> searchShelterList(String keyword, Pageable pageable) {
+    public List<ShelterDTO> searchShelters(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
         List<Shelter> shelters = shelterRepository.findByNameContaining(formattedKeyword, pageable).getContent();
 
-        return shelters.stream()
-                .map(shelter -> new ShelterDTO(shelter.getId(), shelter.getName()))
-                .toList();
+        return ShelterDTO.fromEntities(shelters);
     }
 
-    public List<PostDTO> searchPostList(String keyword, Pageable pageable) {
+    public List<PostDTO> searchPosts(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
-        List<Object[]> posts = postRepository.findByTitleContaining(formattedKeyword, pageable).getContent();
+        List<PostProjection> queryResults = postRepository.findByTitleContaining(formattedKeyword, pageable).getContent();
+        List<Long> postIds = queryResults.stream().map(PostProjection::getPostId).toList();
 
-        return posts.stream()
-                .map(row -> {
-                    Long likeNum = getCachedLikeNum(((Long) row[0]));
-                    return new PostDTO(
-                            (Long) row[0],  // animalId
-                            PostType.valueOf((String) row[4]),  // postType (String을 PostType으로 변환)
-                            (String) row[1],  // title
-                            (String) row[2],  // content
-                            ((Timestamp) row[3]).toLocalDateTime(),  // createdDate (Timestamp를 LocalDateTime으로 변환)
-                            (String) row[5],  // imageUrl
-                            (String) row[7],   // nickName
-                            (Long) row[8], // commentNum
-                            likeNum);
-                })
-                .toList();
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(postIds, Like.POST);
+        return PostDTO.fromQureryResults(queryResults, likeCountMap);
     }
 
-    public List<GroupDTO> searchGroupList(String keyword, Pageable pageable) {
+    public List<GroupDTO> searchGroups(String keyword, Pageable pageable) {
         String formattedKeyword = formatKeywordForFullTextSearch(keyword);
         List<Group> groups = groupRepository.findByNameContaining(formattedKeyword, pageable).getContent();
+        List<Long> groupIds = groups.stream().map(Group::getId).toList();
 
-        List<Long> groupIds = extractGroupIds(groups);
-        Map<Long, Long> meetingCountByGroupId = getMeetingCountsByGroupIds(groupIds); // <groupId, meetingCount>
-
-        return groups.stream()
-                .map(group -> GroupDTO.fromEntity(group, meetingCountByGroupId))
-                .toList();
+        Map<Long, Long> meetingCountMap = getMeetingCountMap(groupIds);
+        return GroupDTO.fromEntities(groups, meetingCountMap);
     }
 
-    private List<Long> extractGroupIds(List<Group> groups) {
-        return groups.stream()
-                .map(Group::getId)
-                .toList();
-    }
-
-    private Map<Long, Long> getMeetingCountsByGroupIds(List<Long> groupIds) {
+    private Map<Long, Long> getMeetingCountMap(List<Long> groupIds) {
         return meetingRepository.countMeetingsByGroupIds(groupIds)
                 .stream()
                 .collect(Collectors.toMap(
@@ -111,16 +85,5 @@ public class SearchService {
         }
 
         return modifiedKeyword.toString().trim();
-    }
-
-    private Long getCachedLikeNum(Long key) {
-        Long likeNum = redisService.getValueInLongWithNull(SearchService.POST_LIKE_NUM_KEY_PREFIX, key.toString());
-
-        if (likeNum == null) {
-            likeNum = postRepository.countLikesByPostId(key);
-            redisService.storeValue(SearchService.POST_LIKE_NUM_KEY_PREFIX, key.toString(), likeNum.toString(), POST_EXP);
-        }
-
-        return likeNum;
     }
 }

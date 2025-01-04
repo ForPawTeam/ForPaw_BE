@@ -2,6 +2,7 @@ package com.hong.forapw.domain.post.repository;
 
 import com.hong.forapw.domain.like.handler.PostLikeHandler;
 import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
+import com.hong.forapw.domain.post.model.query.PostProjection;
 import com.hong.forapw.domain.post.model.query.PostTypeCount;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.constant.PostType;
@@ -47,16 +48,17 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "WHERE p.postType = 'NOTICE' AND g.id = :groupId AND p.removedAt IS NULL")
     Page<Post> findNoticeByGroupIdWithUser(@Param("groupId") Long groupId, Pageable pageable);
 
-    @Query(value = "SELECT p.id as postId, p.title, p.content, p.created_date as createdDate, " +
-            "p.post_type as postType, MIN(pi.imageurl) as imageUrl, " +
-            "u.id as userId, u.nick_name as nickName, p.comment_num as commentNum " +
-            "FROM post_tb p " +
-            "JOIN user_tb u ON p.user_id = u.id " +
-            "LEFT JOIN post_image_tb pi ON pi.post_id = p.id " +
-            "WHERE MATCH(p.title) AGAINST(:title IN BOOLEAN MODE) " +
-            "AND p.post_type IN ('ADOPTION', 'FOSTERING', 'QUESTION') " +
-            "AND p.removed_at IS NULL " +
-            "GROUP BY p.id",
+    @Query(
+            value = "SELECT p.id as postId, p.title, p.content, p.created_date as createdDate, " +
+                    "       p.post_type as postType, MIN(pi.imageurl) as imageUrl, " +
+                    "       u.id as userId, u.nickname as nickName, p.comment_num as commentNum " +
+                    "FROM post_tb p " +
+                    "JOIN user_tb u ON p.user_id = u.id " +
+                    "LEFT JOIN post_image_tb pi ON pi.post_id = p.id " +
+                    "WHERE MATCH(p.title) AGAINST(:title IN BOOLEAN MODE) " +
+                    "AND p.post_type IN ('ADOPTION', 'FOSTERING', 'QUESTION') " +
+                    "AND p.removed_at IS NULL " +
+                    "GROUP BY p.id",
             countQuery = "SELECT COUNT(DISTINCT p.id) " +
                     "FROM post_tb p " +
                     "JOIN user_tb u ON p.user_id = u.id " +
@@ -64,8 +66,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                     "WHERE MATCH(p.title) AGAINST(:title IN BOOLEAN MODE) " +
                     "AND p.post_type IN ('ADOPTION', 'FOSTERING', 'QUESTION') " +
                     "AND p.removed_at IS NULL",
-            nativeQuery = true)
-    Page<Object[]> findByTitleContaining(@Param("title") String title, Pageable pageable);
+            nativeQuery = true
+    )
+    Page<PostProjection> findByTitleContaining(@Param("title") String title, Pageable pageable);
 
     @EntityGraph(attributePaths = {"user"})
     @Query("SELECT p FROM Post p WHERE p.postType = :postType AND p.removedAt IS NULL")

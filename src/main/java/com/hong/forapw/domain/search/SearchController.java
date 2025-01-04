@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_ID;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
 public class SearchController {
 
     private final SearchService searchService;
-    private static final String SORT_BY_ID = "id";
 
     @GetMapping("/search/all")
     public ResponseEntity<?> searchAll(@RequestParam @NotEmpty String keyword,
@@ -31,26 +32,23 @@ public class SearchController {
     }
 
     @GetMapping("/search/shelters")
-    public ResponseEntity<?> searchShelterList(@RequestParam @NotEmpty String keyword,
-                                               @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
-        List<ShelterDTO> shelterDTOS = searchService.searchShelterList(keyword, pageable);
-        SearchShelterListRes response = new SearchShelterListRes(shelterDTOS);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
+    public ResponseEntity<?> searchShelters(@RequestParam @NotEmpty String keyword,
+                                            @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
+        List<ShelterDTO> shelterDTOs = searchService.searchShelters(keyword, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, new SearchShelterListRes(shelterDTOs)));
     }
 
     @GetMapping("/search/posts")
-    public ResponseEntity<?> searchPostList(@RequestParam @NotEmpty String keyword,
-                                            @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
-        List<PostDTO> postDTOS = searchService.searchPostList(keyword, pageable);
-        SearchPostListRes response = new SearchPostListRes(postDTOS);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
+    public ResponseEntity<?> searchPosts(@RequestParam @NotEmpty String keyword,
+                                         @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
+        List<PostDTO> postDTOs = searchService.searchPosts(keyword, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, new SearchPostListRes(postDTOs)));
     }
 
     @GetMapping("/search/groups")
-    public ResponseEntity<?> searchGroupList(@RequestParam @NotEmpty String keyword,
-                                             @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
-        List<GroupDTO> groupDTOS = searchService.searchGroupList(keyword, pageable);
-        SearchGroupListRes response = new SearchGroupListRes(groupDTOS);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
+    public ResponseEntity<?> searchGroups(@RequestParam @NotEmpty String keyword,
+                                          @PageableDefault(size = 3, sort = SORT_BY_ID) Pageable pageable) {
+        List<GroupDTO> groupDTOs = searchService.searchGroups(keyword, pageable);
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, new SearchGroupListRes(groupDTOs)));
     }
 }

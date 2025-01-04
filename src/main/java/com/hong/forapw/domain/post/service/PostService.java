@@ -73,13 +73,12 @@ public class PostService {
     public CreateAnswerRes createAnswer(CreateAnswerReq request, Long questionPostId, Long userId) {
         Post question = postRepository.findByIdWithUser(questionPostId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         question.validateQuestionType();
-
-        List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
 
         User writer = userRepository.getReferenceById(userId);
         Post answer = request.toEntity(writer, question);
+
+        List<PostImage> answerImages = PostImageDTO.fromDTOs(request.images());
         answer.setAnswerRelationships(answerImages, question);
 
         postRepository.save(answer);
@@ -92,9 +91,7 @@ public class PostService {
 
     public FindPostListRes findPostsByType(Pageable pageable, PostType postType) {
         Page<Post> postPage = postRepository.findByPostTypeWithUser(postType, pageable);
-        List<Long> postIds = postPage.getContent().stream()
-                .map(Post::getId)
-                .toList();
+        List<Long> postIds = postPage.getContent().stream().map(Post::getId).toList();
 
         Map<Long, Long> likeCountMap = likeService.getLikeCounts(postIds, Like.POST);
         List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(postPage.getContent(), likeCountMap);
@@ -104,13 +101,11 @@ public class PostService {
 
     public FindPostListRes findPopularPostsByType(Pageable pageable, PostType postType) {
         Page<PopularPost> popularPostPage = popularPostRepository.findByPostTypeWithPost(postType, pageable);
-        Map<Long, Long> likeCountMap = likeService.getLikeCounts(
-                popularPostPage.stream().map(PopularPost::getPostId).toList(), Like.POST
-        );
+        List<Post> popularPosts = popularPostPage.stream().map(PopularPost::getPost).toList();
+        List<Long> popularPostIds = popularPostPage.stream().map(PopularPost::getPostId).toList();
 
-        List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(
-                popularPostPage.stream().map(PopularPost::getPost).toList(), likeCountMap
-        );
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(popularPostIds, Like.POST);
+        List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(popularPosts, likeCountMap);
 
         return new FindPostListRes(postDTOs, popularPostPage.isLast());
     }
@@ -125,8 +120,8 @@ public class PostService {
         List<Post> posts = postPage.getContent();
 
         Map<Long, Long> likeCountMap = likeService.getLikeCounts(posts.stream().map(Post::getId).toList(), Like.POST);
-
         List<FindMyPostListRes.MyPostDTO> postDTOs = FindMyPostListRes.MyPostDTO.fromEntities(posts, likeCountMap);
+
         return new FindMyPostListRes(postDTOs, postPage.isLast());
     }
 
@@ -148,11 +143,10 @@ public class PostService {
     public FindPostByIdRes findPostById(Long postId, Long userId) {
         Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         post.validatePostState();
 
-        Long likeCount = likeService.getLikeCount(postId, Like.POST);
         List<FindPostByIdRes.CommentDTO> commentDTOs = buildCommentDTOs(postId, userId);
+        Long likeCount = likeService.getLikeCount(postId, Like.POST);
 
         postCacheService.incrementPostViewCount(postId);
         postCacheService.markNoticePostAsRead(post, userId, postId);
@@ -163,7 +157,6 @@ public class PostService {
     public FindQnaByIdRes findQnaById(Long qnaId, Long userId) {
         Post qna = postRepository.findById(qnaId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         qna.validateQnaState();
 
         List<Post> answers = postRepository.findByParentIdWithUser(qnaId);
@@ -175,7 +168,6 @@ public class PostService {
     public FindAnswerByIdRes findAnswerById(Long postId, Long userId) {
         Post answer = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         answer.validateAnswerType();
 
         return new FindAnswerByIdRes(answer, userId);
@@ -185,7 +177,6 @@ public class PostService {
     public void updatePost(UpdatePostReq request, User user, Long postId) {
         Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         validator.validateAccessorAuthorization(user, post.getWriterId());
 
         post.updateContent(request.title(), request.content());
@@ -198,7 +189,6 @@ public class PostService {
     public void deletePost(Long postId, User user) {
         Post post = postRepository.findByIdWithUserAndParent(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         validator.validateAccessorAuthorization(user, post.getWriterId());
 
         postLikeRepository.deleteAllByPostId(postId);
@@ -226,7 +216,6 @@ public class PostService {
     public CreateCommentRes createComment(CreateCommentReq request, Long userId, Long postId) {
         Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.POST_NOT_FOUND));
-
         post.validatePostState();
 
         User writer = userRepository.getReferenceById(userId);
@@ -245,7 +234,6 @@ public class PostService {
     public CreateCommentRes createReply(CreateCommentReq request, Long postId, Long userId, Long parentCommentId) {
         Comment parentComment = commentRepository.findByIdWithPost(parentCommentId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.COMMENT_NOT_FOUND));
-
         parentComment.validateParentCommentState(postId);
 
         Post post = postRepository.getReferenceById(postId);
@@ -404,9 +392,7 @@ public class PostService {
                 .sorted(Comparator.comparingDouble(Post::getHotPoint).reversed())
                 .toList();
 
-        popularPosts.addAll(remainingPosts.stream()
-                .limit(5L - popularPosts.size())
-                .toList());
+        popularPosts.addAll(remainingPosts.stream().limit(5L - popularPosts.size()).toList());
     }
 
     private void savePopularPosts(List<Post> popularPosts, PostType postType) {

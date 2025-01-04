@@ -4,6 +4,7 @@ import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 
+import java.util.List;
 import java.util.Map;
 
 public record GroupDTO(
@@ -17,6 +18,7 @@ public record GroupDTO(
         Long participantNum,
         Long meetingNum
 ) {
+
     public static GroupDTO fromEntity(Group group, Map<Long, Long> meetingCountsMap) {
         return new GroupDTO(
                 group.getId(),
@@ -29,5 +31,11 @@ public record GroupDTO(
                 group.getParticipantNum(),
                 meetingCountsMap.getOrDefault(group.getId(), 0L)
         );
+    }
+
+    public static List<GroupDTO> fromEntities(List<Group> groups, Map<Long, Long> meetingCountsMap) {
+        return groups.stream()
+                .map(group -> GroupDTO.fromEntity(group, meetingCountsMap))
+                .toList();
     }
 }
