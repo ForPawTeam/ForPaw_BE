@@ -30,8 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static com.hong.forapw.common.constants.GlobalConstants.MY_POST_TYPES;
-import static com.hong.forapw.common.constants.GlobalConstants.QUESTION_TYPES;
+import static com.hong.forapw.common.constants.GlobalConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -109,12 +108,11 @@ public class PostService {
                 popularPostPage.stream().map(PopularPost::getPostId).toList(), Like.POST
         );
 
-        List<FindPostListRes.PostDTO> postDTOS = FindPostListRes.PostDTO.fromEntities(
-                popularPostPage.stream().map(PopularPost::getPost).toList(),
-                likeCountMap
+        List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(
+                popularPostPage.stream().map(PopularPost::getPost).toList(), likeCountMap
         );
 
-        return new FindPostListRes(postDTOS, popularPostPage.isLast());
+        return new FindPostListRes(postDTOs, popularPostPage.isLast());
     }
 
     public FindQnaListRes findQuestions(Pageable pageable) {
@@ -126,9 +124,7 @@ public class PostService {
         Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, MY_POST_TYPES, pageable);
         List<Post> posts = postPage.getContent();
 
-        Map<Long, Long> likeCountMap = likeService.getLikeCounts(
-                posts.stream().map(Post::getId).toList(), Like.POST
-        );
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(posts.stream().map(Post::getId).toList(), Like.POST);
 
         List<FindMyPostListRes.MyPostDTO> postDTOs = FindMyPostListRes.MyPostDTO.fromEntities(posts, likeCountMap);
         return new FindMyPostListRes(postDTOs, postPage.isLast());
@@ -391,7 +387,7 @@ public class PostService {
     private double calculateHotPoint(Post post) {
         double viewPoints = postCacheService.getPostViewCount(post.getId(), post) * 0.001;
         double commentPoints = post.getCommentNum();
-        double likePoints = likeService.getLikeCount(post.getId(), Like.POST) * 5;
+        double likePoints = likeService.getLikeCount(post.getId(), Like.POST) * 5.0;
         return viewPoints + commentPoints + likePoints;
     }
 
@@ -425,24 +421,24 @@ public class PostService {
     }
 
     private List<FindPostByIdRes.CommentDTO> buildCommentDTOs(Long postId, Long userId) {
-        List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
-        Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>();
-
         List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
-        comments.forEach(comment -> {
-            Long likeCount = likeService.getLikeCount(comment.getId(), Like.COMMENT);
-            boolean isLikedComment = likedCommentIds.contains(comment.getId());
+        List<Long> commentIds = comments.stream().map(Comment::getId).toList();
 
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(commentIds, Like.COMMENT);
+        List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
+
+        Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>();
+        comments.forEach(comment -> {
             if (comment.isParent()) {
-                addParentComment(comment, parentCommentMap, likeCount, isLikedComment);
+                addParentToMap(comment, parentCommentMap, likeCountMap.getOrDefault(comment.getId(), DEFAULT_VALUE), likedCommentIds.contains(comment.getId()));
             } else {
-                addReplyToParent(comment, parentCommentMap, likeCount, isLikedComment);
+                addReplyToParent(comment, parentCommentMap, likeCountMap.getOrDefault(comment.getId(), DEFAULT_VALUE), likedCommentIds.contains(comment.getId()));
             }
         });
         return new ArrayList<>(parentCommentMap.values());
     }
 
-    private void addParentComment(Comment parent, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
+    private void addParentToMap(Comment parent, Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap, Long likeCount, boolean isLiked) {
         FindPostByIdRes.CommentDTO parentCommentDTO = new FindPostByIdRes.CommentDTO(parent, likeCount, isLiked);
         parentCommentMap.put(parent.getId(), parentCommentDTO);
     }

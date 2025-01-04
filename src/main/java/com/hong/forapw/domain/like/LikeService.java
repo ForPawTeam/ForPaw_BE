@@ -10,7 +10,7 @@ import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +28,7 @@ public class LikeService {
 
     @PostConstruct
     void initHandlerMap() {
-        handlerMap = new HashMap<>();
+        handlerMap = new EnumMap<>(Like.class);
         for (LikeHandler handler : handlers) {
             handlerMap.put(handler.getLikeTarget(), handler);
         }

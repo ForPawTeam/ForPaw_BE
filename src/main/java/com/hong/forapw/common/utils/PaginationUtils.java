@@ -17,6 +17,7 @@ public class PaginationUtils {
     public static final Pageable DEFAULT_PAGEABLE = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, SORT_BY_ID));
     public static final Pageable RECOMMEND_GROUP_PAGEABLE = PageRequest.of(0, 30, SORT_BY_PARTICIPANT);
     public static final Pageable DEFAULT_IMAGE_PAGEABLE = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, SORT_BY_MESSAGE_DATE));
+    public static final Pageable POPULAR_POST_PAGEABLE = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, SORT_BY_DATE));
 
     public static boolean isLastPage(Page<?> page) {
         return !page.hasNext();

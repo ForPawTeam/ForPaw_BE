@@ -23,14 +23,7 @@ public class HomeController {
 
     @GetMapping("/home")
     public ResponseEntity<?> findHome(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindHomeRes responseDTO = homeService.findHomePageData(getUserIdSafely(userDetails));
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
-    }
-
-    private Long getUserIdSafely(CustomUserDetails userDetails) {
-        return Optional.ofNullable(userDetails)
-                .map(CustomUserDetails::user)
-                .map(User::getId)
-                .orElse(null);
+        FindHomeRes response = homeService.findHomePageData(userDetails.getUserIdSafely());
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }

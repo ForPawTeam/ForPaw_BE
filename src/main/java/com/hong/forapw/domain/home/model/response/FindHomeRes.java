@@ -4,11 +4,10 @@ import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.group.model.response.RecommendGroupDTO;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.post.entity.Post;
-import com.hong.forapw.domain.region.constant.District;
-import com.hong.forapw.domain.region.constant.Province;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public record FindHomeRes(
         List<AnimalDTO> animals,
@@ -26,7 +25,8 @@ public record FindHomeRes(
             Long likeNum,
             String profileURL
     ) {
-        public AnimalDTO(Animal animal, Long likeNum) {
+
+        public AnimalDTO(Animal animal, Map<Long, Long> likeCountMap) {
             this(
                     animal.getId(),
                     animal.getName(),
@@ -35,8 +35,14 @@ public record FindHomeRes(
                     animal.getSpecialMark(),
                     animal.getRegion(),
                     animal.getInquiryNum(),
-                    likeNum,
+                    likeCountMap.getOrDefault(animal.getId(), 0L),
                     animal.getProfileURL());
+        }
+
+        public static List<AnimalDTO> fromEntities(List<Animal> animals, Map<Long, Long> likeCountMap) {
+            return animals.stream()
+                    .map(animal -> new AnimalDTO(animal, likeCountMap))
+                    .toList();
         }
     }
 
@@ -51,7 +57,8 @@ public record FindHomeRes(
             String imageURL,
             PostType postType
     ) {
-        public PostDTO(Post post, Long likeNum, String imageURL) {
+
+        public PostDTO(Post post, Map<Long, Long> likeCountMap) {
             this(
                     post.getId(),
                     post.getWriterNickName(),
@@ -59,9 +66,15 @@ public record FindHomeRes(
                     post.getContent(),
                     post.getCreatedDate(),
                     post.getCommentNum(),
-                    likeNum,
-                    imageURL,
+                    likeCountMap.getOrDefault(post.getId(), 0L),
+                    post.getPostImages().isEmpty() ? null : post.getPostImages().get(0).getImageURL(),
                     post.getPostType());
+        }
+
+        public static List<PostDTO> fromEntities(List<Post> posts, Map<Long, Long> likeCountMap) {
+            return posts.stream()
+                    .map(post -> new PostDTO(post, likeCountMap))
+                    .toList();
         }
     }
 }

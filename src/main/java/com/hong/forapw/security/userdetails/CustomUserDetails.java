@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 
 public record CustomUserDetails(User user) implements UserDetails {
 
@@ -43,5 +44,12 @@ public record CustomUserDetails(User user) implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public Long getUserIdSafely() {
+        return Optional.of(this)
+                .map(CustomUserDetails::user)
+                .map(User::getId)
+                .orElse(null);
     }
 }
