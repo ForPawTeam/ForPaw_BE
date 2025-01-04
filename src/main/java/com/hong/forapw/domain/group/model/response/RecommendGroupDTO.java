@@ -4,6 +4,9 @@ import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 
+import java.util.List;
+import java.util.Map;
+
 public record RecommendGroupDTO(
         Long id,
         String name,
@@ -19,7 +22,7 @@ public record RecommendGroupDTO(
         String shelterName
 ) {
 
-    public RecommendGroupDTO(Group group, Long likeNum, boolean isLike) {
+    public RecommendGroupDTO(Group group, Map<Long, Long> likeCountMap, List<Long> likedGroupIds) {
         this(
                 group.getId(),
                 group.getName(),
@@ -29,9 +32,15 @@ public record RecommendGroupDTO(
                 group.getProvince(),
                 group.getDistrict(),
                 group.getProfileURL(),
-                likeNum,
-                isLike,
+                likeCountMap.getOrDefault(group.getId(), 0L),
+                likedGroupIds.contains(group.getId()),
                 group.isShelterOwns(),
                 group.getShelterName());
+    }
+
+    public static List<RecommendGroupDTO> fromEntities(List<Group> groups, Map<Long, Long> likeCountMap, List<Long> likedGroupIds) {
+        return groups.stream()
+                .map(group -> new RecommendGroupDTO(group, likeCountMap, likedGroupIds))
+                .toList();
     }
 }

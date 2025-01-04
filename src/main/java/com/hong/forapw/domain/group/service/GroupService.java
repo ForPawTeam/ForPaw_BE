@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.group.service;
 
 import com.hong.forapw.domain.alarm.AlarmService;
+import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.group.GroupValidator;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
 import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
@@ -140,10 +142,12 @@ public class GroupService {
 
     public List<LocalGroupDTO> getLocalGroups(Long userId, Province province, District district, List<Long> likedGroupIds, Pageable pageable) {
         List<Group> localGroups = groupRepository.findByProvinceAndDistrictWithoutMyGroup(province, district, userId, GroupRole.TEMP, pageable).getContent();
-
-        return localGroups.stream()
-                .map(group -> new LocalGroupDTO(group, likeService.getLikeCount(group.getId(), Like.GROUP), likedGroupIds.contains(group.getId())))
+        List<Long> groupIds = localGroups.stream()
+                .map(Group::getId)
                 .toList();
+
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(groupIds, Like.GROUP);
+        return LocalGroupDTO.fromEntities(localGroups, likeCountMap, likedGroupIds);
     }
 
     public FindGroupDetailByIdRes findGroupDetailById(Long userId, Long groupId) {
@@ -288,13 +292,13 @@ public class GroupService {
     }
 
     private List<RecommendGroupDTO> fetchGroupsByProvince(Province province, Long userId, List<Long> likedGroupIds) {
-        return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, RECOMMEND_GROUP_PAGEABLE).getContent().stream()
-                .map(group -> new RecommendGroupDTO(
-                        group,
-                        likeService.getLikeCount(group.getId(), Like.GROUP),
-                        likedGroupIds.contains(group.getId()))
-                )
+        List<Group> groups = groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, RECOMMEND_GROUP_PAGEABLE).getContent();
+        List<Long> groupIds = groups.stream()
+                .map(Group::getId)
                 .toList();
+
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(groupIds, Like.GROUP);
+        return RecommendGroupDTO.fromEntities(groups, likeCountMap, likedGroupIds);
     }
 
     private List<RecommendGroupDTO> fetchAdditionalGroupsIfNeeded(Long userId, List<Long> likedGroupIds, List<RecommendGroupDTO> existingGroups) {
@@ -302,13 +306,18 @@ public class GroupService {
             return Collections.emptyList();
         }
 
-        return groupRepository.findAllWithoutMyGroup(userId, RECOMMEND_GROUP_PAGEABLE).stream()
-                .map(group -> new RecommendGroupDTO(
-                        group,
-                        likeService.getLikeCount(group.getId(), Like.GROUP),
-                        likedGroupIds.contains(group.getId()))
-                )
-                .filter(newGroup -> existingGroups.stream().noneMatch(existingGroup -> existingGroup.id().equals(newGroup.id())))
+        List<Group> groups = groupRepository.findAllWithoutMyGroup(userId, RECOMMEND_GROUP_PAGEABLE).getContent();
+        List<Long> groupIds = groups.stream()
+                .map(Group::getId)
+                .toList();
+
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(groupIds, Like.GROUP);
+        Set<Long> existingGroupIds = existingGroups.stream()
+                .map(RecommendGroupDTO::id)
+                .collect(Collectors.toSet());
+
+        return RecommendGroupDTO.fromEntities(groups, likeCountMap, likedGroupIds).stream()
+                .filter(newGroup -> !existingGroupIds.contains(newGroup.id()))
                 .toList();
     }
 
@@ -430,13 +439,13 @@ public class GroupService {
             return Collections.emptyList();
         }
 
-        return groupUserRepository.findGroupByUserId(userId, pageable).getContent().stream()
-                .map(group -> new MyGroupDTO(
-                        group,
-                        likeService.getLikeCount(group.getId(), Like.GROUP),
-                        likedGroupIds.contains(group.getId()))
-                )
+        List<Group> groups = groupUserRepository.findGroupByUserId(userId, pageable).getContent();
+        List<Long> groupIds = groups.stream()
+                .map(Group::getId)
                 .toList();
+
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(groupIds, Like.GROUP);
+        return MyGroupDTO.fromEntities(groups, likeCountMap, likedGroupIds);
     }
 
     private void addTemporaryGroupMember(User applicant, Group group, String greeting) {
