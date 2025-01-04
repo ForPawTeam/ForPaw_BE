@@ -34,15 +34,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT u FROM Post p " +
             "JOIN p.user u " +
             "WHERE p.id = :postId AND p.removedAt IS NULL")
-    Optional<User> findUserById(@Param("postId") Long postId);
+    Optional<User> findUserById(@Param("animalId") Long postId);
 
     @Query("SELECT u.id FROM Post p " +
             "JOIN p.user u " +
             "WHERE p.id = :postId AND p.removedAt IS NULL")
-    Optional<Long> findUserIdById(@Param("postId") Long postId);
+    Optional<Long> findUserIdById(@Param("animalId") Long postId);
 
     @Query("SELECT p.postType FROM Post p WHERE p.id = :postId AND p.removedAt IS NULL")
-    Optional<PostType> findPostTypeById(@Param("postId") Long postId);
+    Optional<PostType> findPostTypeById(@Param("animalId") Long postId);
 
     @EntityGraph(attributePaths = {"user"})
     @Query("SELECT p FROM Post p " +
@@ -95,11 +95,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @EntityGraph(attributePaths = {"user"})
     @Query("SELECT p FROM Post p WHERE p.id = :postId AND p.removedAt IS NULL")
-    Optional<Post> findByIdWithUser(@Param("postId") Long postId);
+    Optional<Post> findByIdWithUser(@Param("animalId") Long postId);
 
     @EntityGraph(attributePaths = {"user", "parent"})
     @Query("SELECT p FROM Post p WHERE p.id = :postId AND p.removedAt IS NULL")
-    Optional<Post> findByIdWithUserAndParent(@Param("postId") Long postId);
+    Optional<Post> findByIdWithUserAndParent(@Param("animalId") Long postId);
 
     @Query("SELECT p FROM Post p WHERE p.createdDate > :date AND p.removedAt IS NULL")
     List<Post> findPostIdsWithinDate(LocalDateTime date);
@@ -116,23 +116,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<PostTypeCount> countByUserIdAndType(@Param("userId") Long userId, @Param("postTypes") List<PostType> postTypes);
 
     @Query("SELECT COUNT(pl) FROM PostLike pl WHERE pl.post.id = :postId")
-    Long countLikesByPostId(@Param("postId") Long postId);
-
-    @Modifying
-    @Query("UPDATE Post p SET p.answerNum = p.answerNum + 1 WHERE p.id = :postId")
-    void incrementAnswerNum(@Param("postId") Long postId);
+    Long countLikesByPostId(@Param("animalId") Long postId);
 
     @Modifying
     @Query("UPDATE Post p SET p.answerNum = p.answerNum - 1 WHERE p.id = :postId AND p.answerNum > 0")
-    void decrementAnswerNum(@Param("postId") Long postId);
+    void decrementAnswerNum(@Param("animalId") Long postId);
 
     @Modifying
     @Query("UPDATE Post p SET p.commentNum = p.commentNum + 1 WHERE p.id = :postId")
-    void incrementCommentCount(@Param("postId") Long postId);
+    void incrementCommentCount(@Param("animalId") Long postId);
 
     @Modifying
     @Query("UPDATE Post p SET p.commentNum = p.commentNum - :decrementNum WHERE p.id = :postId AND p.commentNum > 0")
-    void decrementCommentNum(@Param("postId") Long postId, @Param("decrementNum") Long decrementNum);
+    void decrementCommentNum(@Param("animalId") Long postId, @Param("decrementNum") Long decrementNum);
 
 
     @Modifying
@@ -141,7 +137,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Modifying
     @Query("DELETE FROM Post p WHERE p.id = :postId AND p.removedAt IS NULL")
-    void deleteById(@Param("postId") Long postId);
+    void deleteById(@Param("animalId") Long postId);
 
     @Query("SELECT new com.hong.forapw.domain.post.model.query.PostIdAndLikeCount(p.id, COUNT(pl.id)) " +
             "FROM Post p " +

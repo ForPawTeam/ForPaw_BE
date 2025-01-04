@@ -72,6 +72,10 @@ public class LikeService {
         return animalLikeHandler.getLikeCount(animalId);
     }
 
+    public Map<Long, Long> getAnimalLikeCounts(List<Long> animalIds) {
+        return animalLikeHandler.getLikeCounts(animalIds);
+    }
+
     public Long getGroupLikeCount(Long groupId) {
         return groupLikeHandler.getLikeCount(groupId);
     }

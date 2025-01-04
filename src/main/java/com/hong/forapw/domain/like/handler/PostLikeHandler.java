@@ -34,7 +34,6 @@ public class PostLikeHandler implements LikeHandler {
 
     private static final Long POST_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90;
 
-
     @Override
     public void validateBeforeLike(Long postId, Long userId) {
         if (!postRepository.existsById(postId))

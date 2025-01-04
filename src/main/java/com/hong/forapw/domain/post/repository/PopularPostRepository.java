@@ -22,5 +22,5 @@ public interface PopularPostRepository extends JpaRepository<PopularPost, Long> 
 
     @Modifying
     @Query("DELETE FROM PopularPost p WHERE p.post.id = :postId")
-    void deleteByPostId(@Param("postId") Long postId);
+    void deleteByPostId(@Param("animalId") Long postId);
 }

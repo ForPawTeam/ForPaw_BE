@@ -94,49 +94,48 @@ public class AnimalService {
         
         saveNewAnimalData(animalJsonDTO, existingAnimalIds);
 
-        shelterService.updateShelterData(animalJsonDTO);
+        shelterService.updateShelter(animalJsonDTO);
         postProcessAfterAnimalUpdate();
     }
 
     public FindAnimalListRes findAnimals(String type, Long userId, Pageable pageable) {
-        List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
-
         Page<Animal> animalPage = animalRepository.findByAnimalType(AnimalType.fromString(type), pageable);
-        List<AnimalDTO> animalDTOS = animalPage.getContent().stream()
-                .map(animal -> {
-                    Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return AnimalDTO.fromEntity(animal, likeCount, likedAnimalIds);
-                })
+        List<Long> animalIds = animalPage.getContent().stream()
+                .map(Animal::getId)
                 .toList();
 
-        return new FindAnimalListRes(animalDTOS, isLastPage(animalPage));
+        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
+        List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animalPage.getContent(), likeCountMap, likedAnimalIds);
+
+        return new FindAnimalListRes(animalDTOs, isLastPage(animalPage));
     }
 
     public FindRecommendedAnimalListRes findRecommendedAnimals(Long userId) {
         List<Long> recommendedAnimalIds = findRecommendedAnimalIds(userId);
-        List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
 
         List<Animal> animals = animalRepository.findByIds(recommendedAnimalIds);
-        List<AnimalDTO> animalDTOS = animals.stream()
-                .map(animal -> {
-                    Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return AnimalDTO.fromEntity(animal, likeCount, likedAnimalIds);
-                })
+        List<Long> animalIds = animals.stream()
+                .map(Animal::getId)
                 .toList();
 
-        return new FindRecommendedAnimalListRes(animalDTOS);
+        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
+        List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animals, likeCountMap, likedAnimalIds);
+
+        return new FindRecommendedAnimalListRes(animalDTOs);
     }
 
     public FindLikeAnimalListRes findLikeAnimals(Long userId) {
-        List<Animal> animalPage = favoriteAnimalRepository.findAnimalsByUserId(userId);
-        List<AnimalDTO> animalDTOS = animalPage.stream()
-                .map(animal -> {
-                    Long likeCount = likeService.getAnimalLikeCount(animal.getId());
-                    return AnimalDTO.fromEntity(animal, likeCount, Collections.emptyList());
-                })
+        List<Animal> animals = favoriteAnimalRepository.findAnimalsByUserId(userId);
+        List<Long> animalIds = animals.stream()
+                .map(Animal::getId)
                 .toList();
 
-        return new FindLikeAnimalListRes(animalDTOS);
+        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animals, likeCountMap, Collections.emptyList());
+
+        return new FindLikeAnimalListRes(animalDTOs);
     }
 
     public FindAnimalByIdRes findAnimalById(Long animalId, Long userId) {
@@ -286,10 +285,7 @@ public class AnimalService {
                 .uri(updateAnimalIntroduceURI)
                 .contentType(MediaType.APPLICATION_JSON)
                 .retrieve()
-                .onStatus(
-                        status -> status.is4xxClientError() || status.is5xxServerError(),
-                        this::mapError
-                )
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), this::mapError)
                 .bodyToMono(Void.class)
                 .retryWhen(createRetrySpec())
                 .onErrorResume(error -> {

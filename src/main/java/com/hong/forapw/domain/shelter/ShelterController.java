@@ -35,7 +35,7 @@ public class ShelterController {
     }
 
     @GetMapping("/shelters")
-    public ResponseEntity<?> findShelterList() {
+    public ResponseEntity<?> findShelters() {
         FindShelterListRes response = shelterService.findActiveShelters();
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.CREATED, response));
     }
@@ -55,7 +55,7 @@ public class ShelterController {
 
     @GetMapping("/shelters/addr")
     public ResponseEntity<?> findShelterListWithAddr() {
-        FindShelterListWithAddrRes response = shelterService.findShelterListWithAddress();
+        FindShelterListWithAddrRes response = shelterService.findSheltersWithAddress();
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 

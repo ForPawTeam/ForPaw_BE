@@ -81,7 +81,7 @@ public class ShelterService {
     }
 
     @Transactional
-    public void updateShelterData(List<AnimalJsonDTO> animalJsonResponse) {
+    public void updateShelter(List<AnimalJsonDTO> animalJsonResponse) {
         for (AnimalJsonDTO response : animalJsonResponse) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
@@ -110,7 +110,7 @@ public class ShelterService {
     }
 
     public FindShelterAnimalsByIdRes findAnimalsByShelter(Long shelterId, Long userId, String type, Pageable pageable) {
-        List<Long> userLikedAnimalIds = findUserLikedAnimalIds(userId);
+        List<Long> userLikedAnimalIds = getUserLikedAnimalIds(userId);
 
         Page<Animal> animalPage = animalRepository.findByShelterIdAndType(AnimalType.fromString(type), shelterId, pageable);
         List<FindShelterAnimalsByIdRes.AnimalDTO> animalDTOS = animalPage.getContent().stream()
@@ -124,7 +124,7 @@ public class ShelterService {
         return new FindShelterAnimalsByIdRes(animalDTOS, isLastPage(animalPage));
     }
 
-    public FindShelterListWithAddrRes findShelterListWithAddress() {
+    public FindShelterListWithAddrRes findSheltersWithAddress() {
         List<Shelter> shelters = shelterRepository.findAll();
         return FindShelterListWithAddrRes.fromShelters(shelters);
     }
@@ -136,13 +136,13 @@ public class ShelterService {
     }
 
     private void updateShelterWithAnimalData(PublicAnimalDTO animalData, Shelter shelter) {
-        findFirstAnimalItem(animalData)
+        getFirstAnimalItem(animalData)
                 .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
                         firstAnimalItem.careTel(), firstAnimalItem.careAddr(), countActiveAnimals(animalData), shelter.getId())
                 );
     }
 
-    private Optional<PublicAnimalDTO.AnimalDTO> findFirstAnimalItem(PublicAnimalDTO animalDTO) {
+    private Optional<PublicAnimalDTO.AnimalDTO> getFirstAnimalItem(PublicAnimalDTO animalDTO) {
         return Optional.ofNullable(animalDTO)
                 .map(PublicAnimalDTO::response)
                 .map(PublicAnimalDTO.ResponseDTO::body)
@@ -234,7 +234,7 @@ public class ShelterService {
         return likeNum;
     }
 
-    private List<Long> findUserLikedAnimalIds(Long userId) {
+    private List<Long> getUserLikedAnimalIds(Long userId) {
         return (userId != null) ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : Collections.emptyList();
     }
 }

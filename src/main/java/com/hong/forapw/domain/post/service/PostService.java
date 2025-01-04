@@ -425,17 +425,6 @@ public class PostService {
         });
     }
 
-    private void ensureNotExpiredForLikes(LocalDateTime date) {
-        LocalDate likeDate = date.toLocalDate();
-        LocalDate now = LocalDate.now();
-        Period period = Period.between(likeDate, now);
-
-        // 기간이 3개월 이상이면 좋아요를 할 수 없다
-        if (period.getMonths() >= 3 || period.getYears() > 0) {
-            throw new CustomException(ExceptionCode.POST_LIKE_EXPIRED);
-        }
-    }
-
     private List<FindPostByIdRes.CommentDTO> buildCommentDTOs(Long postId, Long userId) {
         List<Long> likedCommentIds = commentLikeRepository.findCommentIdsByUserId(userId);
         Map<Long, FindPostByIdRes.CommentDTO> parentCommentMap = new HashMap<>();

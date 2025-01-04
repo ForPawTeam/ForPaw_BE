@@ -2,6 +2,8 @@ package com.hong.forapw.domain.animal.repository;
 
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.animal.constant.AnimalType;
+import com.hong.forapw.domain.animal.model.query.AnimalIdAndLikeCount;
+import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.shelter.Shelter;
@@ -40,10 +42,6 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
     @Query("SELECT a FROM Animal a WHERE a.id IN :ids AND a.removedAt IS NULL")
     List<Animal> findByIds(@Param("ids") List<Long> ids);
 
-    @EntityGraph(attributePaths = {"shelter"})
-    @Query("SELECT a FROM Animal a WHERE a.id IN :ids AND a.removedAt IS NULL")
-    List<Animal> findByIdsWithShelter(@Param("ids") List<Long> ids);
-
     @Query("SELECT a FROM Animal a " +
             "JOIN a.shelter s " +
             "WHERE (:category IS NULL OR a.category = :category) AND s.id = :careRegNo AND a.removedAt IS NULL")
@@ -65,7 +63,12 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
             "WHERE a.removedAt IS NULL AND r.uprName = :province ORDER BY a.id ASC")
     List<Long> findIdsByProvince(Province province, Pageable pageable);
 
-    List<Animal> findByShelter(Shelter shelter);
+    @Query("SELECT new com.hong.forapw.domain.animal.model.query.AnimalIdAndLikeCount(a.id, COUNT(fa.id)) " +
+            "FROM Animal a " +
+            "LEFT JOIN FavoriteAnimal fa on a.id = fa.animal.id " +
+            "WHERE a.id IN (:missingIds) " +
+            "GROUP BY a.id ")
+    List<AnimalIdAndLikeCount> findLikeCountsByIds(List<Long> missingIds);
 
     @Query("SELECT COUNT(a) FROM Animal a " +
             "JOIN a.shelter s " +

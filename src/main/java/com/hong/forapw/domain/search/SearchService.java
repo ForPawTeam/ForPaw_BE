@@ -62,7 +62,7 @@ public class SearchService {
                 .map(row -> {
                     Long likeNum = getCachedLikeNum(((Long) row[0]));
                     return new PostDTO(
-                            (Long) row[0],  // postId
+                            (Long) row[0],  // animalId
                             PostType.valueOf((String) row[4]),  // postType (String을 PostType으로 변환)
                             (String) row[1],  // title
                             (String) row[2],  // content

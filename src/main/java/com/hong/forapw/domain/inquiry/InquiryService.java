@@ -37,9 +37,8 @@ public class InquiryService {
 
     @Transactional
     public void updateInquiry(UpdateInquiryReq request, Long inquiryId, Long userId) {
-        Inquiry inquiry = inquiryRepository.findById(inquiryId).orElseThrow(
-                () -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND)
-        );
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.INQUIRY_NOT_FOUND));
 
         checkAuthority(userId, inquiry.getQuestioner());
         inquiry.updateInquiry(request.title(), request.description(), request.contactMail());

@@ -19,16 +19,13 @@ import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.hong.forapw.common.constants.GlobalConstants.URL_PATTERN;
 import static com.hong.forapw.common.utils.PaginationUtils.DEFAULT_IMAGE_PAGEABLE;
@@ -62,22 +59,20 @@ public class ChatService {
     public FindChatRoomsRes findChatRooms(Long userId) {
         List<ChatUser> chatUsers = chatUserRepository.findAllByUserIdWithChatRoomAndGroup(userId);
 
-        List<FindChatRoomsRes.RoomDTO> roomDTOS = chatUsers.stream()
+        List<FindChatRoomsRes.RoomDTO> roomDTOs = chatUsers.stream()
                 .map(this::buildRoomDTO)
                 .toList();
 
-        return new FindChatRoomsRes(roomDTOS);
+        return new FindChatRoomsRes(roomDTOs);
     }
 
     @Transactional
     public FindMessagesInRoomRes findMessagesInRoom(Long chatRoomId, Long userId, Pageable pageable) {
-        String nickName = userRepository.findNickname(userId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
+        String nickName = userRepository.findNickname(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
-        ChatUser chatUser = chatUserRepository.findByUserIdAndChatRoomIdWithChatRoom(userId, chatRoomId).orElseThrow(
-                () -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS)
-        );
+        ChatUser chatUser = chatUserRepository.findByUserIdAndChatRoomIdWithChatRoom(userId, chatRoomId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
 
         List<Message> messages = messageRepository.findByChatRoomId(chatRoomId, pageable).getContent();
         List<FindMessagesInRoomRes.MessageDTO> messageDTOs = FindMessagesInRoomRes.MessageDTO.fromEntities(messages, userId);
@@ -90,12 +85,12 @@ public class ChatService {
     public FindChatRoomDrawerRes findChatRoomDrawer(Long chatRoomId, Long userId) {
         validateChatAuthorization(userId, chatRoomId);
 
+        List<ImageObjectDTO> imageObjectDTOs = getImageObjects(chatRoomId);
         List<FindChatRoomDrawerRes.ChatUserDTO> chatUserDTOs = chatRoomRepository.findUsersByChatRoomIdExcludingRole(chatRoomId, GroupRole.TEMP).stream()
                 .map(FindChatRoomDrawerRes.ChatUserDTO::new)
                 .toList();
 
-        List<ImageObjectDTO> imageObjectDTOS = findImageObjects(chatRoomId, userId, DEFAULT_IMAGE_PAGEABLE).images();
-        return new FindChatRoomDrawerRes(imageObjectDTOS, chatUserDTOs);
+        return new FindChatRoomDrawerRes(imageObjectDTOs, chatUserDTOs);
     }
 
     public FindImageObjectsRes findImageObjects(Long chatRoomId, Long userId, Pageable pageable) {
@@ -133,9 +128,8 @@ public class ChatService {
 
     @Transactional
     public ReadMessageRes readMessage(String messageId) {
-        Message message = messageRepository.findById(messageId).orElseThrow(
-                () -> new CustomException(ExceptionCode.MESSAGE_NOT_FOUND)
-        );
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.MESSAGE_NOT_FOUND));
 
         ChatUser chatUser = chatUserRepository.findByUserIdAndChatRoomId(message.getSenderId(), message.getChatRoomId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.UNAUTHORIZED_ACCESS));
@@ -151,18 +145,17 @@ public class ChatService {
         }
     }
 
-    private String getUserProfileURL(Long senderId) {
-        return userRepository.findProfileURL(senderId).orElseThrow(
-                () -> new CustomException(ExceptionCode.USER_NOT_FOUND)
-        );
-    }
-
     private LinkMetadata extractMetadataIfApplicable(SendMessageReq request) {
         if (request.messageType() == MessageType.TEXT) {
             String metadataURL = extractFirstURL(request.content());
             return (metadataURL != null) ? MetaDataUtils.fetchMetadata(metadataURL) : null;
         }
         return null;
+    }
+
+    private String getUserProfileURL(Long senderId) {
+        return userRepository.findProfileURL(senderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
     }
 
     private String extractFirstURL(String content) {
@@ -175,6 +168,13 @@ public class ChatService {
 
     private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
         CompletableFuture.runAsync(() -> rabbitMqService.sendChatMessageToRoom(chatRoomId, message));
+    }
+
+    private List<ImageObjectDTO> getImageObjects(Long chatRoomId) {
+        Page<Message> imageMessages = messageRepository.findByChatRoomIdAndMessageType(chatRoomId, MessageType.IMAGE, DEFAULT_IMAGE_PAGEABLE);
+        return imageMessages.getContent().stream()
+                .map(ImageObjectDTO::fromEntity)
+                .toList();
     }
 
     private FindChatRoomsRes.RoomDTO buildRoomDTO(ChatUser chatUser) {
@@ -212,8 +212,8 @@ public class ChatService {
     private void updateLastReadMessage(ChatUser chatUser, List<FindMessagesInRoomRes.MessageDTO> messageDTOs, Long chatRoomId) {
         if (!messageDTOs.isEmpty()) {
             FindMessagesInRoomRes.MessageDTO lastMessage = messageDTOs.get(messageDTOs.size() - 1);
-            long totalMessages = messageRepository.countByChatRoomId(chatRoomId);
-            chatUser.updateLastMessage(lastMessage.messageId(), totalMessages - 1);
+            long totalMessagesCount = messageRepository.countByChatRoomId(chatRoomId);
+            chatUser.updateLastMessage(lastMessage.messageId(), totalMessagesCount - 1);
         }
     }
 }
