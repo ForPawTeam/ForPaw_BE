@@ -10,6 +10,7 @@ import com.hong.forapw.domain.group.model.response.*;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
 import com.hong.forapw.domain.group.repository.GroupRepository;
 import com.hong.forapw.domain.group.repository.GroupUserRepository;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.meeting.model.response.MeetingDTO;
 import com.hong.forapw.domain.post.repository.*;
 import com.hong.forapw.domain.meeting.repository.MeetingRepository;
@@ -141,7 +142,7 @@ public class GroupService {
         List<Group> localGroups = groupRepository.findByProvinceAndDistrictWithoutMyGroup(province, district, userId, GroupRole.TEMP, pageable).getContent();
 
         return localGroups.stream()
-                .map(group -> new LocalGroupDTO(group, likeService.getGroupLikeCount(group.getId()), likedGroupIds.contains(group.getId())))
+                .map(group -> new LocalGroupDTO(group, likeService.getLikeCount(group.getId(), Like.GROUP), likedGroupIds.contains(group.getId())))
                 .toList();
     }
 
@@ -290,7 +291,7 @@ public class GroupService {
         return groupRepository.findByProvinceWithoutMyGroup(province, userId, GroupRole.TEMP, RECOMMEND_GROUP_PAGEABLE).getContent().stream()
                 .map(group -> new RecommendGroupDTO(
                         group,
-                        likeService.getGroupLikeCount(group.getId()),
+                        likeService.getLikeCount(group.getId(), Like.GROUP),
                         likedGroupIds.contains(group.getId()))
                 )
                 .toList();
@@ -304,7 +305,7 @@ public class GroupService {
         return groupRepository.findAllWithoutMyGroup(userId, RECOMMEND_GROUP_PAGEABLE).stream()
                 .map(group -> new RecommendGroupDTO(
                         group,
-                        likeService.getGroupLikeCount(group.getId()),
+                        likeService.getLikeCount(group.getId(), Like.GROUP),
                         likedGroupIds.contains(group.getId()))
                 )
                 .filter(newGroup -> existingGroups.stream().noneMatch(existingGroup -> existingGroup.id().equals(newGroup.id())))
@@ -432,7 +433,7 @@ public class GroupService {
         return groupUserRepository.findGroupByUserId(userId, pageable).getContent().stream()
                 .map(group -> new MyGroupDTO(
                         group,
-                        likeService.getGroupLikeCount(group.getId()),
+                        likeService.getLikeCount(group.getId(), Like.GROUP),
                         likedGroupIds.contains(group.getId()))
                 )
                 .toList();

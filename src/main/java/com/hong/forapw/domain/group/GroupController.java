@@ -2,6 +2,7 @@ package com.hong.forapw.domain.group;
 
 import com.hong.forapw.domain.group.model.request.*;
 import com.hong.forapw.domain.group.model.response.*;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.region.constant.District;
@@ -145,7 +146,7 @@ public class GroupController {
 
     @PostMapping("/groups/{groupId}/like")
     public ResponseEntity<?> likeGroup(@PathVariable Long groupId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.likeGroup(groupId, userDetails.user().getId());
+        likeService.like(groupId, userDetails.user().getId(), Like.GROUP);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

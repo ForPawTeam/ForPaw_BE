@@ -1,6 +1,7 @@
 package com.hong.forapw.domain.post.repository;
 
 import com.hong.forapw.domain.post.entity.Comment;
+import com.hong.forapw.domain.post.model.query.CommentIdAndLikeCount;
 import com.hong.forapw.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,14 +40,20 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT c FROM Comment c WHERE c.post.id = :postId " +
             "ORDER BY c.parent.id NULLS FIRST, c.createdDate ASC")
     @EntityGraph(attributePaths = {"user", "parent"})
-    List<Comment> findByPostIdWithUserAndParentAndRemoved(@Param("animalId") Long postId);
-
+    List<Comment> findByPostIdWithUserAndParentAndRemoved(@Param("postId") Long postId);
 
     @EntityGraph(attributePaths = {"post"})
     @Query("SELECT c FROM Comment c " +
             "JOIN c.user u " +
             "WHERE u.id = :userId AND c.removedAt IS NULL")
     Page<Comment> findByUserIdWithPost(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT new com.hong.forapw.domain.post.model.query.CommentIdAndLikeCount(c.id, COUNT(cl.id)) " +
+            "FROM Comment c " +
+            "LEFT JOIN CommentLike cl on c.id = cl.comment.id " +
+            "WHERE c.id IN (:missingIds) " +
+            "GROUP BY c.id ")
+    List<CommentIdAndLikeCount> findLikeCountsByIds(List<Long> missingIds);
 
     // date 이후의 댓글이 존재 => 마지막 대댓글이 아니다
     @Query("SELECT COUNT(c) > 0 FROM Comment c " +

@@ -3,6 +3,7 @@ package com.hong.forapw.domain.like.handler;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.like.common.LikeHandler;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.entity.PostLike;
 import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
@@ -11,7 +12,6 @@ import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.integration.redis.RedisService;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +33,11 @@ public class PostLikeHandler implements LikeHandler {
     private final RedisService redisService;
 
     private static final Long POST_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90;
+
+    @Override
+    public Like getLikeTarget() {
+        return Like.POST;
+    }
 
     @Override
     public void validateBeforeLike(Long postId, Long userId) {
@@ -83,19 +88,30 @@ public class PostLikeHandler implements LikeHandler {
         return likeCount;
     }
 
-    public Map<Long, Long> getLikeCounts(List<Long> postIds) {
-        Map<Long, Long> cachedLikes = getLikesFromCache(postIds);
-
-        List<Long> missingIds = postIds.stream()
-                .filter(id -> !cachedLikes.containsKey(id))
-                .toList();
-
-        if (!missingIds.isEmpty()) {
-            Map<Long, Long> dbLikes = getLikesFromDatabaseAndCache(missingIds);
-            cachedLikes.putAll(dbLikes);
+    @Override
+    public Map<Long, Long> getLikesFromCache(List<Long> postIds) {
+        Map<Long, Long> result = new HashMap<>();
+        for (Long postId : postIds) {
+            Long likeCount = redisService.getValueInLongWithNull(POST_LIKE_NUM_KEY, postId.toString());
+            if (likeCount != null) {
+                result.put(postId, likeCount);
+            }
         }
+        return result;
+    }
 
-        return cachedLikes;
+    @Override
+    public Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
+        Map<Long, Long> dbLikes = new HashMap<>();
+        List<PostIdAndLikeCount> dbResults = postRepository.findLikeCountsByIds(missingIds);
+
+        for (PostIdAndLikeCount row : dbResults) {
+            Long postId = row.postId();
+            Long likeCount = row.likeCount();
+            dbLikes.put(postId, likeCount);
+            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
+        }
+        return dbLikes;
     }
 
     @Override
@@ -116,28 +132,5 @@ public class PostLikeHandler implements LikeHandler {
         if (ownerId.equals(userId)) {
             throw new CustomException(ExceptionCode.CANNOT_LIKE_OWN_POST);
         }
-    }
-
-    private Map<Long, Long> getLikesFromCache(List<Long> postIds) {
-        Map<Long, Long> result = new HashMap<>();
-        for (Long postId : postIds) {
-            Long likeCount = redisService.getValueInLongWithNull(POST_LIKE_NUM_KEY, postId.toString());
-            if (likeCount != null) {
-                result.put(postId, likeCount);
-            }
-        }
-        return result;
-    }
-
-    private Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
-        Map<Long, Long> dbLikes = new HashMap<>();
-        List<PostIdAndLikeCount> dbResults = postRepository.findLikeCountsByIds(missingIds);
-        for (PostIdAndLikeCount row : dbResults) {
-            Long postId = row.postId();
-            Long likeCount = row.likeCount();
-            dbLikes.put(postId, likeCount);
-            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
-        }
-        return dbLikes;
     }
 }

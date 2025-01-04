@@ -1,5 +1,6 @@
 package com.hong.forapw.domain.post;
 
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.model.request.*;
 import com.hong.forapw.domain.post.model.response.*;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
@@ -127,7 +128,7 @@ public class PostController {
 
     @PostMapping("/posts/{postId}/like")
     public ResponseEntity<?> likePost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.likePost(postId, userDetails.user().getId());
+        likeService.like(postId, userDetails.user().getId(), Like.POST);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
@@ -157,7 +158,7 @@ public class PostController {
 
     @PostMapping("/posts/{postId}/comments/{commentId}/like")
     public ResponseEntity<?> likeComment(@PathVariable Long commentId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.likeComment(commentId, userDetails.user().getId());
+        likeService.like(commentId, userDetails.user().getId(), Like.COMMENT);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

@@ -8,6 +8,7 @@ import com.hong.forapw.common.utils.JsonParser;
 import com.hong.forapw.domain.animal.constant.AnimalType;
 import com.hong.forapw.domain.animal.model.RecommendationDTO;
 import com.hong.forapw.domain.animal.model.response.*;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.shelter.Shelter;
@@ -104,7 +105,7 @@ public class AnimalService {
                 .map(Animal::getId)
                 .toList();
 
-        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(animalIds, Like.ANIMAL);
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
         List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animalPage.getContent(), likeCountMap, likedAnimalIds);
 
@@ -119,7 +120,7 @@ public class AnimalService {
                 .map(Animal::getId)
                 .toList();
 
-        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(animalIds, Like.ANIMAL);
         List<Long> likedAnimalIds = userId != null ? favoriteAnimalRepository.findAnimalIdsByUserId(userId) : new ArrayList<>();
         List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animals, likeCountMap, likedAnimalIds);
 
@@ -132,7 +133,7 @@ public class AnimalService {
                 .map(Animal::getId)
                 .toList();
 
-        Map<Long, Long> likeCountMap = likeService.getAnimalLikeCounts(animalIds);
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(animalIds, Like.ANIMAL);
         List<AnimalDTO> animalDTOs = AnimalDTO.fromEntities(animals, likeCountMap, Collections.emptyList());
 
         return new FindLikeAnimalListRes(animalDTOs);

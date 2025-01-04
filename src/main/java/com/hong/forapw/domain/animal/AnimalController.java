@@ -4,6 +4,7 @@ import com.hong.forapw.domain.animal.model.response.FindAnimalByIdRes;
 import com.hong.forapw.domain.animal.model.response.FindAnimalListRes;
 import com.hong.forapw.domain.animal.model.response.FindLikeAnimalListRes;
 import com.hong.forapw.domain.animal.model.response.FindRecommendedAnimalListRes;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.security.userdetails.CustomUserDetails;
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.entity.User;
@@ -64,7 +65,7 @@ public class AnimalController {
 
     @PostMapping("/animals/{animalId}/like")
     public ResponseEntity<?> likeAnimal(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        likeService.likeAnimal(animalId, userDetails.user().getId());
+        likeService.like(animalId, userDetails.user().getId(), Like.ANIMAL);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

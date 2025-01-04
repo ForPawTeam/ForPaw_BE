@@ -1,6 +1,8 @@
 package com.hong.forapw.domain.group.repository;
 
 import com.hong.forapw.domain.group.entity.Group;
+import com.hong.forapw.domain.group.model.query.GroupIdAndLikeCount;
+import com.hong.forapw.domain.post.model.query.CommentIdAndLikeCount;
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.region.constant.Province;
@@ -11,6 +13,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface GroupRepository extends JpaRepository<Group, Long> {
@@ -41,6 +45,13 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
             countQuery = "SELECT COUNT(*) FROM groups_tb WHERE MATCH(name) AGAINST(:name IN BOOLEAN MODE)",
             nativeQuery = true)
     Page<Group> findByNameContaining(@Param("name") String name, Pageable pageable);
+
+    @Query("SELECT new com.hong.forapw.domain.group.model.query.GroupIdAndLikeCount(g.id, COUNT(fg.id)) " +
+            "FROM Group g " +
+            "LEFT JOIN FavoriteGroup fg on g.id = fg.group.id " +
+            "WHERE g.id IN (:missingIds) " +
+            "GROUP BY g.id ")
+    List<GroupIdAndLikeCount> findLikeCountsByIds(List<Long> missingIds);
 
     @Query("SELECT COUNT(fg) FROM FavoriteGroup fg WHERE fg.group.id = :groupId")
     Long countLikesByGroupId(@Param("groupId") Long groupId);

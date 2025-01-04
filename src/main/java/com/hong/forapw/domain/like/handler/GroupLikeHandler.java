@@ -4,7 +4,10 @@ import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.entity.FavoriteGroup;
 import com.hong.forapw.domain.group.entity.Group;
+import com.hong.forapw.domain.group.model.query.GroupIdAndLikeCount;
 import com.hong.forapw.domain.like.common.LikeHandler;
+import com.hong.forapw.domain.like.common.Like;
+import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
@@ -13,10 +16,13 @@ import com.hong.forapw.integration.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-import static com.hong.forapw.common.constants.GlobalConstants.GROUP_LIKED_SET_KEY;
-import static com.hong.forapw.common.constants.GlobalConstants.GROUP_LIKE_NUM_KEY;
+import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.common.constants.GlobalConstants.POST_LIKE_NUM_KEY;
 
 @Component
 @RequiredArgsConstructor
@@ -29,6 +35,10 @@ public class GroupLikeHandler implements LikeHandler {
 
     public static final Long GROUP_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90; // 세 달
 
+    @Override
+    public Like getLikeTarget() {
+        return Like.GROUP;
+    }
 
     @Override
     public void validateBeforeLike(Long groupId, Long userId) {
@@ -75,6 +85,32 @@ public class GroupLikeHandler implements LikeHandler {
         }
 
         return likeCount;
+    }
+
+    @Override
+    public Map<Long, Long> getLikesFromCache(List<Long> groupIds) {
+        Map<Long, Long> result = new HashMap<>();
+        for (Long groupId : groupIds) {
+            Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY, groupId.toString());
+            if (likeCount != null) {
+                result.put(groupId, likeCount);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
+        Map<Long, Long> dbLikes = new HashMap<>();
+        List<GroupIdAndLikeCount> dbResults = groupRepository.findLikeCountsByIds(missingIds);
+
+        for (GroupIdAndLikeCount row : dbResults) {
+            Long groupId = row.groupId();
+            Long likeCount = row.likeCount();
+            dbLikes.put(groupId, likeCount);
+            redisService.storeValue(POST_LIKE_NUM_KEY, groupId.toString(), likeCount.toString(), GROUP_CACHE_EXPIRATION_MS);
+        }
+        return dbLikes;
     }
 
     @Override

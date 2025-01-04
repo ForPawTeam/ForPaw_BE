@@ -1,5 +1,6 @@
 package com.hong.forapw.domain.post.service;
 
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.PostValidator;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.post.entity.Comment;
@@ -26,9 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.*;
 
 import static com.hong.forapw.common.constants.GlobalConstants.MY_POST_TYPES;
@@ -98,7 +97,7 @@ public class PostService {
                 .map(Post::getId)
                 .toList();
 
-        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(postIds);
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(postIds, Like.POST);
         List<FindPostListRes.PostDTO> postDTOs = FindPostListRes.PostDTO.fromEntities(postPage.getContent(), likeCountMap);
 
         return new FindPostListRes(postDTOs, postPage.isLast());
@@ -106,8 +105,8 @@ public class PostService {
 
     public FindPostListRes findPopularPostsByType(Pageable pageable, PostType postType) {
         Page<PopularPost> popularPostPage = popularPostRepository.findByPostTypeWithPost(postType, pageable);
-        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(
-                popularPostPage.stream().map(PopularPost::getPostId).toList()
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(
+                popularPostPage.stream().map(PopularPost::getPostId).toList(), Like.POST
         );
 
         List<FindPostListRes.PostDTO> postDTOS = FindPostListRes.PostDTO.fromEntities(
@@ -127,8 +126,8 @@ public class PostService {
         Page<Post> postPage = postRepository.findPostsByUserIdAndTypesWithUser(userId, MY_POST_TYPES, pageable);
         List<Post> posts = postPage.getContent();
 
-        Map<Long, Long> likeCountMap = likeService.getPostLikeCounts(
-                posts.stream().map(Post::getId).toList()
+        Map<Long, Long> likeCountMap = likeService.getLikeCounts(
+                posts.stream().map(Post::getId).toList(), Like.POST
         );
 
         List<FindMyPostListRes.MyPostDTO> postDTOs = FindMyPostListRes.MyPostDTO.fromEntities(posts, likeCountMap);
@@ -156,7 +155,7 @@ public class PostService {
 
         post.validatePostState();
 
-        Long likeCount = likeService.getPostLikeCount(postId);
+        Long likeCount = likeService.getLikeCount(postId, Like.POST);
         List<FindPostByIdRes.CommentDTO> commentDTOs = buildCommentDTOs(postId, userId);
 
         postCacheService.incrementPostViewCount(postId);
@@ -392,7 +391,7 @@ public class PostService {
     private double calculateHotPoint(Post post) {
         double viewPoints = postCacheService.getPostViewCount(post.getId(), post) * 0.001;
         double commentPoints = post.getCommentNum();
-        double likePoints = likeService.getPostLikeCount(post.getId()) * 5;
+        double likePoints = likeService.getLikeCount(post.getId(), Like.POST) * 5;
         return viewPoints + commentPoints + likePoints;
     }
 
@@ -431,7 +430,7 @@ public class PostService {
 
         List<Comment> comments = commentRepository.findByPostIdWithUserAndParentAndRemoved(postId);
         comments.forEach(comment -> {
-            Long likeCount = likeService.getCommentLikeCount(comment.getId());
+            Long likeCount = likeService.getLikeCount(comment.getId(), Like.COMMENT);
             boolean isLikedComment = likedCommentIds.contains(comment.getId());
 
             if (comment.isParent()) {

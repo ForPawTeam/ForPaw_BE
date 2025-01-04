@@ -3,6 +3,7 @@ package com.hong.forapw.domain.home;
 import com.hong.forapw.domain.animal.AnimalService;
 import com.hong.forapw.domain.group.model.response.RecommendGroupDTO;
 import com.hong.forapw.domain.home.model.response.FindHomeRes;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.entity.PopularPost;
 import com.hong.forapw.domain.region.constant.Province;
 import com.hong.forapw.domain.post.entity.Post;
@@ -54,7 +55,7 @@ public class HomeService {
 
         return animalRepository.findByIds(recommendedAnimalIds).stream()
                 .map(animal -> {
-                    Long likeCount = likeService.getAnimalLikeCount(animal.getId());
+                    Long likeCount = likeService.getLikeCount(animal.getId(), Like.ANIMAL);
                     return new FindHomeRes.AnimalDTO(animal, likeCount);
                 })
                 .toList();
@@ -68,7 +69,7 @@ public class HomeService {
                 .map(PopularPost::getPost)
                 .map(post -> {
                     String imageURL = extractFirstImageUrl(post);
-                    Long likeCount = likeService.getPostLikeCount(post.getId());
+                    Long likeCount = likeService.getLikeCount(post.getId(), Like.POST);
                     return new FindHomeRes.PostDTO(post, likeCount, imageURL);
                 })
                 .toList();
