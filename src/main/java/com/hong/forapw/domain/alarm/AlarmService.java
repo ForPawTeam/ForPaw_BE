@@ -76,11 +76,7 @@ public class AlarmService {
             throw new CustomException(ExceptionCode.ALARM_LIST_EMPTY);
         }
 
-        List<AlarmDTO> alarmDTOs = alarms.stream()
-                .map(AlarmDTO::new)
-                .toList();
-
-        return new FindAlarmListRes(alarmDTOs);
+        return FindAlarmListRes.fromEntities(alarms);
     }
 
     @Transactional

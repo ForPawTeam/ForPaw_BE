@@ -41,7 +41,6 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final RabbitMqService rabbitMqService;
 
-
     @Transactional
     public SendMessageRes sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
         validateChatAuthorization(senderId, request.chatRoomId());

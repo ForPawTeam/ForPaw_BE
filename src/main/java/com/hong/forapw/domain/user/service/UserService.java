@@ -150,7 +150,7 @@ public class UserService {
     }
 
     public CheckAccountExistRes checkAccountExist(String email) {
-        boolean isValid = userRepository.existsByEmail(email);
+        boolean isValid = !userRepository.existsByEmail(email);
         return new CheckAccountExistRes(isValid);
     }
 

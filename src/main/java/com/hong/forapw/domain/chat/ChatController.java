@@ -30,7 +30,7 @@ public class ChatController {
     }
 
     @GetMapping("/chatRooms")
-    public ResponseEntity<?> findChatRoomList(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> findChatRooms(@AuthenticationPrincipal CustomUserDetails userDetails) {
         FindChatRoomsRes response = chatService.findChatRooms(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
@@ -49,22 +49,22 @@ public class ChatController {
     }
 
     @GetMapping("/chatRooms/{chatRoomId}/images")
-    public ResponseEntity<?> findImageObjectList(@PathVariable Long chatRoomId,
-                                                 @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> findImageObjects(@PathVariable Long chatRoomId,
+                                              @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindImageObjectsRes response = chatService.findImageObjects(chatRoomId, userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/chatRooms/{chatRoomId}/files")
-    public ResponseEntity<?> findFileObjectList(@PathVariable Long chatRoomId,
-                                                @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> findFileObjects(@PathVariable Long chatRoomId,
+                                             @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindFileObjectsRes response = chatService.findFileObjects(chatRoomId, userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/chatRooms/{chatRoomId}/links")
-    public ResponseEntity<?> findLinkObjectList(@PathVariable Long chatRoomId,
-                                                @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> findLinkObjects(@PathVariable Long chatRoomId,
+                                             @PageableDefault(size = 6, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         FindLinkObjectsRes response = chatService.findLinkObjects(chatRoomId, userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }

@@ -28,8 +28,8 @@ public class ApplyController {
     }
 
     @GetMapping("/applies")
-    public ResponseEntity<?> findApplyList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindApplyListRes response = applyService.findApplyList(userDetails.getUserId());
+    public ResponseEntity<?> findApplies(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        FindApplyListRes response = applyService.findApplies(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
