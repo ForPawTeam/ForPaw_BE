@@ -42,8 +42,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
-import static com.hong.forapw.common.utils.PasswordGenerator.generatePassword;
-import static com.hong.forapw.integration.email.EmailService.generateVerificationCode;
+import static com.hong.forapw.common.utils.GeneratorUtils.generatePassword;
+import static com.hong.forapw.common.utils.GeneratorUtils.generateVerificationCode;
 import static com.hong.forapw.integration.email.EmailTemplate.ACCOUNT_SUSPENSION;
 import static com.hong.forapw.integration.email.EmailTemplate.VERIFICATION_CODE;
 

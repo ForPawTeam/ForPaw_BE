@@ -4,14 +4,24 @@ import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+public class GeneratorUtils {
 
-public class PasswordGenerator {
-
-    private PasswordGenerator() {
+    private GeneratorUtils() {
     }
 
     private static final String ALL_CHARS = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    public static String generateVerificationCode() {
+        SecureRandom random = new SecureRandom();
+        return IntStream.range(0, 8) // 8자리
+                .map(i -> random.nextInt(CHAR_SET.length()))
+                .mapToObj(CHAR_SET::charAt)
+                .map(Object::toString)
+                .collect(Collectors.joining());
+    }
 
     public static String generatePassword() {
         SecureRandom random = new SecureRandom();

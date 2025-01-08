@@ -73,7 +73,6 @@ public class MeetingController {
                                              @PageableDefault(size = 5, sort = SORT_BY_ID, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
         groupService.checkGroupAndIsMember(groupId, userDetails.getUserId());
         List<MeetingDTO> meetingDTOS = meetingService.findMeetings(groupId, pageable);
-        FindMeetingListRes responseDTO = new FindMeetingListRes(meetingDTOS);
-        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, responseDTO));
+        return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, new FindMeetingListRes(meetingDTOS)));
     }
 }

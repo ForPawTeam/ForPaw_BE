@@ -32,7 +32,6 @@ public class EmailService {
     private String serviceMailAccount;
 
     private static final String UTF_EIGHT_ENCODING = "UTF-8";
-    private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
     @Async
     public void sendMail(String toEmail, String subject, String templateName, TemplateModel templateModel) {
@@ -42,15 +41,6 @@ public class EmailService {
         } catch (MessagingException e) {
             log.error("{}로의 메일 전송에 실패했습니다", toEmail);
         }
-    }
-
-    public static String generateVerificationCode() {
-        SecureRandom random = new SecureRandom();
-        return IntStream.range(0, 8) // 8자리
-                .map(i -> random.nextInt(CHAR_SET.length()))
-                .mapToObj(CHAR_SET::charAt)
-                .map(Object::toString)
-                .collect(Collectors.joining());
     }
 
     private MimeMessage createMimeMessage(String toEmail, String subject, String templateName, TemplateModel templateModel) throws MessagingException {
@@ -65,16 +55,16 @@ public class EmailService {
         return message;
     }
 
-    private Map<String, Object> convertTemplateModelToMap(TemplateModel templateModel) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.convertValue(templateModel, new TypeReference<>() {});
-    }
-
     private String createHtmlText(String templateName, TemplateModel templateModel) {
         Map<String, Object> modelMap = convertTemplateModelToMap(templateModel);
 
         Context context = new Context();
         modelMap.forEach(context::setVariable);
         return templateEngine.process(templateName, context);
+    }
+
+    private Map<String, Object> convertTemplateModelToMap(TemplateModel templateModel) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.convertValue(templateModel, new TypeReference<>() {});
     }
 }

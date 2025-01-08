@@ -39,7 +39,6 @@ public class UserScheduledService {
     @Value("${admin.name}")
     private String adminName;
 
-
     // 테스트 기간에만 사용하고, 운영에는 사용 X
     public void initSuperAdmin() {
         if (!userRepository.existsByNicknameWithRemoved(adminName)) {
