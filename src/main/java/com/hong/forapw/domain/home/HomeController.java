@@ -11,6 +11,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import static com.hong.forapw.security.userdetails.CustomUserDetails.getUserIdOrNull;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -20,7 +22,7 @@ public class HomeController {
 
     @GetMapping("/home")
     public ResponseEntity<?> findHome(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindHomeRes response = homeService.findHomePageData(userDetails.getUserIdOrNull());
+        FindHomeRes response = homeService.findHomePageData(getUserIdOrNull(userDetails));
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }

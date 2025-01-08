@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+import static com.hong.forapw.security.userdetails.CustomUserDetails.getUserIdOrNull;
 
 @RestController
 @RequiredArgsConstructor
@@ -46,7 +47,7 @@ public class ShelterController {
     @GetMapping("/shelters/{shelterId}/animals")
     public ResponseEntity<?> findShelterAnimalsById(@PathVariable Long shelterId, @RequestParam String type,
                                                     @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindShelterAnimalsByIdRes response = shelterService.findAnimalsByShelter(shelterId, userDetails.getUserIdOrNull(), type, pageable);
+        FindShelterAnimalsByIdRes response = shelterService.findAnimalsByShelter(shelterId, getUserIdOrNull(userDetails), type, pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 

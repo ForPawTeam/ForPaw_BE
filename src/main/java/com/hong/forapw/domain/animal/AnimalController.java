@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 
 import static com.hong.forapw.common.constants.GlobalConstants.SORT_BY_DATE;
+import static com.hong.forapw.security.userdetails.CustomUserDetails.getUserIdOrNull;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,14 +41,14 @@ public class AnimalController {
 
     @GetMapping("/animals/recommend")
     public ResponseEntity<?> findRecommendedAnimalList(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimals(userDetails.getUserIdOrNull());
+        FindRecommendedAnimalListRes response = animalService.findRecommendedAnimals(getUserIdOrNull(userDetails));
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/animals")
     public ResponseEntity<?> findAnimalList(@RequestParam String type,
                                             @PageableDefault(size = 5, sort = SORT_BY_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnimalListRes response = animalService.findAnimals(type, userDetails.getUserIdOrNull(), pageable);
+        FindAnimalListRes response = animalService.findAnimals(type, getUserIdOrNull(userDetails), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -59,7 +60,7 @@ public class AnimalController {
 
     @GetMapping("/animals/{animalId}")
     public ResponseEntity<?> findAnimalById(@PathVariable Long animalId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindAnimalByIdRes response = animalService.findAnimalById(animalId, userDetails.getUserIdOrNull());
+        FindAnimalByIdRes response = animalService.findAnimalById(animalId, getUserIdOrNull(userDetails));
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 

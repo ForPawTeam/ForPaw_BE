@@ -50,8 +50,8 @@ public record CustomUserDetails(User user) implements UserDetails {
         return this.user.getId();
     }
 
-    public Long getUserIdOrNull() {
-        return Optional.of(this)
+    public static Long getUserIdOrNull(CustomUserDetails userDetails) {
+        return Optional.ofNullable(userDetails)
                 .map(CustomUserDetails::user)
                 .map(User::getId)
                 .orElse(null);
