@@ -36,7 +36,6 @@ public class JwtUtils {
     @Value("${jwt.secret}")
     public String secret;
 
-
     public String generateRefreshTokenCookie(String refreshToken) {
         return buildCookie(REFRESH_TOKEN_KEY, refreshToken, refreshTokenExpirationSeconds);
     }

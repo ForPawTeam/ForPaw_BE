@@ -17,7 +17,6 @@ services:
       - mongo
       - redis
       - rabbitmq
-#      - nginx
     environment:
       SPRING_PROFILES_ACTIVE: prod
 
@@ -37,8 +36,8 @@ services:
     environment:
       TZ: Asia/Seoul
     volumes:
-      - /var/lib/volumes/mongo:/data/db
-#      - /home/ubuntu/volumes/mongo:/data/db
+#      - /var/lib/volumes/mongo:/data/db
+      - /home/ubuntu/volumes/mongo:/data/db
     networks:
       - network
 
@@ -54,8 +53,8 @@ services:
         MYSQL_ROOT_PASSWORD: 0623
         MYSQL_DATABASE: ForPaw
     volumes:
-      - /var/lib/volumes/mysql:/var/lib/mysql
-#      - /home/ubuntu/volumes/mysql:/var/lib/mysql
+#      - /var/lib/volumes/mysql:/var/lib/mysql
+      - /home/ubuntu/volumes/mysql:/var/lib/mysql
     networks:
       - network
 
@@ -86,25 +85,14 @@ services:
     depends_on:
       - spring
 
-#  nginx:
-#    image: nginx:1.21.5-alpine
-#    container_name: nginx
-#    ports:
-#      - "80:80"
-#      - "443:443"
-#    volumes:
-#      - /home/ubuntu/nginx/nginx.conf:/etc/nginx/nginx.conf
-#      - /home/ubuntu/certbot-etc:/etc/letsencrypt
-#      - /home/ubuntu/myweb:/usr/share/nginx/html
-#    networks:
-#      - network
-
-#  certbot:
-#    depends_on:
-#      - nginx
-#    image: certbot/certbot
-#    container_name: certbot
-#    volumes:
-#      - /home/ubuntu/certbot-etc:/etc/letsencrypt
-#      - /home/ubuntu/myweb:/usr/share/nginx/html
-#    command: certonly --webroot --webroot-path=/usr/share/nginx/html --email ygsdfsd@pusan.ac.kr --agree-tos --no-eff-email --keep-until-expiring -d www.forpaw.site
+  nginx:
+    image: nginx:1.21.5-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /home/ubuntu/nginx/certbot-etc:/etc/letsencrypt
+    networks:
+      - network
