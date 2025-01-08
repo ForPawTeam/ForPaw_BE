@@ -36,27 +36,27 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<?> handleCustomException(CustomException ex) {
-        String traceId = getTraceId();
-        log.error("[Trace ID: {}] CustomException 발생: {}", traceId, ex.getMessage(), ex);
-        return ResponseEntity.status(ex.status()).body(ApiUtils.error(ex.getMessage(), ex.status()));
+        //String traceId = getTraceId();
+        //log.error("[Trace ID: {}] CustomException 발생: {}", traceId, ex.body().message(), ex);
+        return ResponseEntity.status(ex.status()).body(ex.body());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String traceId = getTraceId();
+        // String traceId = getTraceId();
         List<String> errors = ex.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .toList();
         String errorMessage = String.join(", ", errors);
 
-        log.warn("[Trace ID: {}] 유효성 검사 실패: {}", traceId, errorMessage);
+        //log.warn("[Trace ID: {}] 유효성 검사 실패: {}", traceId, errorMessage);
         return ResponseEntity.badRequest().body(ApiUtils.error(errorMessage, HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @SuppressWarnings("unchecked")
     public ResponseEntity<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        String traceId = getTraceId();
+        //String traceId = getTraceId();
         String errorMessage = getLocalizedMessage("error.invalid.data.format");
 
         Throwable cause = ex.getCause();
@@ -70,44 +70,44 @@ public class GlobalExceptionHandler {
             errorMessage = getLocalizedMessage("error.missing.body");
         }
 
-        log.warn("[Trace ID: {}] 읽을 수 없는 메시지: {} | 요청 정보: {}", traceId, errorMessage, getRequestDetails(request), ex);
+        //log.warn("[Trace ID: {}] 읽을 수 없는 메시지: {} | 요청 정보: {}", traceId, errorMessage, getRequestDetails(request), ex);
         return ResponseEntity.badRequest().body(ApiUtils.error(errorMessage, HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<?> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex, HttpServletRequest request) {
-        String traceId = getTraceId();
+        //String traceId = getTraceId();
         String errorMessage = String.format(getLocalizedMessage("error.missing.parameter"), ex.getParameterName());
 
-        log.warn("[Trace ID: {}] 요청 파라미터 누락: {} | 요청 정보: {}", traceId, ex.getParameterName(), getRequestDetails(request), ex);
+        //log.warn("[Trace ID: {}] 요청 파라미터 누락: {} | 요청 정보: {}", traceId, ex.getParameterName(), getRequestDetails(request), ex);
         return ResponseEntity.badRequest().body(ApiUtils.error(errorMessage, HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgumentException(IllegalArgumentException ex) {
-        String traceId = getTraceId();
+        //String traceId = getTraceId();
         String errorMessage = getLocalizedMessage("error.illegal.argument");
 
-        log.warn("[Trace ID: {}] 잘못된 인자: {}", traceId, ex.getMessage(), ex);
+        //log.warn("[Trace ID: {}] 잘못된 인자: {}", traceId, ex.getMessage(), ex);
         return ResponseEntity.badRequest().body(ApiUtils.error(errorMessage, HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> handleConstraintViolationException(ConstraintViolationException ex) {
-        String traceId = getTraceId();
+        //String traceId = getTraceId();
         String errorMessage = ex.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
-        log.warn("[Trace ID: {}] 유효성 검사 실패: {}", traceId, errorMessage, ex);
+        //log.warn("[Trace ID: {}] 유효성 검사 실패: {}", traceId, errorMessage, ex);
         return ResponseEntity.badRequest().body(ApiUtils.error(errorMessage, HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex, HttpServletRequest request) {
-        String traceId = getTraceId();
+        //String traceId = getTraceId();
         String errorMessage = getLocalizedMessage("error.runtime");
 
-        log.error("[Trace ID: {}] 런타임 예외 발생: {} | 요청 정보: {}", traceId, ex.getMessage(), getRequestDetails(request), ex);
+        //log.error("[Trace ID: {}] 런타임 예외 발생: {} | 요청 정보: {}", traceId, ex.getMessage(), getRequestDetails(request), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiUtils.error(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR));
     }
