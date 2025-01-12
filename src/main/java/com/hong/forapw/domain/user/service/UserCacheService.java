@@ -73,8 +73,14 @@ public class UserCacheService {
     }
 
     public void validateAccessToken(String accessToken, Long userId) {
-        if (!redisService.doesValueMatch(ACCESS_TOKEN_KEY, userId.toString(), accessToken)) {
+        if (redisService.doesValueMismatch(ACCESS_TOKEN_KEY, userId.toString(), accessToken)) {
             throw new CustomException(ExceptionCode.INVALID_ACCESS_TOKEN);
+        }
+    }
+
+    public void validateRefreshToken(String refreshToken, Long userId) {
+        if (redisService.doesValueMismatch(REFRESH_TOKEN_KEY, userId.toString(), refreshToken)) {
+            throw new CustomException(ExceptionCode.INVALID_REFRESH_TOKEN);
         }
     }
 

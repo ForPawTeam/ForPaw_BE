@@ -44,7 +44,7 @@ public class JwtUtils {
         return generateToken(user, accessTokenExpirationMillis);
     }
 
-    public String generateRefreshTokenCookie(User user) {
+    public String generateRefreshToken(User user) {
         return generateToken(user, refreshTokenExpirationMillis);
     }
 
@@ -52,12 +52,8 @@ public class JwtUtils {
         try {
             String encodedJWT = removeTokenPrefix(token);
             DecodedJWT decodedJWT = decodeJWT(encodedJWT);
-
-            Long id = decodedJWT.getClaim("id").asLong();
-            String role = decodedJWT.getClaim("role").asString(); // ROLE_ 접두어 포함된 역할
-            String nickname = decodedJWT.getClaim("nickName").asString();
-
-            return Optional.of(User.builder().id(id).role(UserRole.valueOf(role.replace("ROLE_", ""))).nickName(nickname).build());
+            User user = extractUserFromClaims(decodedJWT);
+            return Optional.of(user);
         } catch (Exception e) {
             logTokenException(token, e);
         }
@@ -67,7 +63,8 @@ public class JwtUtils {
     public Optional<Long> getUserIdFromToken(String token) {
         try {
             DecodedJWT decodedJWT = decodeJWT(token);
-            return Optional.of(decodedJWT.getClaim("id").asLong());
+            Long userId = decodedJWT.getClaim("id").asLong();
+            return Optional.of(userId);
         } catch (Exception e) {
             logTokenException(token, e);
         }
@@ -95,14 +92,26 @@ public class JwtUtils {
                 .sign(Algorithm.HMAC512(secret));
     }
 
+    private String removeTokenPrefix(String jwt) {
+        return jwt.replace(BEARER_PREFIX, "");
+    }
+
+    private User extractUserFromClaims(DecodedJWT decodedJWT) {
+        Long id = decodedJWT.getClaim("id").asLong();
+        String role = decodedJWT.getClaim("role").asString();
+        String nickname = decodedJWT.getClaim("nickName").asString();
+
+        return User.builder()
+                .id(id)
+                .role(UserRole.valueOf(role.replace("ROLE_", "")))
+                .nickName(nickname)
+                .build();
+    }
+
     private DecodedJWT decodeJWT(String encodedJWT) throws SignatureVerificationException, TokenExpiredException {
         return JWT.require(Algorithm.HMAC512(secret))
                 .build()
                 .verify(encodedJWT);
-    }
-
-    private String removeTokenPrefix(String jwt) {
-        return jwt.replace(BEARER_PREFIX, "");
     }
 
     private void logTokenException(String token, Exception e) {

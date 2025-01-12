@@ -113,34 +113,33 @@ public class UserController {
 
     @PostMapping("/accounts/password/verify")
     public ResponseEntity<?> verifyPassword(@RequestBody @Valid CurPasswordReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        VerifyPasswordRes response = userService.verifyPassword(request, userDetails.user().getId());
+        VerifyPasswordRes response = userService.verifyPassword(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/accounts/password")
     public ResponseEntity<?> updatePassword(@RequestBody @Valid UpdatePasswordReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updatePassword(request, userDetails.user().getId());
+        userService.updatePassword(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/accounts/profile")
     public ResponseEntity<?> findProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        ProfileRes response = userService.findProfile(userDetails.user().getId());
+        ProfileRes response = userService.findProfile(userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
     @PatchMapping("/accounts/profile")
     public ResponseEntity<?> updateProfile(@RequestBody @Valid UpdateProfileReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updateProfile(request, userDetails.user().getId());
+        userService.updateProfile(request, userDetails.getUserId());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 
     @PatchMapping("/auth/access")
     public ResponseEntity<?> updateAccessToken(@CookieValue String refreshToken) {
-        TokenDTO tokenDTO = userService.updateAccessToken(refreshToken);
+        String accessToken = userService.updateAccessToken(refreshToken);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtUtils.generateRefreshTokenCookie(tokenDTO.refreshToken()))
-                .body(ApiUtils.success(HttpStatus.OK, new AccessTokenRes(tokenDTO.accessToken())));
+                .body(ApiUtils.success(HttpStatus.OK, new AccessTokenRes(accessToken)));
     }
 
     @DeleteMapping("/accounts/withdraw")

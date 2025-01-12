@@ -203,12 +203,11 @@ public class UserService {
         user.updateProfile(request.nickName(), request.province(), request.district(), request.subDistrict(), request.profileURL());
     }
 
-    public TokenDTO updateAccessToken(String refreshToken) {
-        Long userId = jwtUtils.getUserIdFromToken(refreshToken)
+    public String updateAccessToken(String refreshToken) {
+        User user = jwtUtils.getUserFromToken(refreshToken)
                 .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_TOKEN));
 
-        User user = userRepository.findNonWithdrawnById(userId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
+        userCacheService.validateRefreshToken(refreshToken, user.getId());
 
         return createAccessToken(user);
     }
@@ -303,7 +302,7 @@ public class UserService {
 
     private LoginResult createToken(User user) {
         String accessToken = jwtUtils.generateAccessToken(user);
-        String refreshToken = jwtUtils.generateRefreshTokenCookie(user);
+        String refreshToken = jwtUtils.generateRefreshToken(user);
 
         LoginResult loginResult = new LoginResult(null, accessToken, refreshToken, true);
         userCacheService.storeUserTokens(user.getId(), loginResult);
@@ -311,12 +310,10 @@ public class UserService {
         return loginResult;
     }
 
-    private TokenDTO createAccessToken(User user) {
-        String refreshToken = userCacheService.getValidRefreshToken(user.getId());
+    private String createAccessToken(User user) {
         String accessToken = jwtUtils.generateAccessToken(user);
         userCacheService.storeAccessToken(user.getId(), accessToken);
-
-        return new TokenDTO(accessToken, refreshToken);
+        return accessToken;
     }
 
     private boolean isPasswordUnmatched(User user, String inputPassword) {

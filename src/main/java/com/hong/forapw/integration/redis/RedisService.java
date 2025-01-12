@@ -92,11 +92,6 @@ public class RedisService {
         return (storedValue == null) || !storedValue.equals(value);
     }
 
-    public boolean doesValueMatch(String type, String id, String value) {
-        String storedValue = redisTemplate.opsForValue().get(buildKey(type, id));
-        return storedValue != null && storedValue.equals(value);
-    }
-
     public boolean isMemberOfSet(String key, String member) {
         Boolean result = redisTemplate.opsForSet().isMember(key, member);
         return Boolean.TRUE.equals(result);
