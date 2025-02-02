@@ -32,10 +32,6 @@ public class UserCacheService {
     private static final String MAX_DAILY_LOGIN_FAILURES = "loginFailDaily";
     private static final long LOGIN_FAIL_DAILY_EXPIRATION_MS = 86400000L; // 24시간
 
-    public void storeAccessToken(Long userId, String accessToken) {
-        redisService.storeValue(ACCESS_TOKEN_KEY, userId.toString(), accessToken, accessExpMilli);
-    }
-
     public void storeVerificationCode(String email, String codeType, String verificationCode) {
         redisService.storeValue(getCodeTypeKey(codeType), email, verificationCode, VERIFICATION_CODE_EXPIRATION_MS);
     }
@@ -45,7 +41,6 @@ public class UserCacheService {
     }
 
     public void storeUserTokens(Long userId, LoginResult loginResult) {
-        redisService.storeValue(ACCESS_TOKEN_KEY, userId.toString(), loginResult.accessToken(), accessExpMilli);
         redisService.storeValue(REFRESH_TOKEN_KEY, userId.toString(), loginResult.refreshToken(), refreshExpMilli);
     }
 
@@ -64,7 +59,6 @@ public class UserCacheService {
     }
 
     public void deleteUserTokens(Long userId) {
-        redisService.removeValue(ACCESS_TOKEN_KEY, userId.toString());
         redisService.removeValue(REFRESH_TOKEN_KEY, userId.toString());
     }
 

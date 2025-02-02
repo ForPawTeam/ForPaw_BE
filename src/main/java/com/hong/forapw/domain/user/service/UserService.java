@@ -311,9 +311,7 @@ public class UserService {
     }
 
     private String createAccessToken(User user) {
-        String accessToken = jwtUtils.generateAccessToken(user);
-        userCacheService.storeAccessToken(user.getId(), accessToken);
-        return accessToken;
+        return jwtUtils.generateAccessToken(user);
     }
 
     private boolean isPasswordUnmatched(User user, String inputPassword) {
