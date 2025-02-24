@@ -64,7 +64,6 @@ public class PostService {
         post.setPostRelationships(postImages);
 
         postRepository.save(post);
-        postCacheService.initializePostCache(post.getId());
 
         return new CreatePostRes(post.getId());
     }
@@ -197,6 +196,7 @@ public class PostService {
         postImageRepository.deleteByPostId(postId);
         commentRepository.deleteByPostId(postId); // soft-delete
         postRepository.delete(post); // soft-delete
+        likeService.clearLikeCounts(postId, Like.POST);
     }
 
     @Transactional
@@ -224,7 +224,6 @@ public class PostService {
         commentRepository.save(comment);
 
         postRepository.incrementCommentCount(postId);
-        postCacheService.initializeCommentCache(comment.getId());
         notifyNewComment(request.content(), postId, post.getPostType(), post.getWriterId());
 
         return new CreateCommentRes(comment.getId());
@@ -244,7 +243,6 @@ public class PostService {
         commentRepository.save(reply);
 
         postRepository.incrementCommentCount(postId);
-        postCacheService.initializeCommentCache(reply.getId());
         notifyNewReply(request.content(), postId, parentComment);
 
         return new CreateCommentRes(reply.getId());
@@ -272,6 +270,7 @@ public class PostService {
         comment.updateContent(COMMENT_DELETED);
         commentRepository.deleteById(commentId);
         commentLikeRepository.deleteAllByCommentId(commentId);
+        likeService.clearLikeCounts(commentId, Like.COMMENT);
 
         adjustCommentCountOnDeletion(comment, postId);
     }

@@ -31,8 +31,6 @@ public class AnimalLikeHandler implements LikeHandler {
     private final AnimalRepository animalRepository;
     private final UserRepository userRepository;
 
-    private static final long ANIMAL_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90; // 90 days
-
     @Override
     public Like getLikeTarget() {
         return Like.ANIMAL;
@@ -78,7 +76,7 @@ public class AnimalLikeHandler implements LikeHandler {
         Long likeCount = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY, animalId.toString());
         if (likeCount == null) {
             likeCount = animalRepository.countLikesByAnimalId(animalId);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString(), ANIMAL_CACHE_EXPIRATION_MS);
+            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString());
         }
 
         return likeCount;
@@ -104,7 +102,7 @@ public class AnimalLikeHandler implements LikeHandler {
             Long animalId = row.animalId();
             Long likeCount = row.likeCount();
             dbLikes.put(animalId, likeCount);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString(), ANIMAL_CACHE_EXPIRATION_MS);
+            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString());
         }
         return dbLikes;
     }
@@ -114,6 +112,7 @@ public class AnimalLikeHandler implements LikeHandler {
         return "animal:" + animalId + ":like:lock";
     }
 
+    @Override
     public void clear(Long animalId) {
         redisService.removeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString());
     }

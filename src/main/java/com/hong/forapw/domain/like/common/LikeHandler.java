@@ -22,4 +22,6 @@ public interface LikeHandler {
     Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds);
 
     String buildLockKey(Long targetId);
+
+    void clear(Long id);
 }

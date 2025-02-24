@@ -2,7 +2,6 @@ package com.hong.forapw.domain.like.handler;
 
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.domain.animal.model.query.AnimalIdAndLikeCount;
 import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.entity.Comment;
@@ -22,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
-import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_LIKE_NUM_KEY;
 
 @Component
 @RequiredArgsConstructor
@@ -32,8 +30,6 @@ public class CommentLikeHandler implements LikeHandler {
     private final CommentLikeRepository commentLikeRepository;
     private final UserRepository userRepository;
     private final RedisService redisService;
-
-    private static final Long POST_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90;
 
     @Override
     public Like getLikeTarget() {
@@ -83,7 +79,7 @@ public class CommentLikeHandler implements LikeHandler {
         Long likeCount = redisService.getValueInLongWithNull(COMMENT_LIKE_NUM_KEY, commentId.toString());
         if (likeCount == null) {
             likeCount = commentRepository.countLikesByCommentId(commentId);
-            redisService.storeValue(COMMENT_LIKE_NUM_KEY, commentId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
+            redisService.storeValue(COMMENT_LIKE_NUM_KEY, commentId.toString(), likeCount.toString());
         }
 
         return likeCount;
@@ -110,7 +106,7 @@ public class CommentLikeHandler implements LikeHandler {
             Long commentId = row.commentId();
             Long likeCount = row.likeCount();
             dbLikes.put(commentId, likeCount);
-            redisService.storeValue(COMMENT_LIKE_NUM_KEY, commentId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
+            redisService.storeValue(COMMENT_LIKE_NUM_KEY, commentId.toString(), likeCount.toString());
         }
         return dbLikes;
     }
@@ -118,6 +114,11 @@ public class CommentLikeHandler implements LikeHandler {
     @Override
     public String buildLockKey(Long commentId) {
         return "comment:" + commentId + ":like:lock";
+    }
+
+    @Override
+    public void clear(Long commentId) {
+        redisService.removeValue(COMMENT_LIKE_NUM_KEY, commentId.toString());
     }
 
     private String buildUserLikedSetKey(Long userId) {

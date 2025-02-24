@@ -7,7 +7,6 @@ import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.model.query.GroupIdAndLikeCount;
 import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.like.common.Like;
-import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.group.repository.FavoriteGroupRepository;
@@ -32,8 +31,6 @@ public class GroupLikeHandler implements LikeHandler {
     private final UserRepository userRepository;
     private final FavoriteGroupRepository favoriteGroupRepository;
     private final RedisService redisService;
-
-    public static final Long GROUP_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90; // 세 달
 
     @Override
     public Like getLikeTarget() {
@@ -81,7 +78,7 @@ public class GroupLikeHandler implements LikeHandler {
         Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY, groupId.toString());
         if (likeCount == null) {
             likeCount = groupRepository.countLikesByGroupId(groupId);
-            redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), likeCount.toString(), GROUP_CACHE_EXPIRATION_MS);
+            redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), likeCount.toString());
         }
 
         return likeCount;
@@ -108,7 +105,7 @@ public class GroupLikeHandler implements LikeHandler {
             Long groupId = row.groupId();
             Long likeCount = row.likeCount();
             dbLikes.put(groupId, likeCount);
-            redisService.storeValue(POST_LIKE_NUM_KEY, groupId.toString(), likeCount.toString(), GROUP_CACHE_EXPIRATION_MS);
+            redisService.storeValue(POST_LIKE_NUM_KEY, groupId.toString(), likeCount.toString());
         }
         return dbLikes;
     }
@@ -118,10 +115,7 @@ public class GroupLikeHandler implements LikeHandler {
         return "group:" + groupId + ":like:lock";
     }
 
-    public void initCount(Long groupId) {
-        redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), "0");
-    }
-
+    @Override
     public void clear(Long groupId) {
         redisService.removeValue(GROUP_LIKE_NUM_KEY, groupId.toString());
     }

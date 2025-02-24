@@ -33,17 +33,8 @@ public class S3Service {
         return amazonS3.generatePresignedUrl(preSignedUrlRequest);
     }
 
-    public String extractObjectKey(String s3Url) {
-        int keyStartIndex = s3Url.indexOf(bucketName) + bucketName.length() + 1;
-        return s3Url.substring(keyStartIndex);
-    }
-
-    public void deleteObject(String objectKey) {
-        amazonS3.deleteObject(bucketName, objectKey);
-    }
-
     private Date calculateExpirationTime() {
-        return new Date(System.currentTimeMillis() + ((long) 5 * 60 * 1000)); // 현재 시간으로부터 5분 후
+        return new Date(System.currentTimeMillis() + ((long) 5 * 60 * 1000)); // 현재 시간으로부터 15분
     }
 
     private String createObjectKey(Long userId) {

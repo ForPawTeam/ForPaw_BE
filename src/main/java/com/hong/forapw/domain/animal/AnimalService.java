@@ -256,7 +256,7 @@ public class AnimalService {
     }
 
     private void removeAnimalLikesFromCache(List<Animal> expiredAnimals) {
-        expiredAnimals.forEach(animal -> likeService.clearAnimalLikeData(animal.getId()));
+        expiredAnimals.forEach(animal -> likeService.clearLikeCounts(animal.getId(), Like.ANIMAL));
     }
 
     private void removeAnimalsFromUserSearchHistory(List<Animal> expiredAnimals) {

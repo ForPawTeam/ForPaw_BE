@@ -1,7 +1,6 @@
 package com.hong.forapw.domain.group.service;
 
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.group.GroupValidator;
 import com.hong.forapw.domain.group.entity.Group;
 import com.hong.forapw.domain.group.constant.GroupRole;
@@ -82,7 +81,6 @@ public class GroupService {
         ChatRoom chatRoom = addChatRoom(group);
         addChatUserToRoom(chatRoom, groupOwner);
 
-        likeService.initGroupLikeCount(group.getId());
         configureRabbitMQForChatRoom(chatRoom);
 
         return new CreateGroupRes(group.getId());
@@ -533,7 +531,7 @@ public class GroupService {
         commentRepository.hardDeleteParentByGroupId(groupId);
         postImageRepository.deleteByGroupId(groupId);
         postRepository.hardDeleteByGroupId(groupId);
-        likeService.clearGroupLikeData(groupId);
+        likeService.clearLikeCounts(groupId, Like.GROUP);
     }
 
     private void deleteGroupChatRoom(Long groupId) {

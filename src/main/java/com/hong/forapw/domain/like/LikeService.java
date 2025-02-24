@@ -64,16 +64,9 @@ public class LikeService {
        return cachedLikes;
     }
 
-    public void initGroupLikeCount(Long groupId) {
-        groupLikeHandler.initCount(groupId);
-    }
-
-    public void clearAnimalLikeData(Long animalId) {
-        animalLikeHandler.clear(animalId);
-    }
-
-    public void clearGroupLikeData(Long groupId) {
-        groupLikeHandler.clear(groupId);
+    public void clearLikeCounts(Long targetId, Like target) {
+        LikeHandler handler = handlerMap.get(target);
+        handler.clear(targetId);
     }
 
     private void executeWithLock(String lockKey, Runnable action) {

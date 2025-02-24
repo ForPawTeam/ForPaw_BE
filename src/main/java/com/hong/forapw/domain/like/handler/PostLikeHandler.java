@@ -20,8 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.hong.forapw.common.constants.GlobalConstants.POST_LIKED_SET_KEY;
-import static com.hong.forapw.common.constants.GlobalConstants.POST_LIKE_NUM_KEY;
+import static com.hong.forapw.common.constants.GlobalConstants.*;
 
 @Component
 @RequiredArgsConstructor
@@ -31,8 +30,6 @@ public class PostLikeHandler implements LikeHandler {
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
     private final RedisService redisService;
-
-    private static final Long POST_CACHE_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 90;
 
     @Override
     public Like getLikeTarget() {
@@ -82,7 +79,7 @@ public class PostLikeHandler implements LikeHandler {
         Long likeCount = redisService.getValueInLongWithNull(POST_LIKE_NUM_KEY, postId.toString());
         if (likeCount == null) {
             likeCount = postRepository.countLikesByPostId(postId);
-            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
+            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString());
         }
 
         return likeCount;
@@ -109,7 +106,7 @@ public class PostLikeHandler implements LikeHandler {
             Long postId = row.postId();
             Long likeCount = row.likeCount();
             dbLikes.put(postId, likeCount);
-            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString(), POST_CACHE_EXPIRATION_MS);
+            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString());
         }
         return dbLikes;
     }
@@ -117,6 +114,11 @@ public class PostLikeHandler implements LikeHandler {
     @Override
     public String buildLockKey(Long postId) {
         return "post:" + postId + ":like:lock";
+    }
+
+    @Override
+    public void clear(Long postId) {
+        redisService.removeValue(POST_LIKE_NUM_KEY, postId.toString());
     }
 
     private String buildUserLikedSetKey(Long userId) {
