@@ -36,8 +36,8 @@ services:
     environment:
       TZ: Asia/Seoul
     volumes:
-#      - /var/lib/volumes/mongo:/data/db
-      - /home/ubuntu/volumes/mongo:/data/db
+      - /var/lib/volumes/mongo:/data/db
+#      - /home/ubuntu/volumes/mongo:/data/db
     networks:
       - network
 
@@ -53,8 +53,8 @@ services:
         MYSQL_ROOT_PASSWORD: 0623
         MYSQL_DATABASE: ForPaw
     volumes:
-#      - /var/lib/volumes/mysql:/var/lib/mysql
-      - /home/ubuntu/volumes/mysql:/var/lib/mysql
+      - /var/lib/volumes/mysql:/var/lib/mysql
+#      - /home/ubuntu/volumes/mysql:/var/lib/mysql
     networks:
       - network
 

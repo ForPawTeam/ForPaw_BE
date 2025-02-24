@@ -233,8 +233,6 @@ public class UserService {
         Long userId = jwtUtils.getUserIdFromToken(accessToken)
                 .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_TOKEN));
 
-        userCacheService.validateAccessToken(accessToken, userId);
-
         String profile = userRepository.findProfileById(userId).orElse(null);
         return new ValidateAccessTokenRes(profile);
     }
