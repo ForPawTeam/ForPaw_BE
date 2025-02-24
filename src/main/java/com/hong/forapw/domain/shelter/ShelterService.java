@@ -7,6 +7,8 @@ import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.common.utils.JsonParser;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.animal.constant.AnimalType;
+import com.hong.forapw.domain.like.LikeService;
+import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.region.entity.RegionCode;
 import com.hong.forapw.domain.animal.repository.AnimalRepository;
 import com.hong.forapw.domain.animal.repository.FavoriteAnimalRepository;
@@ -36,6 +38,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_LIKE_NUM_KEY;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
@@ -56,6 +59,7 @@ public class ShelterService {
     private final WebClient webClient;
     private final JsonParser jsonParser;
     private final GoogleGeocodingService googleService;
+    private final LikeService likeService;
 
     @Value("${openAPI.service-key2}")
     private String serviceKey;
@@ -110,12 +114,17 @@ public class ShelterService {
     }
 
     public FindShelterAnimalsByIdRes findAnimalsByShelter(Long shelterId, Long userId, String type, Pageable pageable) {
+        Page<Animal> animalPage = animalRepository.findByShelterIdAndType(AnimalType.fromString(type), shelterId, pageable);
+        List<Long> animalIds = animalPage.getContent().stream()
+                .map(Animal::getId)
+                .toList();
+
+        Map<Long, Long> likeCounts = likeService.getLikeCounts(animalIds, Like.ANIMAL);
         List<Long> userLikedAnimalIds = getUserLikedAnimalIds(userId);
 
-        Page<Animal> animalPage = animalRepository.findByShelterIdAndType(AnimalType.fromString(type), shelterId, pageable);
         List<FindShelterAnimalsByIdRes.AnimalDTO> animalDTOS = animalPage.getContent().stream()
                 .map(animal -> {
-                    Long likeNum = getCachedLikeNum(animal.getId());
+                    Long likeNum = likeCounts.get(animal.getId());
                     boolean isLikedAnimal = userLikedAnimalIds.contains(animal.getId());
                     return FindShelterAnimalsByIdRes.AnimalDTO.fromEntity(animal, isLikedAnimal, likeNum);
                 })
@@ -222,16 +231,6 @@ public class ShelterService {
 
     private boolean isNewShelter(PublicShelterDTO.itemDTO itemDTO, List<Long> existShelterIds) {
         return !existShelterIds.contains(itemDTO.careRegNo());
-    }
-
-    private Long getCachedLikeNum(Long key) {
-        Long likeNum = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY, key.toString());
-        if (likeNum == null) {
-            likeNum = animalRepository.countLikesByAnimalId(key);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, key.toString(), likeNum.toString(), ANIMAL_EXP);
-        }
-
-        return likeNum;
     }
 
     private List<Long> getUserLikedAnimalIds(Long userId) {

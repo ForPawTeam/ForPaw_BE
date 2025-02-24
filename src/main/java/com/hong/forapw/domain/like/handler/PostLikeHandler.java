@@ -76,39 +76,17 @@ public class PostLikeHandler implements LikeHandler {
 
     @Override
     public Long getLikeCount(Long postId) {
-        Long likeCount = redisService.getValueInLongWithNull(POST_LIKE_NUM_KEY, postId.toString());
-        if (likeCount == null) {
-            likeCount = postRepository.countLikesByPostId(postId);
-            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString());
-        }
-
-        return likeCount;
+        return redisService.getValueInLong(POST_LIKE_NUM_KEY, postId.toString());
     }
 
     @Override
-    public Map<Long, Long> getLikesFromCache(List<Long> postIds) {
-        Map<Long, Long> result = new HashMap<>();
+    public Map<Long, Long> getLikeCountMap(List<Long> postIds) {
+        Map<Long, Long> countMap = new HashMap<>();
         for (Long postId : postIds) {
-            Long likeCount = redisService.getValueInLongWithNull(POST_LIKE_NUM_KEY, postId.toString());
-            if (likeCount != null) {
-                result.put(postId, likeCount);
-            }
+            Long likeCount = redisService.getValueInLong(POST_LIKE_NUM_KEY, postId.toString());
+            countMap.put(postId, likeCount);
         }
-        return result;
-    }
-
-    @Override
-    public Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
-        Map<Long, Long> dbLikes = new HashMap<>();
-        List<PostIdAndLikeCount> dbResults = postRepository.findLikeCountsByIds(missingIds);
-
-        for (PostIdAndLikeCount row : dbResults) {
-            Long postId = row.postId();
-            Long likeCount = row.likeCount();
-            dbLikes.put(postId, likeCount);
-            redisService.storeValue(POST_LIKE_NUM_KEY, postId.toString(), likeCount.toString());
-        }
-        return dbLikes;
+        return countMap;
     }
 
     @Override

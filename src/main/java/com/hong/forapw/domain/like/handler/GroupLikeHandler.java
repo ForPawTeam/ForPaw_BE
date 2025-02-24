@@ -75,39 +75,17 @@ public class GroupLikeHandler implements LikeHandler {
 
     @Override
     public Long getLikeCount(Long groupId) {
-        Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY, groupId.toString());
-        if (likeCount == null) {
-            likeCount = groupRepository.countLikesByGroupId(groupId);
-            redisService.storeValue(GROUP_LIKE_NUM_KEY, groupId.toString(), likeCount.toString());
-        }
-
-        return likeCount;
+        return redisService.getValueInLong(GROUP_LIKE_NUM_KEY, groupId.toString());
     }
 
     @Override
-    public Map<Long, Long> getLikesFromCache(List<Long> groupIds) {
-        Map<Long, Long> result = new HashMap<>();
+    public Map<Long, Long> getLikeCountMap(List<Long> groupIds) {
+        Map<Long, Long> countMap = new HashMap<>();
         for (Long groupId : groupIds) {
-            Long likeCount = redisService.getValueInLongWithNull(GROUP_LIKE_NUM_KEY, groupId.toString());
-            if (likeCount != null) {
-                result.put(groupId, likeCount);
-            }
+            Long likeCount = redisService.getValueInLong(GROUP_LIKE_NUM_KEY, groupId.toString());
+            countMap.put(groupId, likeCount);
         }
-        return result;
-    }
-
-    @Override
-    public Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
-        Map<Long, Long> dbLikes = new HashMap<>();
-        List<GroupIdAndLikeCount> dbResults = groupRepository.findLikeCountsByIds(missingIds);
-
-        for (GroupIdAndLikeCount row : dbResults) {
-            Long groupId = row.groupId();
-            Long likeCount = row.likeCount();
-            dbLikes.put(groupId, likeCount);
-            redisService.storeValue(POST_LIKE_NUM_KEY, groupId.toString(), likeCount.toString());
-        }
-        return dbLikes;
+        return countMap;
     }
 
     @Override

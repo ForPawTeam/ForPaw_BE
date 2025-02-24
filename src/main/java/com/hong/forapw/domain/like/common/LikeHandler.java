@@ -17,9 +17,7 @@ public interface LikeHandler {
 
     Long getLikeCount(Long targetId);
 
-    Map<Long, Long> getLikesFromCache(List<Long> targetIds);
-
-    Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds);
+    Map<Long, Long> getLikeCountMap(List<Long> targetIds);
 
     String buildLockKey(Long targetId);
 

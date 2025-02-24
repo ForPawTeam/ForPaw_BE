@@ -73,38 +73,17 @@ public class AnimalLikeHandler implements LikeHandler {
 
     @Override
     public Long getLikeCount(Long animalId) {
-        Long likeCount = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY, animalId.toString());
-        if (likeCount == null) {
-            likeCount = animalRepository.countLikesByAnimalId(animalId);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString());
-        }
-
-        return likeCount;
+        return redisService.getValueInLong(ANIMAL_LIKE_NUM_KEY, animalId.toString());
     }
 
     @Override
-    public Map<Long, Long> getLikesFromCache(List<Long> animalIds) {
-        Map<Long, Long> result = new HashMap<>();
+    public Map<Long, Long> getLikeCountMap(List<Long> animalIds) {
+        Map<Long, Long> countMap = new HashMap<>();
         for (Long animalId : animalIds) {
-            Long likeCount = redisService.getValueInLongWithNull(ANIMAL_LIKE_NUM_KEY, animalId.toString());
-            if (likeCount != null) {
-                result.put(animalId, likeCount);
-            }
+            Long likeCount = redisService.getValueInLong(ANIMAL_LIKE_NUM_KEY, animalId.toString());
+            countMap.put(animalId, likeCount);
         }
-        return result;
-    }
-
-    @Override
-    public Map<Long, Long> getLikesFromDatabaseAndCache(List<Long> missingIds) {
-        Map<Long, Long> dbLikes = new HashMap<>();
-        List<AnimalIdAndLikeCount> dbResults = animalRepository.findLikeCountsByIds(missingIds);
-        for (AnimalIdAndLikeCount row : dbResults) {
-            Long animalId = row.animalId();
-            Long likeCount = row.likeCount();
-            dbLikes.put(animalId, likeCount);
-            redisService.storeValue(ANIMAL_LIKE_NUM_KEY, animalId.toString(), likeCount.toString());
-        }
-        return dbLikes;
+        return countMap;
     }
 
     @Override
