@@ -29,7 +29,7 @@ services:
       - network
 
   mongo:
-    image: "mongo:latest"
+    image: mongo:latest
     container_name: mongo
     ports:
       - "27017:27017"
@@ -42,7 +42,7 @@ services:
       - network
 
   mysql:
-    image: "mysql:8.0"
+    image: mysql:8.0
     container_name: mysql
     ports:
       - "3306:3306"
@@ -59,12 +59,12 @@ services:
       - network
 
   rabbitmq:
-    image: "rabbitmq:3-management"
+    image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
       - "5672:5672"
-      - "15672:15672" # RabbitMQ 관리 콘솔
-      - "61613:61613" # STOMP 프로토콜 포트
+      - "15672:15672"
+      - "61613:61613"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -86,13 +86,15 @@ services:
       - spring
 
   nginx:
-    image: nginx:1.21.5-alpine
+    image: hoyaii/forpaw-nginx
     container_name: nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /home/ubuntu/nginx/certbot-etc:/etc/letsencrypt
+ #     - /home/ubuntu/nginx/certbot-etc:/etc/letsencrypt
     networks:
       - network
+    depends_on:
+      - fastapi
