@@ -85,16 +85,16 @@ services:
     depends_on:
       - spring
 
-  nginx:
-    image: hoyaii/forpaw-nginx
-    container_name: nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
- #     - /home/ubuntu/nginx/certbot-etc:/etc/letsencrypt
-    networks:
-      - network
-    depends_on:
-      - fastapi
+#  nginx:
+#    image: hoyaii/forpaw-nginx
+#    container_name: nginx
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf
+# #     - /home/ubuntu/nginx/certbot-etc:/etc/letsencrypt
+#    networks:
+#      - network
+#    depends_on:
+#      - fastapi

@@ -1,115 +1,78 @@
 # services.py
+import numpy as np  
+import logging
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import PCA
 from fastapi import HTTPException
-from pymilvus import Collection
-import numpy as np  
-from .config import settings
 from typing import List
-import logging
-from .init import initialize_mysql, initialize_redis, initialize_milvus
+from sklearn.metrics.pairwise import cosine_similarity
+
+from .config import settings
+from .init import initialize_mysql, initialize_redis
 from .crud import get_db_session, find_animal_by_id, find_all_animals, find_animal_ids_with_null_title
 
-# Milvus, MySQL, 백터화 객체 초기화, PCA 객체 초기화
-animal_collection = initialize_milvus()
+# 전역으로 TF-IDF 벡터라이저를 정의
+vectorizer = TfidfVectorizer()
+
+# 세션 초기화
 AsyncSessionLocal = initialize_mysql()
 redis_client = initialize_redis()
-vectorizer = TfidfVectorizer()
-animal_pca = PCA(n_components=512)
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def vectorize_and_reduce(texts: List[str], pca_model: PCA) -> np.ndarray:
-    # 텍스트 데이터를 TF-IDF 벡터로 변환 후 차원 축소
-    # 백터의 길이는 Milvus 초기 설정시 설정한 차원으로 나누어져야 함 => 길이를 축소해서 나누어지게 만듦
-    tfidf_matrix = vectorizer.fit_transform(texts)
-    vectors = tfidf_matrix.toarray()
-    return animal_pca.fit_transform(vectors)
-
-def insert_vectors_to_milvus(mivus_collection: Collection, ids: List[int], vectors: np.ndarray):
-    # Milvus에 데이터 삽입
-    mivus_collection.insert([ids, vectors.tolist()])
-
-    # 인덱스 생성
-    index_params = {"index_type": "IVF_FLAT", "metric_type": "L2", "params": {"nlist": 128}}
-    mivus_collection.create_index("vector", index_params)
-
-    mivus_collection.load()
-
-def search_similar_items(query_vec, collection, result_num):
-    search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
-    results = collection.search([query_vec], "vector", search_params, limit=result_num)
-    similar_item_ids = [res for res in results[0].ids]
-    return similar_item_ids
-
-def update_matrix_and_index(matrix, index, new_vectors, new_entities):
-    current_length = len(matrix)
-    matrix = np.vstack([matrix, new_vectors])
-    index.update({entity.id: current_length + idx for idx, entity in enumerate(new_entities)})
-    return matrix, index
-
-async def load_and_vectorize_animal_data():
-    # 비동기 세션을 사용하여 데이터베이스에 연결. Animal 테이블에서 모든 데이터를 가져와서 리스트로 변환
-    # 만약, DB에 Animal 데이터가 하나도 없다면 에러 발생하니 주의
+async def update_animal_similarity_data(top_k: int = 5):
     async with get_db_session(AsyncSessionLocal) as db:
         animals = await find_all_animals(db)
-        texts = [
-            f"{animal.age} {animal.color} {animal.gender} {animal.kind} {animal.region} {animal.special_mark} {animal.neuter}"
-            for animal in animals
-        ]
 
-    # PCA 객체를 사용하여 벡터 차원을 512로 축소 
-    reduced_vectors = vectorize_and_reduce(texts, animal_pca)
-    ids = [animal.id for animal in animals]
-    insert_vectors_to_milvus(animal_collection, ids, reduced_vectors)
-    
-    return reduced_vectors, {animal.id: idx for idx, animal in enumerate(animals)}
+    if not animals:
+        logger.warning("동물 데이터가 없습니다.")
+        return
 
-async def get_similar_animals(animal_id, animal_index, animal_matrix):
-    async with get_db_session(AsyncSessionLocal) as db:
-        animal = await find_animal_by_id(db, animal_id)
-    
-    # animal_id에 대한 동물이 존재여부와 인덱스 존재여부 체크
-    idx = animal_index.get(animal_id)
-    if not animal or idx is None:
+    # 1) TF-IDF 위한 문자열 생성 
+    texts = []
+    animal_ids = []
+    for a in animals:
+        text = f"{a.shelter_id} {a.age} {a.color} {a.gender} {a.kind} {a.region} {a.neuter}"
+        texts.append(text)
+        animal_ids.append(a.id)
+
+    # 2) TF-IDF 벡터화
+    tfidf_matrix = vectorizer.fit_transform(texts)  # (N, D)
+
+    # 3) 코사인 유사도 행렬 (N x N)
+    sim_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+
+    # 4) 각 동물별로 상위 top_k를 구해 Redis 저장
+    for i, animal_id in enumerate(animal_ids):
+        similarities = sim_matrix[i]
+        sorted_indices = np.argsort(similarities)[::-1]   # 내림차순
+        sorted_indices = [idx for idx in sorted_indices if idx != i]  # 자기 자신 제외
+        top_indices = sorted_indices[:top_k]
+        top_similar_ids = [animal_ids[idx] for idx in top_indices]
+
+        # Redis key = "similar:{animal_id}"
+        key = f"similar:{animal_id}"
+        redis_client.delete(key)
+        if top_similar_ids:
+            redis_client.rpush(key, *top_similar_ids)
+
+    logger.info(f"동물별 상위 {top_k} 유사 동물 정보를 Redis에 저장 완료.")
+
+async def get_similar_animals_from_redis(animal_id: int) -> List[int]:
+    key = f"similar:{animal_id}"
+    similar_ids_str = redis_client.lrange(key, 0, -1)  # 문자열 리스트
+
+    if not similar_ids_str:
         return []
-    
-    # 해당 동물의 벡터를 배열로 변환하고, 전체 데이터베이스 벡터와의 코사인 유사도 계산
-    query_vec = animal_matrix[idx].tolist() 
-    similar_animal_ids = search_similar_items(query_vec, animal_collection, 5)
+    return list(map(int, similar_ids_str))
 
-    return similar_animal_ids
-
-# MySQL에 저장된 새로운 동물 데이터를 백터 DB에 업데이트
-async def update_animal_matrix(animal_index, animal_matrix):
+async def find_animals_without_introduction():
     async with get_db_session(AsyncSessionLocal) as db:
-        # 현재 animal_index에서 기존의 모든 동물 ID를 가져옴
-        animals = await find_all_animals(db)
-        existing_ids = set(animal_index.keys())
-        new_animals = [animal for animal in animals if animal.id not in existing_ids]
-
-        if not new_animals:
-            return
-
-    # 새로운 동물 데이터로 텍스트 리스트를 생성
-    new_texts = [
-        f"{animal.shelter_id} {animal.age} {animal.color} {animal.gender} {animal.kind} {animal.region} {animal.special_mark} {animal.happen_place}"
-        for animal in new_animals
-    ]
-
-    # 새로운 텍스트 데이터를 TF-IDF 벡터로 변환하고, 새로운 동물들의 ID 리스트를 생성
-    new_vectors = vectorizer.transform(new_texts).toarray()
-    reduced_new_vectors = animal_pca.transform(new_vectors)  
-    new_ids = [animal.id for animal in new_animals]
-
-    insert_vectors_to_milvus(animal_collection, new_ids, reduced_new_vectors)
-    
-    # 기존 animal_matrix에 새로운 벡터 추가하고, animal_index를 업데이트하여 새로운 동물들의 ID와 인덱스를 추가
-    animal_matrix, animal_index = update_matrix_and_index(animal_matrix, animal_index, reduced_new_vectors, new_animals)
+        animal_ids = await find_animal_ids_with_null_title(db)
+    return animal_ids
 
 async def generate_animal_introduction(animal_id):
     async with get_db_session(AsyncSessionLocal) as db:
