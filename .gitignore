@@ -3,6 +3,7 @@
 **/application-prod.properties
 **/application-dev.properties
 logs/
+docker-compose.yml
 
 HELP.md
 .gradle

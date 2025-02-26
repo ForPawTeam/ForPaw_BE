@@ -1,4 +1,4 @@
-# schemas.py
+# app/schemas/animal.py
 from pydantic import BaseModel
 
 class RecommendRequest(BaseModel):

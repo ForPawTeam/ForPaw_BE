@@ -1,4 +1,4 @@
-# services.py
+# app/services/animal.py
 import numpy as np  
 import logging
 from langchain_openai import ChatOpenAI
@@ -8,23 +8,27 @@ from fastapi import HTTPException
 from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
 
-from .config import settings
-from .init import initialize_mysql, initialize_redis
-from .crud import get_db_session, find_animal_by_id, find_all_animals, find_animal_ids_with_null_title
+from app.core.config import settings
+from app.db.session import get_db_session
+from app.crud.animal import find_animal_by_id, find_all_animals, find_animal_ids_with_null_title
 
 # 전역으로 TF-IDF 벡터라이저를 정의
 vectorizer = TfidfVectorizer()
 
-# 세션 초기화
-AsyncSessionLocal = initialize_mysql()
-redis_client = initialize_redis()
+import redis
+redis_client = redis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    decode_responses=True
+)
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def update_animal_similarity_data(top_k: int = 5):
-    async with get_db_session(AsyncSessionLocal) as db:
+    async with get_db_session() as db:
         animals = await find_all_animals(db)
 
     if not animals:
@@ -70,12 +74,12 @@ async def get_similar_animals_from_redis(animal_id: int) -> List[int]:
     return list(map(int, similar_ids_str))
 
 async def find_animals_without_introduction():
-    async with get_db_session(AsyncSessionLocal) as db:
+    async with get_db_session() as db:
         animal_ids = await find_animal_ids_with_null_title(db)
     return animal_ids
 
 async def generate_animal_introduction(animal_id):
-    async with get_db_session(AsyncSessionLocal) as db:
+    async with get_db_session() as db:
         animal = await find_animal_by_id(db, animal_id)
         if not animal:
             raise HTTPException(status_code=404, detail="해당 동물을 찾을 수 없습니다.")
@@ -133,12 +137,12 @@ async def generate_animal_introduction(animal_id):
     return title, introduction
 
 async def get_animal_ids_with_null_title():
-    async with get_db_session(AsyncSessionLocal) as db:
+    async with get_db_session() as db:
         return await find_animal_ids_with_null_title(db)
 
 async def update_animal_introductions(animal_ids):
     # 5개씩 작업하고 커밋. (모두 처리하고 커밋하면, 에러가 발생하면 받아온 데이터 다 날릴 수 있음)
-    async with get_db_session(AsyncSessionLocal) as db:
+    async with get_db_session() as db:
         for i in range(0, len(animal_ids), 5):
             batch = animal_ids[i:i+5]
             for animal_id in batch:
