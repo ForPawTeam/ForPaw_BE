@@ -13,3 +13,5 @@ langchain
 langchain_community
 cryptography
 langchain-openai
+scipy
+surprise

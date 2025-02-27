@@ -1,26 +1,22 @@
 # app/main.py
 from fastapi import FastAPI
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import asyncio
+from app.tasks.scheduler import start_scheduler
 from app.api import api_router
-from app.services.animal import update_animal_similarity_data
-
-app = FastAPI()
+from app.services.cb import update_animal_similarity_data, init_redis as init_cb_redis
+from app.services.cf import init_redis as init_cf_redis
 
 async def lifespan(app: FastAPI):
+    await init_cf_redis()
+    await init_cb_redis()
+
+    # 애플리케이션 시작 시 초기 콘텐츠 기반 추천 정보 갱신
     await update_animal_similarity_data(top_k=5)
     
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        lambda: asyncio.create_task(update_animal_similarity_data(top_k=5)),
-        'cron',
-        hour=1
-    )
-    scheduler.start()
-    app.state.scheduler = scheduler
+    app.state.scheduler = start_scheduler()
 
     yield
 
-    scheduler.shutdown()
+    app.state.scheduler.shutdown()
 
+app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)
