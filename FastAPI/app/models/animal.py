@@ -21,3 +21,4 @@ class Animal(Base):
     introduction_title = Column(String(255), nullable=True)
     introduction_content = Column(Text, nullable=True)
     name = Column(String(255))
+    created_date = Column(DateTime, nullable=True)

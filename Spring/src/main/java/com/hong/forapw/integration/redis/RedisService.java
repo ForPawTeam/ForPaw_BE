@@ -137,10 +137,6 @@ public class RedisService {
         return redisTemplate.opsForHash().entries(buildKey(type, id));
     }
 
-    public Set<String> keys(String pattern) {
-        return redisTemplate.keys(pattern);
-    }
-
     public RLock getLock(String lockKey) {
         return redissonClient.getLock(lockKey);
     }

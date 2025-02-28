@@ -9,7 +9,7 @@ from app.services import cf
 from app.services import cb
 from app.core.config import settings
 from app.db.session import get_db_session
-from app.crud.animal import find_animal_by_id, find_animal_ids_with_null_title
+from app.crud.animal import find_animal_by_id, find_recent_animal_ids_with_null_title
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -121,5 +121,5 @@ async def update_animal_introductions(animal_ids):
 
 async def find_animals_without_introduction():
     async with get_db_session() as db:
-        animal_ids = await find_animal_ids_with_null_title(db)
+        animal_ids = await find_recent_animal_ids_with_null_title(db)
     return animal_ids
