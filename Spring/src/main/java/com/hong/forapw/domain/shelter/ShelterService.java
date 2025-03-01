@@ -90,7 +90,7 @@ public class ShelterService {
             updateShelterFromAnimalJson(animalJson, shelter);
         }
 
-        updateShelterAddressByGoogle();
+        updateShelterAddress(googleService);
     }
 
     public FindShelterListRes findActiveShelters() {
@@ -168,10 +168,6 @@ public class ShelterService {
 
     private boolean isAnimalNoticeNotExpired(PublicAnimalDTO.AnimalDTO animal, LocalDate currentDate) {
         return LocalDate.parse(animal.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(currentDate);
-    }
-
-    private void updateShelterAddressByGoogle() {
-        updateShelterAddress(googleService);
     }
 
     private void updateShelterAddress(GeocodingService geocodingService) {
