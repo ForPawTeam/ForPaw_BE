@@ -6,8 +6,6 @@ COPY ./requirements.txt /project/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /project/requirements.txt
 
-COPY ./app/.env /project/app/.env
-
 COPY ./app /project/app
 
 ENV PYTHONPATH=/project

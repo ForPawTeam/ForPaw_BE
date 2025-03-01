@@ -1,4 +1,4 @@
-package com.hong.forapw.domain.animal;
+package com.hong.forapw.domain.animal.cf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

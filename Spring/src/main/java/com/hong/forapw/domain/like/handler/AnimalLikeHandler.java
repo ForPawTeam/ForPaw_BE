@@ -2,7 +2,7 @@ package com.hong.forapw.domain.like.handler;
 
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.domain.animal.CFDataExportService;
+import com.hong.forapw.domain.animal.cf.CFDataExportService;
 import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.animal.entity.FavoriteAnimal;
 import com.hong.forapw.domain.like.common.LikeHandler;

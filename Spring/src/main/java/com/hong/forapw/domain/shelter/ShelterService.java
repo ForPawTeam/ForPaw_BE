@@ -29,6 +29,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -55,7 +56,6 @@ public class ShelterService {
     private final RegionCodeRepository regionCodeRepository;
     private final AnimalRepository animalRepository;
     private final FavoriteAnimalRepository favoriteAnimalRepository;
-    private final RedisService redisService;
     private final WebClient webClient;
     private final JsonParser jsonParser;
     private final GoogleGeocodingService googleService;
@@ -66,8 +66,6 @@ public class ShelterService {
 
     @Value("${openAPI.shelter.uri}")
     private String baseUrl;
-
-    private static final Long ANIMAL_EXP = 1000L * 60 * 60 * 24 * 90; // 세 달
 
     @Transactional
     @Scheduled(cron = "0 0 6 * * MON")
@@ -84,12 +82,12 @@ public class ShelterService {
                 .subscribe();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateShelter(List<AnimalJsonDTO> animalJsonResponse) {
         for (AnimalJsonDTO response : animalJsonResponse) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
-            updateShelterByAnimalData(animalJson, shelter);
+            updateShelterFromAnimalJson(animalJson, shelter);
         }
 
         updateShelterAddressByGoogle();
@@ -138,16 +136,16 @@ public class ShelterService {
         return FindShelterListWithAddrRes.fromShelters(shelters);
     }
 
-    private void updateShelterByAnimalData(String animalJson, Shelter shelter) {
-        jsonParser.parse(animalJson, PublicAnimalDTO.class).ifPresent(
-                animalDTO -> updateShelterWithAnimalData(animalDTO, shelter)
-        );
-    }
-
-    private void updateShelterWithAnimalData(PublicAnimalDTO animalData, Shelter shelter) {
-        getFirstAnimalItem(animalData)
-                .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
-                        firstAnimalItem.careTel(), firstAnimalItem.careAddr(), countActiveAnimals(animalData), shelter.getId())
+    private void updateShelterFromAnimalJson(String animalJson, Shelter shelter) {
+        jsonParser.parse(animalJson, PublicAnimalDTO.class)
+                .ifPresent(animalDTO ->
+                        getFirstAnimalItem(animalDTO)
+                                .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
+                                        firstAnimalItem.careTel(),
+                                        firstAnimalItem.careAddr(),
+                                        countActiveAnimals(animalDTO),
+                                        shelter.getId()
+                                ))
                 );
     }
 

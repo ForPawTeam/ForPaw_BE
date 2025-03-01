@@ -1,5 +1,6 @@
 package com.hong.forapw.domain.animal;
 
+import com.hong.forapw.domain.animal.cf.CFDataExportService;
 import com.hong.forapw.domain.animal.model.PublicAnimalDTO;
 import com.hong.forapw.domain.animal.model.AnimalJsonDTO;
 import com.hong.forapw.common.exceptions.CustomException;
@@ -65,39 +66,31 @@ public class AnimalService {
     private final RedisService redisService;
     private final LikeService likeService;
     private final ShelterService shelterService;
-    private final EntityManager entityManager;
+    private final AnimalDataSaveService animalDataSaveService;
     private final WebClient webClient;
-    private final JsonParser jsonParser;
 
     @Value("${openAPI.service-key2}")
     private String serviceKey;
 
-    @Value("${animal.names}")
-    private String[] animalNames;
-
     @Value("${recommend.uri}")
     private String animalRecommendURI;
-
-    @Value("${animal.update.uri}")
-    private String updateAnimalIntroduceURI;
 
     @Value("${openAPI.animal.uri}")
     private String animalURI;
 
     private static final int MAX_RECOMMENDED_ANIMALS = 5;
 
-    @Transactional
     @Scheduled(cron = "0 0 0 * * *")
     public void updateNewAnimals() {
         List<Long> existingAnimalIds = animalRepository.findAllIds();
         
         List<Shelter> shelters = shelterRepository.findAllWithRegionCode();
         List<AnimalJsonDTO> animalJsonDTO = fetchAnimalDataFromApi(shelters);
-        
-        saveNewAnimalData(animalJsonDTO, existingAnimalIds);
+
+        animalDataSaveService.saveNewAnimalData(animalJsonDTO, existingAnimalIds);
 
         shelterService.updateShelter(animalJsonDTO);
-        postProcessAfterAnimalUpdate();
+        animalDataSaveService.postProcessAfterAnimalUpdate();
     }
 
     public FindAnimalListRes findAnimals(String type, Long userId, Pageable pageable) {
@@ -181,165 +174,6 @@ public class AnimalService {
                         }))
                 .collectList()
                 .block();
-    }
-
-    public void saveNewAnimalData(List<AnimalJsonDTO> animalJsonResponse, List<Long> existingAnimalIds) {
-        for (AnimalJsonDTO response : animalJsonResponse) {
-            Shelter shelter = response.shelter();
-            String animalJson = response.animalJson();
-
-            List<Animal> animals = convertAnimalJsonToAnimals(animalJson, shelter, existingAnimalIds);
-            animalRepository.saveAll(animals);
-        }
-        entityManager.flush();
-    }
-
-    private List<Animal> convertAnimalJsonToAnimals(String animalJson, Shelter shelter, List<Long> existingAnimalIds) {
-        return jsonParser.parse(animalJson, PublicAnimalDTO.class)
-                .map(PublicAnimalDTO::response)
-                .map(PublicAnimalDTO.ResponseDTO::body)
-                .map(PublicAnimalDTO.BodyDTO::items)
-                .map(PublicAnimalDTO.ItemsDTO::item)
-                .orElse(Collections.emptyList())
-                .stream()
-                .filter(animalDTO -> isNewAnimal(animalDTO, existingAnimalIds))
-                .filter(this::isAdoptionNoticeValid)
-                .map(animalDTO -> {
-                    String name = createAnimalName();
-                    String kind = parseSpecies(animalDTO.kindCd());
-                    return animalDTO.toEntity(name, kind, shelter);
-                })
-                .toList();
-    }
-
-    private boolean isNewAnimal(PublicAnimalDTO.AnimalDTO item, List<Long> existingAnimalIds) {
-        return !existingAnimalIds.contains(Long.valueOf(item.desertionNo()));
-    }
-
-    private boolean isAdoptionNoticeValid(PublicAnimalDTO.AnimalDTO item) {
-        return LocalDate.parse(item.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(LocalDate.now());
-    }
-
-    private String createAnimalName() {
-        int index = ThreadLocalRandom.current().nextInt(animalNames.length);
-        return animalNames[index];
-    }
-
-    private String parseSpecies(String input) {
-        Pattern pattern = Pattern.compile("\\[.*?\\] (.+)");
-        Matcher matcher = pattern.matcher(input);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return null;
-    }
-
-    private void postProcessAfterAnimalUpdate() {
-        List<Animal> expiredAnimals = handleExpiredAnimals();
-
-        Set<Shelter> updatedShelters = getUpdatedShelters(expiredAnimals);
-        updateShelterAnimalCounts(updatedShelters);
-
-        updateAnimalIntroductions();
-        resolveDuplicateShelters();
-    }
-
-    private List<Animal> handleExpiredAnimals() {
-        List<Animal> expiredAnimals = animalRepository.findAllOutOfDateWithShelter(LocalDateTime.now().toLocalDate());
-
-        removeAnimalLikesFromCache(expiredAnimals);
-        removeAnimalsFromUserSearchHistory(expiredAnimals);
-        favoriteAnimalRepository.deleteByAnimalIn(expiredAnimals);
-        animalRepository.deleteAll(expiredAnimals);
-
-        return expiredAnimals;
-    }
-
-    private void removeAnimalLikesFromCache(List<Animal> expiredAnimals) {
-        expiredAnimals.forEach(animal -> likeService.clearLikeCounts(animal.getId(), Like.ANIMAL));
-    }
-
-    private void removeAnimalsFromUserSearchHistory(List<Animal> expiredAnimals) {
-        List<User> users = userRepository.findAllNonWithdrawn();
-        for (User user : users) {
-            String key = ANIMAL_SEARCH_KEY + ":" + user.getId();
-            expiredAnimals.forEach(animal ->
-                    redisService.removeListElement(key, animal.getId().toString())
-            );
-        }
-    }
-
-    private void updateShelterAnimalCounts(Set<Shelter> updatedShelters) {
-        updatedShelters.forEach(shelter ->
-                shelter.updateAnimalCount(animalRepository.countByShelterId(shelter.getId()))
-        );
-    }
-
-    private Set<Shelter> getUpdatedShelters(List<Animal> expiredAnimals) {
-        return expiredAnimals.stream()
-                .map(Animal::getShelter)
-                .collect(Collectors.toSet());
-    }
-
-    private void updateAnimalIntroductions() {
-        webClient.post()
-                .uri(updateAnimalIntroduceURI)
-                .contentType(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), this::mapError)
-                .bodyToMono(Void.class)
-                .retryWhen(createRetrySpec())
-                .onErrorResume(error -> {
-                    log.error("소개글 업데이트 중 에러 발생: {}", error.getMessage());
-                    return Mono.empty();
-                })
-                .block();
-    }
-
-    private Mono<Throwable> mapError(ClientResponse clientResponse) {
-        return clientResponse.bodyToMono(String.class)
-                .flatMap(errorBody -> Mono.empty());
-    }
-
-    private Retry createRetrySpec() {
-        return Retry.fixedDelay(3, Duration.ofSeconds(2))
-                .filter(CustomException.class::isInstance)
-                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) ->
-                        new CustomException(ExceptionCode.INTRODUCTION_UPDATE_FAILED)
-                );
-    }
-
-    private void resolveDuplicateShelters() {
-        List<String> duplicateCareTels = shelterRepository.findDuplicateCareTels();
-        duplicateCareTels.forEach(this::handleDuplicateSheltersForCareTel);
-    }
-
-    private void handleDuplicateSheltersForCareTel(String careTel) {
-        List<Shelter> shelters = shelterRepository.findByCareTel(careTel);
-        Shelter targetShelter = getTargetShelter(shelters);
-        List<Long> duplicateShelterIds = getDuplicateShelterIds(shelters, targetShelter);
-
-        if (!duplicateShelterIds.isEmpty()) {
-            animalRepository.updateShelterByShelterIds(targetShelter, duplicateShelterIds);
-            shelterRepository.updateIsDuplicateByIds(duplicateShelterIds, true);
-        }
-
-        shelterRepository.updateIsDuplicate(targetShelter.getId(), false);
-    }
-
-    private Shelter getTargetShelter(List<Shelter> shelters) {
-        return shelters.stream()
-                .filter(shelter -> !shelter.isDuplicate())
-                .min(Comparator.comparingLong(Shelter::getId))
-                .orElse(shelters.get(0));
-    }
-
-    private List<Long> getDuplicateShelterIds(List<Shelter> shelters, Shelter targetShelter) {
-        return shelters.stream()
-                .filter(shelter -> !shelter.equals(targetShelter))
-                .map(Shelter::getId)
-                .toList();
     }
 
     private void saveSearchRecord(Long animalId, Long userId) {

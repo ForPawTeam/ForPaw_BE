@@ -1,4 +1,4 @@
-package com.hong.forapw.domain.animal;
+package com.hong.forapw.domain.animal.cf;
 
 import com.hong.forapw.common.utils.ApiUtils;
 import lombok.RequiredArgsConstructor;
