@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import static com.hong.forapw.common.constants.GlobalConstants.ACCESS_TOKEN_KEY;
 import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY;
 
 @Service
@@ -17,9 +16,6 @@ import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY
 public class UserCacheService {
 
     private final RedisService redisService;
-
-    @Value("${jwt.access-exp-milli}")
-    public Long accessExpMilli;
 
     @Value("${jwt.refresh-exp-milli}")
     public Long refreshExpMilli;
@@ -40,7 +36,7 @@ public class UserCacheService {
         redisService.storeValue(CODE_TO_EMAIL_KEY_PREFIX, verificationCode, email, LOGIN_FAIL_CURRENT_EXPIRATION_MS);
     }
 
-    public void storeUserTokens(Long userId, LoginResult loginResult) {
+    public void storeRefreshTokens(Long userId, LoginResult loginResult) {
         redisService.storeValue(REFRESH_TOKEN_KEY, userId.toString(), loginResult.refreshToken(), refreshExpMilli);
     }
 
@@ -66,12 +62,6 @@ public class UserCacheService {
         redisService.removeValue(CODE_TO_EMAIL_KEY_PREFIX, verificationCode);
     }
 
-    public void validateAccessToken(String accessToken, Long userId) {
-        if (redisService.doesValueMismatch(ACCESS_TOKEN_KEY, userId.toString(), accessToken)) {
-            throw new CustomException(ExceptionCode.INVALID_ACCESS_TOKEN);
-        }
-    }
-
     public void validateRefreshToken(String refreshToken, Long userId) {
         if (redisService.doesValueMismatch(REFRESH_TOKEN_KEY, userId.toString(), refreshToken)) {
             throw new CustomException(ExceptionCode.INVALID_REFRESH_TOKEN);
@@ -94,14 +84,6 @@ public class UserCacheService {
 
     public long getCurrentLoginFailures(Long userId) {
         return redisService.getValueInLong(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK, userId.toString());
-    }
-
-    public String getValidRefreshToken(Long userId) {
-        String refreshToken = redisService.getValueInString(REFRESH_TOKEN_KEY, userId.toString());
-        if (refreshToken == null)
-            throw new CustomException(ExceptionCode.TOKEN_EXPIRED);
-
-        return refreshToken;
     }
 
     public String getEmailByVerificationCode(String verificationCode) {

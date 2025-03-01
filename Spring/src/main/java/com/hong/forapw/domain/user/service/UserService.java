@@ -1,11 +1,9 @@
 package com.hong.forapw.domain.user.service;
 
 import com.hong.forapw.domain.user.UserValidator;
-import com.hong.forapw.domain.user.model.*;
 import com.hong.forapw.domain.post.model.query.PostTypeCount;
 import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
-import com.hong.forapw.admin.entity.LoginAttempt;
 import com.hong.forapw.domain.post.constant.PostType;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.entity.UserStatus;
@@ -21,15 +19,12 @@ import com.hong.forapw.domain.post.repository.CommentLikeRepository;
 import com.hong.forapw.domain.post.repository.CommentRepository;
 import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
-import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.request.*;
 import com.hong.forapw.domain.user.model.response.*;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.user.repository.UserStatusRepository;
-import com.hong.forapw.integration.email.model.BlankTemplate;
 import com.hong.forapw.integration.email.model.EmailVerificationTemplate;
 import com.hong.forapw.integration.email.EmailService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -73,26 +68,7 @@ public class UserService {
     private final JwtUtils jwtUtils;
     private final UserValidator validator;
 
-    private static final String UNKNOWN = "unknown";
     private static final String CODE_TYPE_RECOVERY = "recovery";
-
-    @Transactional
-    public LoginResult login(LoginReq request, HttpServletRequest servletRequest) {
-        User user = userRepository.findByEmailWithRemoved(request.email())
-                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_CREDENTIALS));
-
-        validator.validateUserNotExited(user);
-        validator.validateUserActive(user);
-        validator.validateLoginAttempts(user);
-
-        if (isPasswordUnmatched(user, request.password())) {
-            handleLoginFailures(user);
-            infoLoginFail(user);
-        }
-
-        recordLoginAttempt(user, servletRequest);
-        return createToken(user);
-    }
 
     @Transactional
     public void join(JoinReq request) {
@@ -254,58 +230,12 @@ public class UserService {
         return new FindCommunityRecordRes(user, adoptionNum + fosteringNum, commentNum, questionNum, answerNum);
     }
 
-    public LoginResult processSocialLogin(String email, HttpServletRequest request) {
-        Optional<User> userOP = userRepository.findByEmailWithRemoved(email);
-        if (userOP.isEmpty()) {
-            return new LoginResult(email, null, null, false);
-        }
-
-        User user = userOP.get();
-        validator.validateUserNotExited(user);
-        validator.validateUserActive(user);
-        validator.validateNotLocalSignupAccount(user);
-
-        recordLoginAttempt(user, request);
-
-        return createToken(user);
-    }
-
-    private void handleLoginFailures(User user) {
-        long currentFailures = userCacheService.incrementCurrentLoginFailures(user.getId());
-
-        if (currentFailures >= 3L) {
-            long dailyFailures = userCacheService.incrementDailyLoginFailures(user);
-            if (dailyFailures == 3L) {
-                emailService.sendMail(user.getEmail(), ACCOUNT_SUSPENSION.getSubject(), MAIL_TEMPLATE_FOR_LOCK_ACCOUNT, new BlankTemplate());
-            }
-
-            throw new CustomException(ExceptionCode.LOGIN_LIMIT_EXCEEDED);
-        }
-    }
-
-    private void infoLoginFail(User user) {
-        Long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
-        String message = String.format("로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해 주세요. (%d회 실패)", currentLoginFailures);
-
-        throw new CustomException(ExceptionCode.INVALID_CREDENTIALS, message);
-    }
-
     private void updateNewPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new CustomException(ExceptionCode.EMAIL_NOT_FOUND)
         );
 
         user.updatePassword(passwordEncoder.encode(newPassword));
-    }
-
-    private LoginResult createToken(User user) {
-        String accessToken = jwtUtils.generateAccessToken(user);
-        String refreshToken = jwtUtils.generateRefreshToken(user);
-
-        LoginResult loginResult = new LoginResult(null, accessToken, refreshToken, true);
-        userCacheService.storeUserTokens(user.getId(), loginResult);
-
-        return loginResult;
     }
 
     private String createAccessToken(User user) {
@@ -333,46 +263,19 @@ public class UserService {
     }
 
     private void deleteAllMeetingUserData(Long userId) {
-        meetingUserRepository.findByUserIdWithMeeting(userId)
-                .forEach(meetingUser -> {
-                            meetingUser.getMeeting().decrementParticipantCount();
-                            meetingUserRepository.delete(meetingUser);
-                        }
-                );
+        meetingUserRepository.findByUserIdWithMeeting(userId).forEach(
+                meetingUser -> {
+                    meetingUser.getMeeting().decrementParticipantCount();
+                    meetingUserRepository.delete(meetingUser);
+                });
     }
 
     private void deleteAllGroupUserData(Long userId) {
-        groupUserRepository.findByUserIdWithGroup(userId)
-                .forEach(groupUser -> {
-                            groupUser.getGroup().decrementParticipantNum();
-                            groupUserRepository.delete(groupUser);
-                        }
-                );
-    }
-
-    public void recordLoginAttempt(User user, HttpServletRequest request) {
-        String clientIp = getClientIP(request);
-        String userAgent = request.getHeader(USER_AGENT_HEADER);
-
-        LoginAttempt attempt = LoginAttempt.builder()
-                .user(user)
-                .clientIp(clientIp)
-                .userAgent(userAgent)
-                .build();
-
-        loginAttemptRepository.save(attempt);
-    }
-
-    private String getClientIP(HttpServletRequest request) {
-        for (String header : IP_HEADER_CANDIDATES) {
-            String ip = request.getHeader(header);
-
-            // 해당 헤더가 비어 있지 않고, "unknown"이라는 값이 아닌 경우에만 해당 IP를 반환
-            if (ip != null && !ip.isEmpty() && !UNKNOWN.equalsIgnoreCase(ip)) {
-                return ip;
-            }
-        }
-        return request.getRemoteAddr();
+        groupUserRepository.findByUserIdWithGroup(userId).forEach(
+                groupUser -> {
+                    groupUser.getGroup().decrementParticipantNum();
+                    groupUserRepository.delete(groupUser);
+                });
     }
 
     private void setUserStatus(User user) {
