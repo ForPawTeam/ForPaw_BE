@@ -11,12 +11,10 @@ import com.hong.forapw.domain.user.model.request.LoginReq;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.integration.email.EmailService;
 import com.hong.forapw.integration.email.model.BlankTemplate;
-import com.hong.forapw.integration.oauth.google.GoogleOAuthService;
-import com.hong.forapw.integration.oauth.google.GoogleOAuthToken;
-import com.hong.forapw.integration.oauth.google.GoogleUser;
-import com.hong.forapw.integration.oauth.kakao.KakaoOAuthService;
-import com.hong.forapw.integration.oauth.kakao.KakaoOAuthToken;
-import com.hong.forapw.integration.oauth.kakao.KakaoUser;
+import com.hong.forapw.integration.oauth.common.OAuthToken;
+import com.hong.forapw.integration.oauth.common.SocialOAuthService;
+import com.hong.forapw.integration.oauth.SocialProvider;
+import com.hong.forapw.integration.oauth.common.SocialUser;
 import com.hong.forapw.security.jwt.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,8 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,12 +46,11 @@ public class AuthService {
     private final UserRepository userRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final UserCacheService userCacheService;
-    private final KakaoOAuthService kakaoOAuthService;
-    private final GoogleOAuthService googleOAuthService;
     private final EmailService emailService;
     private final UserValidator validator;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final Map<SocialProvider, SocialOAuthService<? extends OAuthToken, ? extends SocialUser>> socialServices;
 
     private static final String QUERY_PARAM_EMAIL = "email";
     private static final String QUERY_PARAM_AUTH_PROVIDER = "authProvider";
@@ -66,7 +61,6 @@ public class AuthService {
 
     @Value("${social.home.redirect.uri}")
     private String redirectHomeUri;
-
 
     @Transactional
     public LoginResult login(LoginReq request, HttpServletRequest servletRequest) {
@@ -87,19 +81,14 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResult loginWithKakao(String code, HttpServletRequest request) {
-        KakaoOAuthToken token = kakaoOAuthService.getToken(code);
-        KakaoUser kakaoUser = kakaoOAuthService.getUserInfo(token.access_token());
-        String email = kakaoUser.kakao_account().email();
+    public LoginResult loginWithSocial(String code, SocialProvider provider, HttpServletRequest request) {
+        SocialOAuthService<? extends OAuthToken, ? extends SocialUser> service = socialServices.get(provider);
+        if (service == null)
+            throw new CustomException(ExceptionCode.INVALID_AUTH_PROVIDER);
 
-        return processSocialLogin(email, request);
-    }
-
-    @Transactional
-    public LoginResult loginWithGoogle(String code, HttpServletRequest request) {
-        GoogleOAuthToken token = googleOAuthService.getToken(code);
-        GoogleUser googleUser = googleOAuthService.getUserInfo(token.access_token());
-        String email = googleUser.email();
+        OAuthToken token = service.getToken(code);
+        SocialUser userInfo = service.getUserInfo(token.getToken());
+        String email = userInfo.getEmail();
 
         return processSocialLogin(email, request);
     }
@@ -149,7 +138,6 @@ public class AuthService {
     private void infoLoginFail(User user) {
         Long currentLoginFailures = userCacheService.getCurrentLoginFailures(user.getId());
         String message = String.format("로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해 주세요. (%d회 실패)", currentLoginFailures);
-
         throw new CustomException(ExceptionCode.INVALID_CREDENTIALS, message);
     }
 

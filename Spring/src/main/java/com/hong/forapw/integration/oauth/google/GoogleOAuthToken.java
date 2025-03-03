@@ -8,4 +8,9 @@ public record GoogleOAuthToken(
         String token_type,
         String scope,
         String refresh_token) implements OAuthToken {
+
+    @Override
+    public String getToken() {
+        return access_token;
+    }
 }

@@ -5,6 +5,7 @@ import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.request.LoginReq;
 import com.hong.forapw.domain.user.model.response.LoginRes;
 import com.hong.forapw.domain.user.service.AuthService;
+import com.hong.forapw.integration.oauth.SocialProvider;
 import com.hong.forapw.security.jwt.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,8 +24,6 @@ public class AuthController {
     private final AuthService authService;
     private final JwtUtils jwtUtils;
 
-    private static final String AUTH_KAKAO = "KAKAO";
-    private static final String AUTH_GOOGLE = "GOOGLE";
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginReq request, HttpServletRequest servletRequest) {
@@ -34,15 +33,15 @@ public class AuthController {
                 .body(ApiUtils.success(HttpStatus.OK, new LoginRes(loginResult.accessToken())));
     }
 
-    @GetMapping("/auth/login/kakao")
-    public void loginWithKakao(@RequestParam String code, HttpServletRequest request, HttpServletResponse response) {
-        LoginResult loginResult = authService.loginWithKakao(code, request);
-        authService.redirectAfterOauthLogin(loginResult, AUTH_KAKAO, response);
-    }
-
-    @GetMapping("/auth/login/google")
-    public void loginWithGoogle(@RequestParam String code, HttpServletRequest request, HttpServletResponse response) {
-        LoginResult loginResult = authService.loginWithGoogle(code, request);
-        authService.redirectAfterOauthLogin(loginResult, AUTH_GOOGLE, response);
+    @GetMapping("/auth/login/{provider}")
+    public void loginSocial(
+            @PathVariable("provider") String providerStr,
+            @RequestParam String code,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        SocialProvider provider = SocialProvider.valueOf(providerStr.toUpperCase());
+        LoginResult loginResult = authService.loginWithSocial(code, provider, request);
+        authService.redirectAfterOauthLogin(loginResult, provider.name(), response);
     }
 }

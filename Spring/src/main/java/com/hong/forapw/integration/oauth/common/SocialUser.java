@@ -1,4 +1,5 @@
 package com.hong.forapw.integration.oauth.common;
 
 public interface SocialUser {
+    String getEmail();
 }

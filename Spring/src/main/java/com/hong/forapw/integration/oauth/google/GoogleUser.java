@@ -6,4 +6,9 @@ public record GoogleUser(
         String id,
         String email,
         String nickname) implements SocialUser {
+
+    @Override
+    public String getEmail() {
+        return email;
+    }
 }

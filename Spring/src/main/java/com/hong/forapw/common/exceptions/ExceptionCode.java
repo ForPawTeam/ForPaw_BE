@@ -114,7 +114,8 @@ public enum ExceptionCode {
     INTRODUCTION_UPDATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "소개글 업데이트 요청이 실패했습니다."),
     REDIS_LOCK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 잠금 요청에 실패했습니다."),
     REDIS_LOCK_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 잠금 처리 중 인터럽트가 발생했습니다."),
-    INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다.");
+    INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
+    INVALID_AUTH_PROVIDER(HttpStatus.BAD_REQUEST, "잘못된 소셜 로그인 경로입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

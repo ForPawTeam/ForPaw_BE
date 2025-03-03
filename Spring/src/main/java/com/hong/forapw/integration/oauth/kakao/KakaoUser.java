@@ -27,4 +27,9 @@ public record KakaoUser(
                 Boolean is_default_image) {
         }
     }
+
+    @Override
+    public String getEmail() {
+        return this.kakao_account != null ? this.kakao_account.email() : null;
+    }
 }

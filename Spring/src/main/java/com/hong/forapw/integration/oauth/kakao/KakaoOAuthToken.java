@@ -9,4 +9,9 @@ public record KakaoOAuthToken(
         String refresh_token,
         Integer refresh_token_expires_in,
         String scope) implements OAuthToken {
+
+    @Override
+    public String getToken() {
+        return access_token;
+    }
 }
