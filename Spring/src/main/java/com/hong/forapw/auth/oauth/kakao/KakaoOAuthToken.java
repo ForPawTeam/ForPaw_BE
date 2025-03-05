@@ -1,6 +1,6 @@
-package com.hong.forapw.integration.oauth.kakao;
+package com.hong.forapw.auth.oauth.kakao;
 
-import com.hong.forapw.integration.oauth.common.OAuthToken;
+import com.hong.forapw.auth.oauth.common.OAuthToken;
 
 public record KakaoOAuthToken(
         String token_type,

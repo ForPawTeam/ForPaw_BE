@@ -1,6 +1,6 @@
-package com.hong.forapw.integration.oauth.google;
+package com.hong.forapw.auth.oauth.google;
 
-import com.hong.forapw.integration.oauth.common.SocialOAuthService;
+import com.hong.forapw.auth.oauth.common.SocialOAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;

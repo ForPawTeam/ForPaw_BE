@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -41,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_SEARCH_KEY;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
+import static com.hong.forapw.common.utils.UriUtils.buildAnimalOpenApiURI;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +63,30 @@ public class AnimalDataSaveService {
 
     @Value("${animal.update.uri}")
     private String updateAnimalIntroduceURI;
+
+    @Value("${openAPI.service-key2}")
+    private String serviceKey;
+
+    @Value("${openAPI.animal.uri}")
+    private String animalURI;
+
+    public List<AnimalJsonDTO> fetchAnimalDataFromApi(List<Shelter> shelters) {
+        return Flux.fromIterable(shelters)
+                .delayElements(Duration.ofMillis(75))
+                .flatMap(shelter -> buildAnimalOpenApiURI(animalURI, serviceKey, shelter.getId())
+                        .flatMap(uri -> webClient.get()
+                                .uri(uri)
+                                .retrieve()
+                                .bodyToMono(String.class)
+                                .retry(3)
+                                .map(rawJsonResponse -> new AnimalJsonDTO(shelter, rawJsonResponse)))
+                        .onErrorResume(e -> {
+                            log.error("Shelter {} 데이터 가져오기 실패: {}", shelter.getId(), e.getMessage());
+                            return Mono.empty();
+                        }))
+                .collectList()
+                .block();
+    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveNewAnimalData(List<AnimalJsonDTO> animalJsonResponse, List<Long> existingAnimalIds) {

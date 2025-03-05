@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
-import static com.hong.forapw.common.utils.UriUtils.convertHttpUrlToHttps;
+import static com.hong.forapw.common.utils.UriUtils.convertToHttpsUri;
 
 public record PublicAnimalDTO(ResponseDTO response) {
     public record ResponseDTO(HeaderDTO header, BodyDTO body) {
@@ -65,7 +65,7 @@ public record PublicAnimalDTO(ResponseDTO response) {
                     .weight(weight)
                     .noticeSdt(LocalDate.parse(noticeSdt, formatter))
                     .noticeEdt(LocalDate.parse(noticeEdt, formatter))
-                    .profileURL(convertHttpUrlToHttps(popfile))
+                    .profileURL(convertToHttpsUri(popfile))
                     .processState(processState)
                     .gender(sexCd)
                     .neuter(neuterYn)

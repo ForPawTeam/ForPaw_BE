@@ -1,4 +1,4 @@
-package com.hong.forapw.domain.user.service;
+package com.hong.forapw.auth;
 
 import com.hong.forapw.admin.entity.LoginAttempt;
 import com.hong.forapw.admin.repository.LoginAttemptRepository;
@@ -9,12 +9,13 @@ import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.request.LoginReq;
 import com.hong.forapw.domain.user.repository.UserRepository;
+import com.hong.forapw.domain.user.service.UserCacheService;
 import com.hong.forapw.integration.email.EmailService;
 import com.hong.forapw.integration.email.model.BlankTemplate;
-import com.hong.forapw.integration.oauth.common.OAuthToken;
-import com.hong.forapw.integration.oauth.common.SocialOAuthService;
-import com.hong.forapw.integration.oauth.SocialProvider;
-import com.hong.forapw.integration.oauth.common.SocialUser;
+import com.hong.forapw.auth.oauth.common.OAuthToken;
+import com.hong.forapw.auth.oauth.common.SocialOAuthService;
+import com.hong.forapw.auth.oauth.SocialProvider;
+import com.hong.forapw.auth.oauth.common.SocialUser;
 import com.hong.forapw.security.jwt.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

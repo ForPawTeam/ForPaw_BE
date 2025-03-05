@@ -1,4 +1,4 @@
-package com.hong.forapw.integration.oauth.common;
+package com.hong.forapw.auth.oauth.common;
 
 public interface SocialOAuthService<T extends OAuthToken, U extends SocialUser> {
     T getToken(String code);

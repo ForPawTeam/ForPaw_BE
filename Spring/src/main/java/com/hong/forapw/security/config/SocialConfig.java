@@ -1,11 +1,11 @@
 package com.hong.forapw.security.config;
 
-import com.hong.forapw.integration.oauth.common.OAuthToken;
-import com.hong.forapw.integration.oauth.common.SocialOAuthService;
-import com.hong.forapw.integration.oauth.SocialProvider;
-import com.hong.forapw.integration.oauth.common.SocialUser;
-import com.hong.forapw.integration.oauth.google.GoogleOAuthService;
-import com.hong.forapw.integration.oauth.kakao.KakaoOAuthService;
+import com.hong.forapw.auth.oauth.common.OAuthToken;
+import com.hong.forapw.auth.oauth.common.SocialOAuthService;
+import com.hong.forapw.auth.oauth.SocialProvider;
+import com.hong.forapw.auth.oauth.common.SocialUser;
+import com.hong.forapw.auth.oauth.google.GoogleOAuthService;
+import com.hong.forapw.auth.oauth.kakao.KakaoOAuthService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

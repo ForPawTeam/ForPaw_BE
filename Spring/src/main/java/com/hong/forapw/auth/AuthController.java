@@ -1,11 +1,10 @@
-package com.hong.forapw.domain.user.controller;
+package com.hong.forapw.auth;
 
 import com.hong.forapw.common.utils.ApiUtils;
 import com.hong.forapw.domain.user.model.LoginResult;
 import com.hong.forapw.domain.user.model.request.LoginReq;
 import com.hong.forapw.domain.user.model.response.LoginRes;
-import com.hong.forapw.domain.user.service.AuthService;
-import com.hong.forapw.integration.oauth.SocialProvider;
+import com.hong.forapw.auth.oauth.SocialProvider;
 import com.hong.forapw.security.jwt.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

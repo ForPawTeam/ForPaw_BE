@@ -1,4 +1,4 @@
-package com.hong.forapw.integration.oauth;
+package com.hong.forapw.auth.oauth;
 
 public enum SocialProvider {
     KAKAO,

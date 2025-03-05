@@ -24,11 +24,12 @@ import static com.hong.forapw.security.userdetails.CustomUserDetails.getUserIdOr
 public class ShelterController {
 
     private final ShelterService shelterService;
+    private final ShelterScheduler shelterScheduler;
 
     // 테스트 시에만 API를 열어둠
     @GetMapping("/shelters/import")
     public ResponseEntity<?> loadShelter(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        shelterService.updateNewShelters();
+        shelterScheduler.updateNewShelters();
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

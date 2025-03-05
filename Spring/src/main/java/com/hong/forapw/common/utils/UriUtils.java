@@ -9,9 +9,6 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 @Slf4j
 public class UriUtils {
@@ -19,10 +16,9 @@ public class UriUtils {
     private UriUtils() {
     }
 
-    public static String convertHttpUrlToHttps(String url) {
-        if (StringUtils.isBlank(url)) {
+    public static String convertToHttpsUri(String url) {
+        if (StringUtils.isBlank(url))
             throw new CustomException(ExceptionCode.INVALID_URI_FORMAT);
-        }
 
         return StringUtils.replaceOnce(url, "http://", "https://");
     }
@@ -48,9 +44,8 @@ public class UriUtils {
     }
 
     public static URI buildKakaoGeocodingURI(String address, String kakaoGeoCodingURI) {
-        if (address == null || address.isBlank()) {
+        if (address == null || address.isBlank())
             throw new CustomException(ExceptionCode.INVALID_URI_FORMAT);
-        }
 
         return UriComponentsBuilder.fromHttpUrl(kakaoGeoCodingURI)
                 .queryParam("query", address)
@@ -60,9 +55,8 @@ public class UriUtils {
     }
 
     public static URI buildGoogleGeocodingURI(String address, String googleGeoCodingURI, String googleAPIKey) {
-        if (address == null || address.isBlank()) {
+        if (address == null || address.isBlank())
             throw new CustomException(ExceptionCode.INVALID_URI_FORMAT);
-        }
 
         return UriComponentsBuilder.fromHttpUrl(googleGeoCodingURI)
                 .queryParam("address", address)

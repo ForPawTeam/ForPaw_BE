@@ -1,6 +1,6 @@
-package com.hong.forapw.integration.oauth.google;
+package com.hong.forapw.auth.oauth.google;
 
-import com.hong.forapw.integration.oauth.common.OAuthToken;
+import com.hong.forapw.auth.oauth.common.OAuthToken;
 
 public record GoogleOAuthToken(
         String access_token,
