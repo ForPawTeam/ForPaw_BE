@@ -27,12 +27,13 @@ import static com.hong.forapw.security.userdetails.CustomUserDetails.getUserIdOr
 public class AnimalController {
 
     private final AnimalService animalService;
+    private final AnimalScheduler animalScheduler;
     private final LikeService likeService;
 
     // 테스트시에만 열어둠
     @GetMapping("/animals/import")
     public ResponseEntity<?> loadAnimals() {
-        animalService.updateNewAnimals();
+        animalScheduler.updateNewAnimals();
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, null));
     }
 

@@ -39,7 +39,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
 	// MySQL
-	implementation 'mysql:mysql-connector-java:8.0.33'
+	implementation 'org.mariadb.jdbc:mariadb-java-client:3.1.2'
+	//implementation 'mysql:mysql-connector-java:8.0.33'
 
 	// Oauth
 	implementation group: 'com.auth0', name: 'java-jwt', version: '4.3.0'

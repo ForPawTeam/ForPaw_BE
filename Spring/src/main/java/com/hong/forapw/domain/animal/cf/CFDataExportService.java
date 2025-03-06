@@ -64,7 +64,6 @@ public class CFDataExportService {
                 .flatMap(userId -> extractInteractionsForUser(userId).stream())
                 .collect(Collectors.toList());
 
-        // FastAPI로 POST 요청 전송
         try {
             String jsonPayload = objectMapper.writeValueAsString(interactions);
             webClient.post()

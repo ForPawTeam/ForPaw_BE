@@ -16,13 +16,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class PostScheduledService {
+public class PostScheduler {
 
     private final PostRepository postRepository;
     private final PostService postService;
     private final PostCacheService postCacheService;
 
-    /** 매일 06:00, 18:00에 실행되어 오늘의 인기 게시글을 갱신 */
     @Scheduled(cron = "0 0 6,18 * * *")
     public void updateTodayPopularPosts() {
         LocalDate now = LocalDate.now();
@@ -33,7 +32,6 @@ public class PostScheduledService {
         postService.refreshPopularPostsWithinRange(startOfToday, endOfToday, PostType.FOSTERING);
     }
 
-    /** 매일 00:25에 실행되어 Redis에 저장된 조회수를 DB와 동기화 */
     @Scheduled(cron = "0 25 0 * * *")
     public void syncViewNum() {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
