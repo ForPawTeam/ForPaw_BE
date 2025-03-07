@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.region.entity;
 
-
 import com.hong.forapw.domain.region.constant.District;
 import com.hong.forapw.domain.region.constant.Province;
 import jakarta.persistence.*;
@@ -15,23 +14,19 @@ public class RegionCode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 시도 코드
     @Column
-    private Integer uprCd;
+    private Integer uprCd; // 시도 코드
 
-    // 시군구 코드
     @Column
-    private Integer orgCd;
+    private Integer orgCd; // 시군구 코드
 
-    // 시도명
     @Column
     @Enumerated(EnumType.STRING)
-    private Province uprName;
+    private Province uprName; // 시도명
 
-    // 시도군명
     @Column
     @Enumerated(EnumType.STRING)
-    private District orgName;
+    private District orgName;  // 시도군명
 
     @Builder
     public RegionCode(Integer uprCd, Integer orgCd, Province uprName, District orgName) {

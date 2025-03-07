@@ -151,8 +151,8 @@ public class AnimalService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void postProcessAfterAnimalUpdate() {
         List<Animal> expiredAnimals = handleExpiredAnimals();
-
         Set<Shelter> updatedShelters = getUpdatedShelters(expiredAnimals);
+
         updateShelterAnimalCounts(updatedShelters);
 
         resolveDuplicateShelters();

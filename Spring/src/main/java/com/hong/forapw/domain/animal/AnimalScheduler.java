@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -47,34 +48,41 @@ public class AnimalScheduler {
     @Scheduled(cron = "0 0 0 * * *")
     public void updateNewAnimals() {
         List<Long> existingAnimalIds = animalRepository.findAllIds();
-
         List<Shelter> shelters = shelterRepository.findAllWithRegionCode();
-        List<AnimalJsonDTO> animalJsonDTO = fetchAnimalDataFromApi(shelters);
 
-        animalService.saveNewAnimalData(animalJsonDTO, existingAnimalIds);
-
-        shelterService.updateShelter(animalJsonDTO);
-        animalService.postProcessAfterAnimalUpdate();
-
-        updateAnimalIntroductions();
+        fetchAnimalDataFromApi(shelters)
+                .collectList()
+                .flatMap(animalJsonDTOs ->  // Mono.fromRunnable을 통해 동기 메서드들을 한 번에 실행
+                        Mono.fromRunnable(() -> processAnimalUpdate(animalJsonDTOs, existingAnimalIds))
+                                .subscribeOn(Schedulers.boundedElastic())) // 블로킹 I/O → boundedElastic 스레드풀에서 실행
+                .subscribe(
+                        result -> log.info("동물 정보 업데이트 완료: {}", result),
+                        error -> log.error("updateNewAnimals 중 오류 발생: {}", error.getMessage())
+                );
     }
 
-    private List<AnimalJsonDTO> fetchAnimalDataFromApi(List<Shelter> shelters) {
+    private Flux<AnimalJsonDTO> fetchAnimalDataFromApi(List<Shelter> shelters) {
         return Flux.fromIterable(shelters)
-                .delayElements(Duration.ofMillis(75))
                 .flatMap(shelter -> buildAnimalOpenApiURI(animalURI, serviceKey, shelter.getId())
-                        .flatMap(uri -> webClient.get()
-                                .uri(uri)
-                                .retrieve()
-                                .bodyToMono(String.class)
-                                .retry(3)
-                                .map(rawJsonResponse -> new AnimalJsonDTO(shelter, rawJsonResponse)))
-                        .onErrorResume(e -> {
-                            log.error("Shelter {} 데이터 가져오기 실패: {}", shelter.getId(), e.getMessage());
-                            return Mono.empty();
-                        }))
-                .collectList()
-                .block();
+                                .flatMap(uri -> webClient.get()
+                                        .uri(uri)
+                                        .retrieve()
+                                        .bodyToMono(String.class)
+                                        .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(100)))
+                                        .map(rawJson -> new AnimalJsonDTO(shelter, rawJson)))
+                                .onErrorResume(e -> {
+                                    log.error("Shelter {} 데이터 가져오기 실패: {}", shelter.getId(), e.getMessage());
+                                    return Mono.empty();
+                                }),
+                        20 // concurrency 파라미터
+                );
+    }
+
+    private void processAnimalUpdate(List<AnimalJsonDTO> animalJsonDTOs, List<Long> existingAnimalIds) {
+        animalService.saveNewAnimalData(animalJsonDTOs, existingAnimalIds);
+        shelterService.updateShelter(animalJsonDTOs);
+        animalService.postProcessAfterAnimalUpdate();
+        updateAnimalIntroductions();
     }
 
     private void updateAnimalIntroductions() {

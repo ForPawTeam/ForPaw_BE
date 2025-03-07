@@ -8,10 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
 
 @Repository
 public interface ShelterRepository extends JpaRepository<Shelter, Long> {
@@ -42,27 +40,20 @@ public interface ShelterRepository extends JpaRepository<Shelter, Long> {
             "* SIN(RADIANS(s.latitude)))) ASC", nativeQuery = true)
     List<Shelter> findNearestShelters(@Param("lat") double lat, @Param("lon") double lon);
 
-    @Query("SELECT s FROM Shelter s WHERE s.careTel IN " +
-            "(SELECT s2.careTel FROM Shelter s2 GROUP BY s2.careTel, s2.latitude, s2.longitude HAVING COUNT(s2.id) > 1)")
-    List<Shelter> findDuplicateShelters();
-
     @Query("SELECT s.careTel FROM Shelter s GROUP BY s.careTel HAVING COUNT(s) > 1")
     List<String> findDuplicateCareTels();
 
     List<Shelter> findByCareTel(String careTel);
 
     @Modifying
-    @Transactional
-    @Query("UPDATE Shelter s SET s.careTel = :careTel, s.careAddr = :careAddr, s.animalCnt = :animalCnt WHERE s.id = :shelterId")
-    void updateShelterInfo(@Param("careTel") String careTel, @Param("careAddr") String careAddr, @Param("animalCnt") Long animalCnt, @Param("shelterId") Long shelterId);
+    @Query("UPDATE Shelter s SET s.careTel = :careTel, s.careAddr = :careAddr WHERE s.id = :shelterId")
+    void updateShelterInfo(@Param("careTel") String careTel, @Param("careAddr") String careAddr, @Param("shelterId") Long shelterId);
 
     @Modifying
-    @Transactional
     @Query("UPDATE Shelter s SET s.latitude = :latitude, s.longitude = :longitude WHERE s.id = :shelterId")
     void updateAddressInfo(@Param("latitude") Double latitude, @Param("longitude") Double longitude, @Param("shelterId") Long shelterId);
 
     @Modifying
-    @Transactional
     @Query("UPDATE Shelter s SET s.isDuplicate = :isDuplicate WHERE s.id = :shelterId")
     void updateIsDuplicate(@Param("shelterId") Long shelterId, @Param("isDuplicate") boolean isDuplicate);
 

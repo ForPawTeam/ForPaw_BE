@@ -9,10 +9,8 @@ import com.hong.forapw.domain.animal.entity.Animal;
 import com.hong.forapw.domain.animal.constant.AnimalType;
 import com.hong.forapw.domain.like.LikeService;
 import com.hong.forapw.domain.like.common.Like;
-import com.hong.forapw.domain.region.entity.RegionCode;
 import com.hong.forapw.domain.animal.repository.AnimalRepository;
 import com.hong.forapw.domain.animal.repository.FavoriteAnimalRepository;
-import com.hong.forapw.domain.region.RegionCodeRepository;
 import com.hong.forapw.domain.shelter.model.response.FindShelterAnimalsByIdRes;
 import com.hong.forapw.domain.shelter.model.response.FindShelterInfoByIdRes;
 import com.hong.forapw.domain.shelter.model.response.FindShelterListRes;
@@ -20,28 +18,19 @@ import com.hong.forapw.domain.shelter.model.response.FindShelterListWithAddrRes;
 import com.hong.forapw.integration.geocoding.model.Coordinates;
 import com.hong.forapw.integration.geocoding.service.GeocodingService;
 import com.hong.forapw.integration.geocoding.service.GoogleGeocodingService;
-import com.hong.forapw.domain.shelter.model.PublicShelterDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.net.URI;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
 
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
-import static com.hong.forapw.common.utils.UriUtils.buildShelterOpenApiURI;
 
 @Service
 @RequiredArgsConstructor
@@ -61,7 +50,7 @@ public class ShelterService {
         for (AnimalJsonDTO response : animalJsonResponse) {
             Shelter shelter = response.shelter();
             String animalJson = response.animalJson();
-            updateShelterFromAnimalJson(animalJson, shelter);
+            updateShelterByAnimalJson(animalJson, shelter);
         }
 
         updateShelterAddress(googleService);
@@ -115,17 +104,14 @@ public class ShelterService {
         shelterRepository.saveAll(shelterList);
     }
 
-    private void updateShelterFromAnimalJson(String animalJson, Shelter shelter) {
+    private void updateShelterByAnimalJson(String animalJson, Shelter shelter) {
         jsonParser.parse(animalJson, PublicAnimalDTO.class)
-                .ifPresent(animalDTO ->
-                        getFirstAnimalItem(animalDTO)
-                                .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
-                                        firstAnimalItem.careTel(),
-                                        firstAnimalItem.careAddr(),
-                                        countActiveAnimals(animalDTO),
-                                        shelter.getId()
-                                ))
-                );
+                .flatMap(this::getFirstAnimalItem)
+                .ifPresent(firstAnimalItem -> shelterRepository.updateShelterInfo(
+                        firstAnimalItem.careTel(),
+                        firstAnimalItem.careAddr(),
+                        shelter.getId()
+                ));
     }
 
     private Optional<PublicAnimalDTO.AnimalDTO> getFirstAnimalItem(PublicAnimalDTO animalDTO) {
@@ -136,17 +122,6 @@ public class ShelterService {
                 .map(PublicAnimalDTO.ItemsDTO::item)
                 .filter(items -> !items.isEmpty())
                 .map(items -> items.get(0));
-    }
-
-    private long countActiveAnimals(PublicAnimalDTO animalDTO) {
-        LocalDate currentDate = LocalDate.now().minusDays(1);
-        return animalDTO.response().body().items().item().stream()
-                .filter(animal -> isAnimalNoticeNotExpired(animal, currentDate))
-                .count();
-    }
-
-    private boolean isAnimalNoticeNotExpired(PublicAnimalDTO.AnimalDTO animal, LocalDate currentDate) {
-        return LocalDate.parse(animal.noticeEdt(), YEAR_HOUR_DAY_FORMAT).isAfter(currentDate);
     }
 
     private void updateShelterAddress(GeocodingService geocodingService) {
