@@ -4,7 +4,7 @@ import logging
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.core.config import settings
-from app.db.session import get_db_session
+from app.db.session import get_db_context
 from app.crud.animal import find_all_animals
 from typing import List, Tuple
 from redis.asyncio import Redis
@@ -23,12 +23,14 @@ async def init_redis():
     )
 
 async def get_cb_candidates(user_id: int, cb_top_k: int = 5) -> dict:
+    # Redis에서 사용자가 검색한 동물 ID 목록 조회
     search_key = f"animal:search:{user_id}"
     searched_animals_str = await redis_client.lrange(search_key, 0, -1)
     cb_scores = {}
 
     if searched_animals_str:
         searched_animals = list(map(int, searched_animals_str))
+        
         # 각 검색된 동물에 대해 유사 동물 목록을 조회하고 점수를 부여
         for animal_id in searched_animals:
             similar_ids = await _get_similar_animals(animal_id)
@@ -46,7 +48,7 @@ async def _get_similar_animals(animal_id: int) -> list:
     return list(map(int, similar_ids_str))
 
 async def update_animal_similarity_data(top_k: int = 5):
-    async for db in get_db_session():
+    async with get_db_context() as db:
         animals = await find_all_animals(db)
 
     if not animals:

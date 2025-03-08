@@ -15,11 +15,9 @@ public class GroupCacheService {
 
     private final RedisService redisService;
 
-
     public Set<String> getReadPostIds(Long userId) {
-        if (userId == null) {
+        if (userId == null)
             return Collections.emptySet(); // 유저 ID가 없는 경우 빈 Set 반환
-        }
 
         String key = POST_READ_KEY + userId;
         return redisService.getMembersOfSet(key);

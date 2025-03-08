@@ -62,7 +62,7 @@ public class CFDataExportService {
         // 각 유저의 상호작용 데이터를 stream으로 변환하여 InteractionDTO 리스트 생성
         List<InteractionDTO> interactions = userIds.stream()
                 .flatMap(userId -> extractInteractionsForUser(userId).stream())
-                .collect(Collectors.toList());
+                .toList();
 
         try {
             String jsonPayload = objectMapper.writeValueAsString(interactions);
@@ -90,7 +90,7 @@ public class CFDataExportService {
         return userInteractions.entrySet().stream()
                 .map(entry -> createInteractionDTO(userId, entry))
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private InteractionDTO createInteractionDTO(Long userId, Map.Entry<Object, Object> entry) {

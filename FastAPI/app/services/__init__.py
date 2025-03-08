@@ -1,7 +1,9 @@
-from .animal import (
+from .animal_introduction import (
     find_animals_without_introduction,
-    generate_animal_introduction,
-    update_animal_introductions,
+    update_animal_introductions
+)
+
+from .animal_recommendation import (
     hybrid_recommendation
 )
 
