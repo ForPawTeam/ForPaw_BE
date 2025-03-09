@@ -50,7 +50,6 @@ public class PostService {
     private final AlarmService alarmService;
     private final PostValidator validator;
 
-    private static final String POST_SCREENED = "이 게시글은 커뮤니티 규정을 위반하여 숨겨졌습니다.";
     private static final String COMMENT_DELETED = "삭제된 댓글 입니다.";
 
     @Transactional

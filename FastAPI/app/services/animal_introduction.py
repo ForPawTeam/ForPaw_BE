@@ -92,12 +92,18 @@ class AnimalIntroductionService:
             
         response_lines = response_text.strip().split('\n')
         
+        # 첫 번째 줄(제목) 이후부터 실제 내용이 시작되는 줄을 찾을 때까지 빈 줄을 무시
         if len(response_lines) < 2:
             logger.error(f"동물 ID {animal_id}에 대한 응답이 예상된 형식이 아닙니다: {response_text}")
             raise HTTPException(status_code=500, detail="생성된 소개글 형식이 잘못되었습니다.")
             
         title = response_lines[0].replace("Title: ", "").strip()
-        introduction = '\n'.join(response_lines[1:]).strip()
+
+        content_start_index = 1
+        while content_start_index < len(response_lines) and not response_lines[content_start_index].strip():
+            content_start_index += 1
+
+        introduction = '\n'.join(response_lines[content_start_index:]).strip()
         
         return title, introduction
 

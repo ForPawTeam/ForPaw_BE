@@ -22,3 +22,5 @@ class Animal(Base):
     introduction_content = Column(Text, nullable=True)
     name = Column(String(255))
     created_date = Column(DateTime, nullable=True)
+    process_state = Column(String(255))
+    weight = Column(String(255))

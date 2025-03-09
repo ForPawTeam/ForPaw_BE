@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from app.services.cb import update_animal_similarity_data
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ async def scheduled_update():
 
 def start_scheduler():
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
-    trigger = CronTrigger(hour=1, minute=0)  # 매일 새벽 1시 정각 실행
+    trigger = IntervalTrigger(hours=1)
     scheduler.add_job(
         lambda: asyncio.create_task(scheduled_update()),
         trigger=trigger,
