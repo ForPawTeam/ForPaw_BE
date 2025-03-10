@@ -7,7 +7,9 @@ from typing import Tuple, List
 
 from app.core.config import settings
 from app.db.session import get_db_context
-from app.crud.animal import find_animal_by_id, find_recent_animal_ids_with_null_title
+from app.db.session import get_db_context, get_background_db_session
+from app.crud.animal import find_animal_by_id, find_recent_animal_ids_with_null_title, update_animal_introduction
+from app.utils.retry import with_db_retry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -123,23 +125,20 @@ class AnimalIntroductionService:
     
     async def update_introductions_batch(self, animal_ids: List[int]) -> None:
         async with get_db_context() as db:
-            for i in range(0, len(animal_ids), BATCH_SIZE):  # 상수 사용
+            for i in range(0, len(animal_ids), BATCH_SIZE):
                 batch = animal_ids[i:i+BATCH_SIZE]
                 for animal_id in batch:
+                    # 별도 세션을 사용하여 각 동물 업데이트를 독립적인 트랜잭션으로 처리
+                    db = await get_background_db_session()
                     try:
                         title, introduction = await self.generate_introduction(animal_id)
-                        animal = await find_animal_by_id(db, animal_id)
-
-                        if animal:
-                            animal.introduction_title = title
-                            animal.introduction_content = introduction
-                            db.add(animal)
-                            logger.info(f"동물 ID {animal_id} 업데이트 완료.")
+                        await update_animal_introduction(db, animal_id, title, introduction)
+                        logger.info(f"동물 ID {animal_id} 업데이트 완료.")
                     except Exception as e:
                         logger.error(f"동물 ID {animal_id} 업데이트 실패: {str(e)}")
-                        # 배치의 나머지는 계속 처리
+                    finally:
+                        await db.close()  # 사용 후 세션 명시적으로 닫기
 
-                await db.commit()
                 logger.info(f"배치 업데이트(commit) 완료 - 동물 ID 배치: {batch}")
 
 # 의존성 주입 제공자
@@ -149,6 +148,7 @@ def get_introduction_service() -> AnimalIntroductionService:
 async def update_animal_introductions(animal_ids, service: AnimalIntroductionService):
     await service.update_introductions_batch(animal_ids)
 
+@with_db_retry(max_retries=3)
 async def find_animals_without_introduction():
     async with get_db_context() as db:
         animal_ids = await find_recent_animal_ids_with_null_title(db)

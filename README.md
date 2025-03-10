@@ -95,7 +95,7 @@ ii. 보호소는 일손 부족, 봉사자는 참여 기회 부족</br>
 > - FastAPI는 **OpenAI API**를 이용해 유기동물의 특징을 바탕으로 자연스러운 **소개글**을 작성하는 기능을 담당. </br>
 > - 공공 데이터 API는 유기동물 및 보호소의 **상세 정보**를 제공. 
 > - Google Maps API는 보호소 주소를 위도·경도로 변환하여 **위치** 데이터를 제공. </br>
-> - RabbitMQ는 채팅 시스템에서 **메시지 브로커** 역할을 하며, 안정적인 비동기 메시지 전송을 수행. </br>
+> - RabbitMQ는 채팅 시스템에서 **메시지 브로커** 역할을 하고, 안정적인 비동기 메시지 전송을 담당. </br>
 > - MongoDB는 채팅 데이터를 **저장**하여 대화 기록을 관리하고, 빠른 검색을 지원.
 > - JWT를 활용해 사용자 **인증**을 처리하고, Google OAuth 및 Kakao OAuth로 간편 로그인을 제공.
 </br>
@@ -105,12 +105,11 @@ ii. 보호소는 일손 부족, 봉사자는 참여 기회 부족</br>
 </br>
 
 > - 모든 트래픽은 Nginx(443 포트)를 통해 암호화된 **HTTPS**로만 접근 가능하며, Let’s Encrypt SSL 인증서를 적용하여 보안 강화.
-> - **내부 네트워크**에서만 Spring Boot ↔ MySQL, Redis, MongoDB, Milvus, FastAPI, RabbitMQ 간 통신 수행.
+> - **내부 네트워크**에서만 Spring Boot ↔ MySQL, Redis, MongoDB, FastAPI, RabbitMQ 간 통신 수행.
 > - Refresh Token은 httpOnly Secure 쿠키를 통해 전달되어 **XSS** 공격을 방지하고, SameSite 속성을 설정하여 **CSRF** 공격을 차단.
-> - Access Token **만료** 시, Next.js가 Refresh Token을 활용하여 Spring Boot에서 새 Access Token을 **자동 발급**.
-> - Next.js가 **API Gateway** 역할을 수행, 모든 API 요청을 사전에 검증한 후 Spring Boot로 전달하여 추가적인 보안 계층을 제공.
+> - Access Token **만료** 시, Next.js가 Refresh Token을 활용하여 Spring Boot에  새로운 Access Token **발급** 요청.
 > - JPA의 **파리미터 바인딩**을 활용한 안전한 쿼리 실행으로 **SQL Injection** 방지.
-> - Nginx에서 **Rate Limiting**을 적용하여 대량의 요청 차단 및 **CORS** 정책을 통해 허용된 도메인에서만 API 접근 가능.
+> - **Rate Limiting**을 적용하여 대량의 요청을 차단하고, **CORS** 정책을 통해 허용된 도메인에서만 API 접근 가능하도록 설정.
 
 </br>
 
@@ -131,14 +130,13 @@ ii. 보호소는 일손 부족, 봉사자는 참여 기회 부족</br>
 ### 2.2. 사용 기술
 | 번호 | 기술          | 버전  | 번호 | 기술         | 버전  |
 |:----:|:------------:|:-----:|:----:|:-----------:|:-----:|
-| 1    | MySQL        | 8.0.33 | 9   | NextJS      | 12    |
-| 2    | Java JDK     | 17.0.9 | 10  | Junit5      | 5.10.2 |
-| 3    | JWT          | 4.3.0  | 11  | Nginx       | 1.26  |
-| 4    | MongoDB      | 2.2.0  | 12  | Tailwind CSS| 3.4.3 |
-| 5    | RabbitMQ     | 3.13.0 | 13  | Jenkins     | 2.452.2 |
-| 6    | FastAPI      | 0.110.3 | 14  | Gradle      | 8.5 |
-| 7    | Spring Boot  | 3.2.0  | 15  | Figma       | UI3 |
-| 8    | Milvus       | 2.4.1  |     |             |       |
+| 1    | MySQL        | 8.0.33 | 8   | NextJS      | 12    |
+| 2    | Java JDK     | 17.0.9 | 9   | Junit5      | 5.10.2 |
+| 3    | JWT          | 4.3.0  | 10  | Nginx       | 1.26  |
+| 4    | MongoDB      | 2.2.0  | 11  | Tailwind CSS| 3.4.3 |
+| 5    | RabbitMQ     | 3.13.0 | 12  | Jenkins     | 2.452.2 |
+| 6    | FastAPI      | 0.110.3 | 13  | Gradle      | 8.5 |
+| 7    | Spring Boot  | 3.2.0  | 14  | Figma       | UI3 |
 </br>
 
 ## 3. 개발결과
