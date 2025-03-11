@@ -1,8 +1,10 @@
-# app/api/cf.py
+# app/api/recommendation.py
 import math
 from typing import List
 from fastapi import APIRouter
 from app.schemas.cf import InteractionDTO
+from fastapi import BackgroundTasks
+from app.services.cb import update_animal_similarity_data
 from app.services.cf import (train_cf_model, build_cf_recommendations, store_cf_results_in_redis)
 
 router = APIRouter()
@@ -10,6 +12,18 @@ router = APIRouter()
 ALPHA = 1.0    # 좋아요 가중치
 BETA = 0.2     # 조회수 가중치
 GAMMA = 2.0    # 문의 가중치
+
+@router.post("/cb/update/similarity")
+async def update_similarity(background_tasks: BackgroundTasks):
+    """
+    동물 유사도 데이터를 업데이트
+    """
+    # 백그라운드 작업으로 처리하여 응답 지연 방지
+    background_tasks.add_task(update_animal_similarity_data, top_k=5)
+    return {
+        "status": "success", 
+        "message": "동물 유사도 데이터 업데이트 작업이 백그라운드에서 시작되었습니다."
+    }
 
 @router.post("/cf/import")
 async def import_interactions(interactions: List[InteractionDTO]):

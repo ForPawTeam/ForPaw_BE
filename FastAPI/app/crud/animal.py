@@ -54,16 +54,10 @@ async def find_all_groups(db):
 
 @with_db_retry(max_retries=3)
 async def update_animal_introduction(db, animal_id: int, title: str, content: str):
-    try:
-        animal = await find_animal_by_id(db, animal_id)
-        if animal:
-            animal.introduction_title = title
-            animal.introduction_content = content
-            db.add(animal)
-            await db.commit()
-            return True
-        return False
-    except SQLAlchemyError as e:
-        await db.rollback()
-        logger.error(f"Error updating animal introduction for ID {animal_id}: {str(e)}")
-        raise
+    animal = await find_animal_by_id(db, animal_id)
+    if animal:
+        animal.introduction_title = title
+        animal.introduction_content = content
+        db.add(animal)
+        return True
+    return False

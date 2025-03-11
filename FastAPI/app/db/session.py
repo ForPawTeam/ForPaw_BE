@@ -36,16 +36,19 @@ async def get_db_context():
         await session.commit()
     except Exception as e:
         await session.rollback()
-        logger.error(f"Database session error: {str(e)}")
         raise
     finally:
-        await session.close()
+        await session.close()  # 항상 세션 닫기
 
-async def get_background_db_session():
+@asynccontextmanager
+async def get_background_db_context():
     session = AsyncSessionLocal()
     try:
-        return session
+        yield session
+        await session.commit()
     except Exception as e:
-        await session.close()
-        logger.error(f"Failed to create background session: {str(e)}")
+        await session.rollback()
+        logger.error(f"백그라운드 작업 중 데이터베이스 오류: {str(e)}")
         raise
+    finally:
+        await session.close()  # 항상 세션 닫기

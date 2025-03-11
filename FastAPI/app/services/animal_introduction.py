@@ -4,17 +4,16 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from fastapi import HTTPException
 from typing import Tuple, List
-
 from app.core.config import settings
 from app.db.session import get_db_context
-from app.db.session import get_db_context, get_background_db_session
+from app.db.session import get_db_context, get_background_db_context
 from app.crud.animal import find_animal_by_id, find_recent_animal_ids_with_null_title, update_animal_introduction
 from app.utils.retry import with_db_retry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 5  # 배치 처리 크기
+BATCH_SIZE = 5
 
 class AnimalIntroductionService:
 
@@ -124,29 +123,36 @@ class AnimalIntroductionService:
             return self._parse_response(response_text, animal_id)
     
     async def update_introductions_batch(self, animal_ids: List[int]) -> None:
-        async with get_db_context() as db:
-            for i in range(0, len(animal_ids), BATCH_SIZE):
-                batch = animal_ids[i:i+BATCH_SIZE]
-                for animal_id in batch:
-                    # 별도 세션을 사용하여 각 동물 업데이트를 독립적인 트랜잭션으로 처리
-                    db = await get_background_db_session()
-                    try:
-                        title, introduction = await self.generate_introduction(animal_id)
-                        await update_animal_introduction(db, animal_id, title, introduction)
-                        logger.info(f"동물 ID {animal_id} 업데이트 완료.")
-                    except Exception as e:
-                        logger.error(f"동물 ID {animal_id} 업데이트 실패: {str(e)}")
-                    finally:
-                        await db.close()  # 사용 후 세션 명시적으로 닫기
+        for i in range(0, len(animal_ids), BATCH_SIZE):
+            batch = animal_ids[i:i+BATCH_SIZE]
+            
+            for animal_id in batch:
+                try:
+                    # 컨텍스트 매니저를 사용하여 세션 자동 관리
+                    async with get_background_db_context() as db:
+                        animal = await find_animal_by_id(db, animal_id)
+                        if animal and not animal.introduction_title:
+                            title, introduction = await self.generate_introduction(animal_id)
+                            await update_animal_introduction(db, animal_id, title, introduction)
+                            logger.info(f"동물 ID {animal_id} 업데이트 완료.")
+                        else:
+                            logger.info(f"동물 ID {animal_id}는 이미 소개글이 있거나 존재하지 않습니다.")
+                except Exception as e:
+                    logger.error(f"동물 ID {animal_id} 업데이트 실패: {str(e)}")
 
-                logger.info(f"배치 업데이트(commit) 완료 - 동물 ID 배치: {batch}")
+            logger.info(f"배치 업데이트 완료 - 동물 ID 배치: {batch}")
 
 # 의존성 주입 제공자
 def get_introduction_service() -> AnimalIntroductionService:
     return AnimalIntroductionService()
 
 async def update_animal_introductions(animal_ids, service: AnimalIntroductionService):
-    await service.update_introductions_batch(animal_ids)
+    try:
+        await service.update_introductions_batch(animal_ids)
+    except Exception as e:
+        logger.error(f"동물 소개글 업데이트 중 오류 발생: {str(e)}")
+    finally:
+        logger.info(f"{len(animal_ids)}개 동물 소개글 업데이트 작업 완료")
 
 @with_db_retry(max_retries=3)
 async def find_animals_without_introduction():

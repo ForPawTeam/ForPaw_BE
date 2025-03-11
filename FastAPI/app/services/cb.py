@@ -6,7 +6,7 @@ from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.core.config import settings
-from app.db.session import get_db_context
+from app.db.session import get_background_db_context
 from app.crud.animal import find_all_animals
 from typing import List, Tuple, Dict, Any
 from redis.asyncio import Redis
@@ -91,23 +91,33 @@ async def update_animal_similarity_data(top_k: int = 5):
     Args
         top_k: 각 동물마다 저장할 유사 동물 수
     """
-    async with get_db_context() as db:
-        animals = await find_all_animals(db)
+    try:
+        # 컨텍스트 매니저를 사용하여 세션 자동 관리
+        async with get_background_db_context() as db:
+            logger.info("동물 데이터 조회 중...")
+            animals = await find_all_animals(db)
 
-    if not animals:
-        logger.warning("동물 데이터가 없습니다.")
-        return
+            if not animals:
+                logger.warning("동물 데이터가 없습니다.")
+                return
 
-    # 동물 데이터 전처리 및 특성 추출
-    animal_features, animal_ids = _prepare_animal_features(animals)
+            # 동물 데이터 전처리 및 특성 추출
+            logger.info(f"{len(animals)}개 동물 데이터 전처리 중...")
+            animal_features, animal_ids = _prepare_animal_features(animals)
 
-    # 특성 가중치 적용 및 유사도 계산 -> 모든 동물 쌍 간 유사도를 담은 NxN 행렬 생성
-    sim_matrix = _compute_similarity(animal_features)
+            # 특성 가중치 적용 및 유사도 계산
+            logger.info("유사도 계산 중...")
+            sim_matrix = _compute_similarity(animal_features)
 
-    # 각 동물별 상위 top_k 유사 동물 ID를 Redis에 저장
-    await _store_similar_animals_in_redis(animal_ids, sim_matrix, top_k)
+            # 각 동물별 상위 top_k 유사 동물 ID를 Redis에 저장
+            logger.info("Redis에 유사도 데이터 저장 중...")
+            await _store_similar_animals_in_redis(animal_ids, sim_matrix, top_k)
 
-    logger.info(f"동물별 상위 {top_k} 유사 동물 정보를 Redis에 저장 완료.")
+            logger.info(f"동물별 상위 {top_k} 유사 동물 정보를 Redis에 저장 완료.")
+    
+    except Exception as e:
+        logger.error(f"동물 유사도 데이터 업데이트 중 오류 발생: {str(e)}")
+        raise
 
 def _prepare_animal_features(animals) -> Tuple[List[Dict[str, Any]], List[int]]:
     animal_features = []

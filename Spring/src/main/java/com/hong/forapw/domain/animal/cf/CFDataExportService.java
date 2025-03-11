@@ -26,12 +26,6 @@ import static com.hong.forapw.common.constants.GlobalConstants.USER_ANIMAL_INTER
 public class CFDataExportService {
 
     private final RedisService redisService;
-    private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
-    private final WebClient webClient;
-
-    @Value("${cf.export.uri}")
-    private String exportUrl;
 
     private static final String FIELD_FORMAT = "like=%d,view=%d,inquiry=%d";
 
@@ -55,34 +49,7 @@ public class CFDataExportService {
         redisService.setHashValue(USER_ANIMAL_INTERACTION_KEY, String.valueOf(userId), field, newValue);
     }
 
-    @Scheduled(cron = "0 0 10 * * *", zone = "Asia/Seoul")
-    public void exportInteractionsToFastAPI() {
-        List<Long> userIds = userRepository.findAllIds();
-
-        // 각 유저의 상호작용 데이터를 stream으로 변환하여 InteractionDTO 리스트 생성
-        List<InteractionDTO> interactions = userIds.stream()
-                .flatMap(userId -> extractInteractionsForUser(userId).stream())
-                .toList();
-
-        try {
-            String jsonPayload = objectMapper.writeValueAsString(interactions);
-            webClient.post()
-                    .uri(exportUrl)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(jsonPayload))
-                    .retrieve()
-                    .bodyToMono(Void.class)
-                    .onErrorResume(e -> {
-                        log.warn("FastAPI 호출 시 에러 발생: {}", e.getMessage());
-                        return Mono.empty();
-                    })
-                    .block();
-        } catch (JsonProcessingException e) {
-            log.error("상호작용 데이터를 JSON으로 변환 중 에러 발생", e);
-        }
-    }
-
-    private List<InteractionDTO> extractInteractionsForUser(Long userId) {
+    public List<InteractionDTO> extractInteractionsForUser(Long userId) {
         Map<Object, Object> userInteractions = redisService.getHashEntries(USER_ANIMAL_INTERACTION_KEY, String.valueOf(userId));
         if (userInteractions == null) {
             return Collections.emptyList();
