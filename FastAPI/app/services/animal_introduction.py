@@ -17,7 +17,7 @@ BATCH_SIZE = 5
 
 class AnimalIntroductionService:
 
-    def __init__(self, model_name: str = "gpt-4o-mini", temperature: float = 0.5, max_tokens: int = 750):
+    def __init__(self, model_name: str = "gpt-4o-mini", temperature: float = 0.5, max_tokens: int = 600):
         self.model_name = model_name
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -25,47 +25,39 @@ class AnimalIntroductionService:
 
     def _create_prompt(self, animal) -> str:
         return (
-            "### Persona ###\n"
-            "1. You are a compassionate shelter staff member writing an engaging introduction for an animal seeking adoption.\n"
-            "2. Your goal is to create an emotional connection between potential adopters and the animal.\n"
-            
-            "### Animal Information ###\n"
-            f"Name: {animal.name}\n"
-            f"Species: {animal.kind}\n"
-            f"Gender: {'Male' if animal.gender == 'M' else 'Female'}\n"
-            f"Spayed/Neutered: {'Yes' if animal.neuter == 'Y' else 'No'}\n"
-            f"Color: {animal.color}\n"
-            f"Approximate Age: {animal.age}\n"
-            f"Location Found: {animal.happen_place}\n"
-            f"Special Characteristics: {animal.special_mark}\n"
-            
-            "### Personality Profile ###\n"
-            "1. Describe 2-3 endearing personality traits (playful, gentle, loyal, etc.) that make this animal special.\n"
-            "2. Mention how the animal interacts with humans (enjoys being petted, follows people, etc.).\n"
-            "3. If applicable, describe how the animal gets along with other animals or children.\n"
-            
-            "### Story Elements ###\n"
-            f"1. {animal.name} was found in {animal.happen_place} and has shown remarkable resilience.\n"
-            "2. Include a short heartwarming anecdote about a positive interaction with shelter staff.\n"
-            "3. Paint a picture of how this animal could enrich someone's home and daily life.\n"
-            
-            "### Title ###\n"
-            "1. Create an attention-grabbing, heartwarming title in Korean (25 characters or fewer).\n"
-            f"2. Format suggestion: {animal.happen_place}'에서 발견된' {animal.age}'살' {animal.name} - [unique trait].\n"
-            "3. Include only the city/district without detailed address.\n"
-            
-            "### Response Format ###\n"
-            "1. First line: Title prefixed with 'Title: '\n"
-            "2. Two newline characters (\\n\\n)\n"
-            "3. Introduction text\n"
-            "4. Final line: Brief, warm call to action encouraging adoption inquiry\n"
-            
-            "### Writing Guidelines ###\n"
-            "1. Provide the introduction in Korean.\n"
-            "2. Write from the perspective of a shelter staff member who cares for the animal. Use a tone that conveys warmth and care. More than half of the sentences should end with '요' to maintain a gentle tone."
-            "3. Keep the text between 150 and 230 characters and avoid using negative language. "
-            "4. Avoid repetition.\n"
-            "5. Include details about the animal's characteristics, gender, and approximate age throughout the description."
+        "### Persona ###\n"
+        "1. Your task is to write a introduction for the animal based on the following information.\n"
+        "2. Highlight the animal's positive traits and suitability as a pet to encourage potential adopters.\n"
+        
+        "### Animal Information ###\n"
+        f"Name: {animal.name}\n"
+        f"Species: {animal.kind}\n"
+        f"Gender: {'Male' if animal.gender == 'M' else 'Female'}\n"
+        f"Spayed/Neutered: {'Yes' if animal.neuter == 'Y' else 'No'}\n"
+        f"Color: {animal.color}\n"
+        f"Approximate Age: {animal.age}\n"
+        f"Location Found: {animal.happen_place}\n"
+        f"Special Characteristics: {animal.special_mark}\n"
+        
+        "### Background ###\n"
+        f"{animal.name}, a {animal.kind}, was found in {animal.happen_place}. Known for its {animal.special_mark} and unique {animal.color} coat, {animal.name} has shown loving nature despite its circumstances.\n"
+        
+        "### Title ###\n"
+        "1. Provide a normal title for the introduction in Korean.\n"
+        "2. The title should be 25 characters or fewer.\n"
+        "3. Please include only the city/district without the detailed address for {animal.happen_place}. {animal.happen_place}'에서 발견된' {animal.age}'살' {animal.name}.\n"
+        
+        "### Response Format ###\n"
+        "1. The first line should be the title, prefixed with 'Title: '.\n"
+        "2. After the title, there should be two newline characters (\\n\\n).\n"
+        "3. The introduction should follow after the newline characters.\n"
+        
+        "### Writing Guidelines ###\n"
+        "1. Provide the introduction in Korean.\n"
+        "2. Write from the perspective of a shelter staff member who cares for the animal. Use a tone that conveys warmth and care. More than half of the sentences should end with '요' to maintain a gentle tone."
+        "3. Keep the text between 150 and 230 characters and avoid using negative language. "
+        "4. Avoid repetition.\n"
+        "5. Include details about the animal's characteristics, gender, and approximate age throughout the description."
         )
 
     async def _generate_text_with_llm(self, prompt: str) -> str:

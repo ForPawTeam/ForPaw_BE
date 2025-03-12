@@ -1,6 +1,8 @@
 # services/cf.py
 import logging
+import math
 import pandas as pd
+from app.schemas.cf import InteractionDTO
 from redis.asyncio import Redis
 from surprise import Dataset, Reader, SVD
 from surprise import accuracy
@@ -10,6 +12,10 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 redis_client = None
+
+ALPHA = 1.0    # 좋아요 가중치
+BETA = 0.2     # 조회수 가중치
+GAMMA = 2.0    # 문의 가중치
 
 async def init_redis():
     global redis_client
@@ -43,6 +49,53 @@ async def get_cf_candidates(user_id: int) -> Dict[int, float]:
             except ValueError:
                 continue
     return cf_scores
+
+async def process_interactions(interactions: List[InteractionDTO]) -> None:
+    """
+    작동 과정
+    1. 각 상호작용을 가중치를 적용한 단일 점수로 변환
+    2. 변환된 데이터로 협업 필터링 모델 학습
+    3. 각 사용자에 대한 추천 결과 생성 및 Redis에 저장
+    """
+    logger.info(f"{len(interactions)}개 상호작용 데이터 처리 시작")
+    
+    # 상호작용 데이터가 없는 경우 조기 반환
+    if not interactions:
+        logger.warning("처리할 상호작용 데이터가 없습니다.")
+        return
+    
+    try:
+        # 상호작용 데이터에 가중치 적용하여 단일 점수로 변환
+        computed_interactions = []
+        for inter in interactions:
+            # 가중 합산 => (좋아요 × ALPHA) + (log(조회수+1) × BETA) + (문의 수 × GAMMA)
+            # log 변환은 조회수가 많더라도 점수가 지나치게 커지는 것을 방지
+            rating = ALPHA * inter.like_count + BETA * math.log(1 + inter.view_count) + GAMMA * inter.inquiry_count
+            computed_interactions.append({
+                "user_id": inter.user_id,
+                "animal_id": inter.animal_id,
+                "rating": rating
+            })
+        
+        logger.info(f"가중치 적용된 상호작용 데이터 {len(computed_interactions)}개 생성 완료")
+        
+        # 협업 필터링 모델 학습
+        algo = await train_cf_model(computed_interactions)
+        if algo is None:
+            return
+        
+        user_ids = list({entry["user_id"] for entry in computed_interactions})
+        animal_ids = list({entry["animal_id"] for entry in computed_interactions})
+        logger.info(f"사용자 {len(user_ids)}명, 동물 {len(animal_ids)}마리에 대한 추천 생성 중")
+        
+        # 각 사용자에 대해 상위 top_n 추천 동물 목록  생성
+        cf_results = await build_cf_recommendations(algo, user_ids, animal_ids, top_n=5)
+        
+        await store_cf_results_in_redis(cf_results)
+        logger.info(f"협업 필터링 추천 결과 생성 및 저장 완료 (사용자 {len(cf_results)}명)")
+        
+    except Exception as e:
+        logger.error(f"상호작용 데이터 처리 중 오류 발생: {str(e)}")
 
 async def train_cf_model(interactions: List[Dict[str, Any]]):
     """
