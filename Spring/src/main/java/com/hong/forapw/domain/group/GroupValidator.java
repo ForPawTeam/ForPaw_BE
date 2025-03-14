@@ -44,10 +44,7 @@ public class GroupValidator {
     }
 
     public void validateNotAlreadyGroupMember(Long groupId, Long userId) {
-        GroupUser groupUser = groupUserRepository.findByGroupIdAndUserId(groupId, userId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.NOT_GROUP_MEMBER));
-
-        if (groupUser.isMember()) {
+        if (groupUserRepository.existsByGroupIdAndUserId(groupId, userId)) {
             throw new CustomException(ExceptionCode.ALREADY_IN_GROUP);
         }
     }
