@@ -11,8 +11,8 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     future=True,
     echo=False,
-    pool_size=5,                  # 기본 연결 풀 크기
-    max_overflow=10,              # 최대 추가 연결 수
+    pool_size=10,                  # 기본 연결 풀 크기
+    max_overflow=20,              # 최대 추가 연결 수
     pool_timeout=30,              # 연결 획득 타임아웃 (초)
     pool_recycle=1800,            # 연결 재활용 시간 (30분)
     pool_pre_ping=True,           # 연결 사용 전 상태 확인 (끊긴 연결 감지)
