@@ -1,14 +1,10 @@
 package com.hong.forapw.integration.rabbitmq;
 
 import com.hong.forapw.domain.alarm.AlarmService;
-import com.hong.forapw.domain.alarm.constant.AlarmType;
-import com.hong.forapw.domain.chat.entity.Message;
-import com.hong.forapw.domain.chat.model.request.ChatObjectDTO;
+import com.hong.forapw.domain.chat.ChatService;
+import com.hong.forapw.domain.chat.MessageService;
 import com.hong.forapw.domain.chat.model.MessageDTO;
-import com.hong.forapw.domain.group.constant.GroupRole;
-import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
-import com.hong.forapw.domain.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
@@ -20,10 +16,6 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
 import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
 import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
 
@@ -33,14 +25,13 @@ import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX
 public class RabbitMqService {
 
     private final ChatRoomRepository chatRoomRepository;
-    private final MessageRepository messageRepository;
     private final RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry;
     private final SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory;
     private final RabbitTemplate rabbitTemplate;
     private final AmqpAdmin amqpAdmin;
     private final MessageConverter converter;
     private final AlarmService alarmService;
-
+    private final MessageService messageService;
 
     @Transactional
     public void initChatListener() {
@@ -52,11 +43,6 @@ public class RabbitMqService {
                     bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
                     registerChatListener(listenerId, queueName);
                 });
-    }
-
-    public void registerDirectExchange(String exchangeName) {
-        DirectExchange fanoutExchange = new DirectExchange(exchangeName);
-        amqpAdmin.declareExchange(fanoutExchange);
     }
 
     public void bindDirectExchangeToQueue(String exchangeName, String queueName) {
@@ -71,11 +57,10 @@ public class RabbitMqService {
 
     public void registerChatListener(String listenerId, String queueName) {
         SimpleRabbitListenerEndpoint endpoint = createRabbitListenerEndpoint(listenerId, queueName);
-
         endpoint.setMessageListener(m -> {
             MessageDTO messageDTO = convertToMessageDTO(m);
-            saveMessage(messageDTO);
-            notifyChatRoomUsers(messageDTO);
+            messageService.saveMessage(messageDTO);
+            alarmService.sendAlarmToChatRoomUsers(messageDTO);
         });
 
         rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
@@ -92,28 +77,6 @@ public class RabbitMqService {
 
     private MessageDTO convertToMessageDTO(org.springframework.amqp.core.Message m) {
         return (MessageDTO) converter.fromMessage(m);
-    }
-
-    private void saveMessage(MessageDTO messageDTO) {
-        List<String> objectURLs = Optional.ofNullable(messageDTO.objects())
-                .orElse(Collections.emptyList())
-                .stream()
-                .map(ChatObjectDTO::objectURL)
-                .toList();
-
-        Message message = messageDTO.toEntity(objectURLs);
-        messageRepository.save(message);
-    }
-
-    private void notifyChatRoomUsers(MessageDTO messageDTO) {
-        List<User> users = chatRoomRepository.findUsersByChatRoomIdExcludingRole(messageDTO.chatRoomId(), GroupRole.TEMP);
-        users.forEach(user -> sendAlarmForNewMessage(user, messageDTO));
-    }
-
-    private void sendAlarmForNewMessage(User user, MessageDTO messageDTO) {
-        String content = "새로운 메시지: " + messageDTO.content();
-        String redirectURL = "/chatting/" + messageDTO.chatRoomId();
-        alarmService.sendAlarm(user.getId(), content, redirectURL, AlarmType.CHATTING);
     }
 
     private SimpleRabbitListenerEndpoint createRabbitListenerEndpoint(String listenerId, String queueName) {

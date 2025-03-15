@@ -78,12 +78,6 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         return new DirectExchange("chat.exchange");
     }
 
-    // 알람을 위한 Exchange
-    @Bean
-    DirectExchange alarmExchange() {
-        return new DirectExchange("alarm.exchange");
-    }
-
     @Override
     public void configureRabbitListeners(RabbitListenerEndpointRegistrar registrar) {
         registrar.setContainerFactory(rabbitListenerContainerFactory());

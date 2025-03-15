@@ -8,6 +8,9 @@ import com.hong.forapw.domain.alarm.model.response.AlarmDTO;
 import com.hong.forapw.domain.alarm.model.response.FindAlarmListRes;
 import com.hong.forapw.domain.alarm.repository.AlarmRepository;
 import com.hong.forapw.domain.alarm.repository.EmitterRepository;
+import com.hong.forapw.domain.chat.model.MessageDTO;
+import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
+import com.hong.forapw.domain.group.constant.GroupRole;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ public class AlarmService {
     private final AlarmRepository alarmRepository;
     private final UserRepository userRepository;
     private final EmitterRepository emitterRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60;
     private static final String SSE_EVENT_NAME = "sse";
@@ -68,6 +72,17 @@ public class AlarmService {
 
         alarmRepository.save(alarm);
         sendAlarmViaSSE(alarm);
+    }
+
+    @Transactional
+    public void sendAlarmToChatRoomUsers(MessageDTO messageDTO) {
+        List<User> users = chatRoomRepository.findUsersByChatRoomIdExcludingRole(messageDTO.chatRoomId(), GroupRole.TEMP);
+
+        users.forEach(user -> {
+            String content = "새로운 메시지: " + messageDTO.content();
+            String redirectURL = "/chatting/" + messageDTO.chatRoomId();
+            internalSendAlarm(user.getId(), content, redirectURL);
+        });
     }
 
     public FindAlarmListRes findAlarms(Long userId) {
@@ -133,5 +148,18 @@ public class AlarmService {
 
     private String createTimestampedId(String userId) {
         return userId + "_" + System.currentTimeMillis();
+    }
+
+    private void internalSendAlarm(Long receiverId, String content, String redirectURL) {
+        User receiver = userRepository.getReferenceById(receiverId);
+        Alarm alarm = Alarm.builder()
+                .receiver(receiver)
+                .content(content)
+                .redirectURL(redirectURL)
+                .alarmType(AlarmType.CHATTING)
+                .build();
+
+        alarmRepository.save(alarm);
+        sendAlarmViaSSE(alarm);
     }
 }

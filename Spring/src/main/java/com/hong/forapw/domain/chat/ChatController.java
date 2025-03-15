@@ -25,7 +25,7 @@ public class ChatController {
 
     @PostMapping("/chat/send")
     public ResponseEntity<?> sendMessage(@RequestBody SendMessageReq request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        SendMessageRes response = chatService.sendMessage(request, userDetails.getUserId(), userDetails.getUsername());
+        SendMessageRes response = chatService.sendChat(request, userDetails.getUserId(), userDetails.getUsername());
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -38,7 +38,7 @@ public class ChatController {
     @GetMapping("/chatRooms/{chatRoomId}/messages")
     public ResponseEntity<?> findMessageListInRoom(@PathVariable Long chatRoomId,
                                                    @PageableDefault(size = 50, sort = SORT_BY_MESSAGE_DATE, direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        FindMessagesInRoomRes response = chatService.findMessagesInRoom(chatRoomId, userDetails.getUserId(), pageable);
+        FindMessagesInRoomRes response = chatService.findChatInRoom(chatRoomId, userDetails.getUserId(), pageable);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 
@@ -71,7 +71,7 @@ public class ChatController {
 
     @PostMapping("/chat/{chatId}/read")
     public ResponseEntity<?> readMessage(@PathVariable String chatId) {
-        ReadMessageRes response = chatService.readMessage(chatId);
+        ReadMessageRes response = chatService.readChat(chatId);
         return ResponseEntity.ok().body(ApiUtils.success(HttpStatus.OK, response));
     }
 }

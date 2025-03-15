@@ -42,12 +42,12 @@ public class ChatService {
     private final RabbitMqService rabbitMqService;
 
     @Transactional
-    public SendMessageRes sendMessage(SendMessageReq request, Long senderId, String senderNickName) {
+    public SendMessageRes sendChat(SendMessageReq request, Long senderId, String senderNickName) {
         validateChatAuthorization(senderId, request.chatRoomId());
 
         String messageId = UUID.randomUUID().toString();
         LinkMetadata metadata = extractMetadataIfApplicable(request);
-        String senderProfileURL = getUserProfileURL(senderId);
+        String senderProfileURL = findSenderProfileURL(senderId);
 
         MessageDTO messageDTO = new MessageDTO(request, senderNickName, messageId, metadata, senderProfileURL, senderId);
         publishMessageToBroker(request.chatRoomId(), messageDTO);
@@ -66,7 +66,7 @@ public class ChatService {
     }
 
     @Transactional
-    public FindMessagesInRoomRes findMessagesInRoom(Long chatRoomId, Long userId, Pageable pageable) {
+    public FindMessagesInRoomRes findChatInRoom(Long chatRoomId, Long userId, Pageable pageable) {
         String nickName = userRepository.findNickname(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
 
@@ -126,7 +126,7 @@ public class ChatService {
     }
 
     @Transactional
-    public ReadMessageRes readMessage(String messageId) {
+    public ReadMessageRes readChat(String messageId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.MESSAGE_NOT_FOUND));
 
@@ -152,7 +152,7 @@ public class ChatService {
         return null;
     }
 
-    private String getUserProfileURL(Long senderId) {
+    private String findSenderProfileURL(Long senderId) {
         return userRepository.findProfileURL(senderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_FOUND));
     }
