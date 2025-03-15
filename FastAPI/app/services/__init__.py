@@ -9,14 +9,12 @@ from .animal_recommendation import (
 
 from .cb import (
     update_animal_similarity_data,
-    get_cb_candidates,
-    init_redis as init_redis_cb
+    get_cb_candidates
 )
 
 from .cf import (
     train_cf_model,
     build_cf_recommendations,
     store_cf_results_in_redis,
-    get_cf_candidates,
-    init_redis as init_redis_cf
+    get_cf_candidates
 )

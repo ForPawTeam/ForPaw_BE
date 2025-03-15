@@ -3,28 +3,17 @@ import logging
 import math
 import pandas as pd
 from app.schemas.cf import InteractionDTO
-from redis.asyncio import Redis
 from surprise import Dataset, Reader, SVD
 from surprise import accuracy
 from surprise.model_selection import train_test_split
 from typing import List, Dict, Any
-from app.core.config import settings
+from app.db.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
-redis_client = None
 
 ALPHA = 1.0    # 좋아요 가중치
 BETA = 0.2     # 조회수 가중치
 GAMMA = 2.0    # 문의 가중치
-
-async def init_redis():
-    global redis_client
-    redis_client = Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        decode_responses=True
-    )
 
 async def get_cf_candidates(user_id: int) -> Dict[int, float]:
     """
@@ -34,6 +23,8 @@ async def get_cf_candidates(user_id: int) -> Dict[int, float]:
         추천 동물 ID와 정규화된 점수를 포함하는 맵 {animal_id: score}
         - 점수는 순위에 기반하며, 상위 항목일수록 높은 점수 (1.0~0.0)
     """
+    redis_client = await get_redis_client()
+
     # Redis에서 추천 리스트 가져오기
     key = f"CF:{user_id}"
     cf_candidates_str = await redis_client.lrange(key, 0, -1)
@@ -187,6 +178,8 @@ async def store_cf_results_in_redis(cf_results: Dict[int, List[int]]):
     - 키: "CF:{user_id}"
     - 값: 추천 동물 ID 리스트 (순서 중요)
     """ 
+    redis_client = await get_redis_client()
+
     for user_id, animal_ids in cf_results.items():
         key = f"CF:{user_id}"
         await redis_client.delete(key)

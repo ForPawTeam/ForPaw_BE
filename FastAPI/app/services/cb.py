@@ -5,15 +5,13 @@ import re
 from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from app.core.config import settings
 from app.db.session import get_background_db_context
 from app.crud.animal import find_all_animals
 from typing import List, Tuple, Dict, Any
-from redis.asyncio import Redis
+from app.db.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 vectorizer = TfidfVectorizer()
-redis_client = None
 
 FEATURE_WEIGHTS = {
     'kind': 3.0,        # 동물 종은 매우 중요한 요소
@@ -26,15 +24,6 @@ FEATURE_WEIGHTS = {
     'special_mark': 1.0 # 특징은 중간 정도 중요
 }
 
-async def init_redis():
-    global redis_client
-    redis_client = Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        decode_responses=True
-    )
-
 async def get_cb_candidates(user_id: int, cb_top_k: int = 5) -> dict:
     """
     특정 사용자를 위한 콘텐츠 기반 추천 후보 목록과 점수 반환
@@ -45,9 +34,11 @@ async def get_cb_candidates(user_id: int, cb_top_k: int = 5) -> dict:
     3. 유사한 동물에 순위 기반 점수 부여 (상위 항목일수록 높은 점수)
     4. 여러 검색 결과에서 나온 동물들의 점수를 합산
         
-    Returns:
+    Returns
         유사 동물 ID와 점수를 포함하는 맵 {animal_id: score}
     """
+    redis_client = await get_redis_client()
+
     # Redis에서 사용자가 검색한 동물 ID 목록 조회
     search_key = f"animal:search:{user_id}"
     searched_animals_str = await redis_client.lrange(search_key, 0, -1)
@@ -61,21 +52,21 @@ async def get_cb_candidates(user_id: int, cb_top_k: int = 5) -> dict:
             similar_ids = await _get_similar_animals(animal_id)
             if similar_ids:
                 # 상위 cb_top_k개 동물만 고려하여 점수 부여
-                # 0부터 시작하는 인덱스이므로 순위는 i+1이 되어야 하지만,
-                # 내림차순 점수를 위해 (cb_top_k - i) / cb_top_k 공식 사용
+                # 0부터 시작하는 인덱스이므로 순위는 i+1이 되어야 하지만, 내림차순 점수를 위해 (cb_top_k - i) / cb_top_k 공식 사용
                 for i, sim_id in enumerate(similar_ids[:cb_top_k]):
                     score = (cb_top_k - i) / cb_top_k  # 순위 기반 정규화 점수 (1.0 ~ 0.2)
                     cb_scores[sim_id] = cb_scores.get(sim_id, 0) + score  # 기존 점수에 누적
     return cb_scores
 
 async def _get_similar_animals(animal_id: int) -> list:
-    """
-    Redis에서 특정 동물과 유사한 동물 ID 목록을 조회
-    """
+    redis_client = await get_redis_client()
+
+    # Redis에서 특정 동물과 유사한 동물 ID 목록을 조회
     key = f"similar:{animal_id}"
     similar_ids_str = await redis_client.lrange(key, 0, -1)
     if not similar_ids_str:
         return []
+    
     return list(map(int, similar_ids_str))
 
 async def update_animal_similarity_data(top_k: int = 5):
@@ -86,7 +77,7 @@ async def update_animal_similarity_data(top_k: int = 5):
     1. 데이터베이스에서 모든 동물 정보 조회
     2. 동물 특성(보호소, 나이, 색상 등)을 문자열로 변환
     3. TF-IDF 벡터화 및 코사인 유사도 계산
-    4. 각 동물마다 유사도 높은 top_k개 동물을 Redis에 저장
+    4. 각 동물마다 유사도 높은 top_k*개 동물을 Redis에 저장
     
     Args
         top_k: 각 동물마다 저장할 유사 동물 수
@@ -369,6 +360,8 @@ async def _store_similar_animals_in_redis(animal_ids: list, sim_matrix, top_k: i
     """
     각 동물에 대해 유사도가 높은 상위 top_k개 동물 ID를 Redis에 저장
     """
+    redis_client = await get_redis_client()
+
     for i, animal_id in enumerate(animal_ids):
         # i번째 동물의 모든 다른 동물과의 유사도 
         similarities = sim_matrix[i]
