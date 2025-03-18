@@ -18,7 +18,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final int MAX_REQUESTS = 1000; // 허용 요청 수 (REST API에 대한 DDOS 공격 방지 목적)
+    private static final int MAX_REQUESTS = 5000; // 허용 요청 수 (REST API에 대한 DDOS 공격 방지 목적)
     private static final long TIME_WINDOW_SECONDS = 60; // 제한 시간 (초 단위)
     private static final String RATE_LIMIT_EXCEEDED_MESSAGE = "Too Many Requests";
     private static final String RATE_LIMIT_PREFIX = "rate_limit";

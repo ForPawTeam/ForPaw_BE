@@ -6,6 +6,7 @@ import com.hong.forapw.domain.chat.entity.Message;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public record FindMessagesInRoomRes(
         String chatRoomName,
@@ -45,7 +46,7 @@ public record FindMessagesInRoomRes(
         public static List<MessageDTO> fromEntities(List<Message> messages, Long userId) {
             return messages.stream()
                     .map(message -> MessageDTO.fromEntity(message, userId))
-                    .toList();
+                    .collect(Collectors.toList());
         }
     }
 }
