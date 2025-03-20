@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
 
@@ -380,7 +381,7 @@ public class PostService {
     private List<Post> selectPopularPosts(List<Post> posts) {
         return posts.stream()
                 .filter(post -> post.getHotPoint() > 10.0)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private void fillPopularPostsIfNecessary(List<Post> allPosts, List<Post> popularPosts) {
