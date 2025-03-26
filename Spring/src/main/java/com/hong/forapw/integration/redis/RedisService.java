@@ -55,6 +55,12 @@ public class RedisService {
         return redisTemplate.opsForValue().increment(key, increment);
     }
 
+    public Long incrementAndSetExpiration(String key, long increment, long expirationSeconds) {
+        Long value = redisTemplate.opsForValue().increment(key, increment);
+        redisTemplate.expire(key, expirationSeconds, TimeUnit.SECONDS);
+        return value;
+    }
+
     public void decrementValue(String type, String id, Long value) {
         redisTemplate.opsForValue().decrement(buildKey(type, id), value);
     }

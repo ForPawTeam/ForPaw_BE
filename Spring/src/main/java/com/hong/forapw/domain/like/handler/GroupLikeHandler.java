@@ -4,7 +4,6 @@ import com.hong.forapw.common.exceptions.CustomException;
 import com.hong.forapw.common.exceptions.ExceptionCode;
 import com.hong.forapw.domain.group.entity.FavoriteGroup;
 import com.hong.forapw.domain.group.entity.Group;
-import com.hong.forapw.domain.group.model.query.GroupIdAndLikeCount;
 import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.user.entity.User;
@@ -21,7 +20,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
-import static com.hong.forapw.common.constants.GlobalConstants.POST_LIKE_NUM_KEY;
 
 @Component
 @RequiredArgsConstructor

@@ -18,7 +18,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final int MAX_REQUESTS = 5000; // 허용 요청 수 (REST API에 대한 DDOS 공격 방지 목적)
+    private static final int MAX_REQUESTS = 10000; // 허용 요청 수 (REST API에 대한 DDOS 공격 방지 목적)
     private static final long TIME_WINDOW_SECONDS = 60; // 제한 시간 (초 단위)
     private static final String RATE_LIMIT_EXCEEDED_MESSAGE = "Too Many Requests";
     private static final String RATE_LIMIT_PREFIX = "rate_limit";
@@ -48,10 +48,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private boolean isRateLimitExceeded(String rateLimitKey) {
         try {
-            Long requestCount = redisService.incrementAndGet(rateLimitKey, 1L);
-            if (requestCount == 1) {
-                redisService.setKeyExpiration(rateLimitKey, TIME_WINDOW_SECONDS);
-            }
+            Long requestCount = redisService.incrementAndSetExpiration(rateLimitKey, 1L, TIME_WINDOW_SECONDS);
             return requestCount > MAX_REQUESTS;
         } catch (Exception e) {
             log.error("Redis 작업 중 오류 발생, 기본적으로 요청을 허용합니다. 키: {}", rateLimitKey, e);

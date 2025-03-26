@@ -6,7 +6,6 @@ import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.entity.Post;
 import com.hong.forapw.domain.post.entity.PostLike;
-import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.post.repository.PostLikeRepository;
 import com.hong.forapw.domain.post.repository.PostRepository;
