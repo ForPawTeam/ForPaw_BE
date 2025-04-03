@@ -22,7 +22,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UserScheduledService {
+public class UserScheduler {
 
     private final PasswordEncoder passwordEncoder;
     private final RedisService redisService;

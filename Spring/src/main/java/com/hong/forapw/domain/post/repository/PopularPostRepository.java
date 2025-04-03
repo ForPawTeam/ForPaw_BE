@@ -21,6 +21,10 @@ public interface PopularPostRepository extends JpaRepository<PopularPost, Long> 
     Page<PopularPost> findAllWithPost(Pageable pageable);
 
     @Modifying
+    @Query("DELETE FROM PopularPost p WHERE p.postType = :postType")
+    void deleteByPostType(@Param("postType") PostType postType);
+
+    @Modifying
     @Query("DELETE FROM PopularPost p WHERE p.post.id = :postId")
     void deleteByPostId(@Param("postId") Long postId);
 }

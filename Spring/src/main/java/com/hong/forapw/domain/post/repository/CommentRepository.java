@@ -48,21 +48,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             "WHERE u.id = :userId AND c.removedAt IS NULL")
     Page<Comment> findByUserIdWithPost(@Param("userId") Long userId, Pageable pageable);
 
-    @Query("SELECT new com.hong.forapw.domain.post.model.query.CommentIdAndLikeCount(c.id, COUNT(cl.id)) " +
-            "FROM Comment c " +
-            "LEFT JOIN CommentLike cl on c.id = cl.comment.id " +
-            "WHERE c.id IN (:missingIds) " +
-            "GROUP BY c.id ")
-    List<CommentIdAndLikeCount> findLikeCountsByIds(List<Long> missingIds);
-
     // date 이후의 댓글이 존재 => 마지막 대댓글이 아니다
     @Query("SELECT COUNT(c) > 0 FROM Comment c " +
             "JOIN c.parent p " +
             "WHERE p.id = :parentId AND c.createdDate > :date AND c.removedAt IS NULL")
     boolean existsByParentIdAndDateAfter(Long parentId, LocalDateTime date);
 
-    @Query("SELECT COUNT(cl) FROM CommentLike cl WHERE cl.comment.id = :commentId")
-    Long countLikesByCommentId(@Param("commentId") Long commentId);
+    @Query("SELECT COUNT(c) FROM Comment c WHERE c.post.id = :postId AND c.createdDate > :date AND c.removedAt IS NULL")
+    long countByPostIdAndCreatedDateAfter(@Param("postId") Long postId, @Param("date") LocalDateTime date);
 
     @Query("SELECT COUNT(c) FROM Comment c WHERE c.createdDate >= :date AND c.removedAt IS NULL")
     Long countALlWithinDate(LocalDateTime date);

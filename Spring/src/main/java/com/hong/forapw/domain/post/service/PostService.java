@@ -27,11 +27,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.domain.post.constant.PostConstants.COMMENT_DELETED;
 
 @Service
 @RequiredArgsConstructor
@@ -50,8 +49,6 @@ public class PostService {
     private final LikeService likeService;
     private final AlarmService alarmService;
     private final PostValidator validator;
-
-    private static final String COMMENT_DELETED = "삭제된 댓글 입니다.";
 
     @Transactional
     public CreatePostRes createPost(CreatePostReq request, Long userId) {
@@ -238,8 +235,8 @@ public class PostService {
         Post post = postRepository.getReferenceById(postId);
         User writer = userRepository.getReferenceById(userId);
         Comment reply = request.toEntity(request.content(), post, writer);
-        parentComment.addChildComment(reply);
 
+        parentComment.addChildComment(reply);
         commentRepository.save(reply);
 
         postRepository.incrementCommentCount(postId);
@@ -286,12 +283,6 @@ public class PostService {
         Report report = request.toEntity(reporter, reportedUser);
 
         reportRepository.save(report);
-    }
-
-    @Transactional
-    public void refreshPopularPostsWithinRange(LocalDateTime start, LocalDateTime end, PostType postType) {
-        List<Post> posts = postRepository.findByDateAndType(start, end, postType);
-        processPopularPosts(posts, postType);
     }
 
     private void sendNewAnswerAlarm(Post questionPost, String answerContent, Long questionPostId) {
@@ -356,53 +347,6 @@ public class PostService {
         }
 
         throw new CustomException(ExceptionCode.INVALID_REPORT_TARGET);
-    }
-
-    private void processPopularPosts(List<Post> posts, PostType postType) {
-        posts.forEach(this::updatePostHotPoint);
-
-        List<Post> popularPosts = selectPopularPosts(posts);
-        fillPopularPostsIfNecessary(posts, popularPosts);
-        savePopularPosts(popularPosts, postType);
-    }
-
-    private void updatePostHotPoint(Post post) {
-        double hotPoint = calculateHotPoint(post);
-        post.updateHotPoint(hotPoint);
-    }
-
-    private double calculateHotPoint(Post post) {
-        double viewPoints = postCacheService.getPostViewCount(post.getId(), post) * 0.001;
-        double commentPoints = post.getCommentNum();
-        double likePoints = likeService.getLikeCount(post.getId(), Like.POST) * 5.0;
-        return viewPoints + commentPoints + likePoints;
-    }
-
-    private List<Post> selectPopularPosts(List<Post> posts) {
-        return posts.stream()
-                .filter(post -> post.getHotPoint() > 10.0)
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
-
-    private void fillPopularPostsIfNecessary(List<Post> allPosts, List<Post> popularPosts) {
-        if (popularPosts.size() >= 5) return;
-        List<Post> remainingPosts = allPosts.stream()
-                .filter(post -> !popularPosts.contains(post))
-                .sorted(Comparator.comparingDouble(Post::getHotPoint).reversed())
-                .toList();
-
-        popularPosts.addAll(remainingPosts.stream().limit(5L - popularPosts.size()).toList());
-    }
-
-    private void savePopularPosts(List<Post> popularPosts, PostType postType) {
-        popularPosts.forEach(post -> {
-            PopularPost popularPost = PopularPost.builder()
-                    .post(post)
-                    .postType(postType)
-                    .build();
-
-            popularPostRepository.save(popularPost);
-        });
     }
 
     private List<FindPostByIdRes.CommentDTO> buildCommentDTOs(Long postId, Long userId) {

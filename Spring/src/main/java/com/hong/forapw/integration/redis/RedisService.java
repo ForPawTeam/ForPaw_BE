@@ -8,12 +8,14 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +41,48 @@ public class RedisService {
         SetOperations<String, String> setOps = redisTemplate.opsForSet();
         setOps.add(key, String.valueOf(value));
         redisTemplate.expire(key, expirationTime, TimeUnit.SECONDS);
+    }
+
+    public void addSortedSetElement(String key, String member, double score) {
+        ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
+        zSetOps.add(key, member, score);
+    }
+
+    public void removeSortedSetElement(String key, String member) {
+        ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
+        zSetOps.remove(key, member);
+    }
+
+    // 특정 점수 범위 내에서 패턴으로 시작하는 Sorted Set 요소의 수를 계산
+    public long countSortedSetElementsInRange(String key, String prefix, double minScore, double maxScore) {
+        AtomicLong count = new AtomicLong(0);
+
+        // 점수 범위 내의 모든 요소를 조회
+        ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
+        Set<ZSetOperations.TypedTuple<String>> elements =
+                zSetOps.rangeByScoreWithScores(key, minScore, maxScore);
+
+        if (elements != null) {
+            elements.forEach(tuple -> {
+                if (tuple.getValue() != null && tuple.getValue().startsWith(prefix)) {
+                    count.incrementAndGet();
+                }
+            });
+        }
+
+        return count.get();
+    }
+
+    // 특정 프리픽스로 시작하는 Sorted Set 요소를 모두 제거
+    public void removeSortedSetElementsByPrefix(String key, String prefix) {
+        ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
+        Set<String> members = zSetOps.range(key, 0, -1);
+
+        if (members != null) {
+            members.stream()
+                    .filter(member -> member.startsWith(prefix))
+                    .forEach(member -> zSetOps.remove(key, member));
+        }
     }
 
     public void addListElement(String key, String value, Long limit) {

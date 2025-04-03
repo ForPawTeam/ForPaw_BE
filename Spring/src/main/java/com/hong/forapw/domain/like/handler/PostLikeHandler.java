@@ -14,6 +14,9 @@ import com.hong.forapw.integration.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,9 @@ public class PostLikeHandler implements LikeHandler {
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
     private final RedisService redisService;
+
+    // 좋아요 시간 추적을 위한 정렬된 셋 키 프리픽스
+    private static final String POST_LIKE_TIMESTAMP_KEY = "post:like:timestamps";
 
     @Override
     public Like getLikeTarget() {
@@ -62,6 +68,10 @@ public class PostLikeHandler implements LikeHandler {
 
         redisService.addSetElement(buildUserLikedSetKey(userId), postId);
         redisService.incrementValue(POST_LIKE_NUM_KEY, postId.toString(), 1L);
+
+        String member = buildTimestampMember(postId, userId);
+        double score = getCurrentTimestampInSeconds();
+        redisService.addSortedSetElement(POST_LIKE_TIMESTAMP_KEY, member, score);
     }
 
     @Override
@@ -71,6 +81,9 @@ public class PostLikeHandler implements LikeHandler {
 
         redisService.removeSetElement(buildUserLikedSetKey(userId), postId.toString());
         redisService.decrementValue(POST_LIKE_NUM_KEY, postId.toString(), 1L);
+
+        String member = buildTimestampMember(postId, userId);
+        redisService.removeSortedSetElement(POST_LIKE_TIMESTAMP_KEY, member);
     }
 
     @Override
@@ -88,6 +101,14 @@ public class PostLikeHandler implements LikeHandler {
         return countMap;
     }
 
+    public long countByPostIdAndCreatedDateAfter(Long postId, LocalDateTime dateTime) {
+        double minScore = dateTime.atZone(ZoneId.systemDefault()).toInstant().getEpochSecond();
+        double maxScore = Double.POSITIVE_INFINITY; // 최대값까지 (현재까지)
+        String prefix = postId + ":";
+
+        return redisService.countSortedSetElementsInRange(POST_LIKE_TIMESTAMP_KEY, prefix, minScore, maxScore);
+    }
+
     @Override
     public String buildLockKey(Long postId) {
         return "post:" + postId + ":like:lock";
@@ -96,6 +117,9 @@ public class PostLikeHandler implements LikeHandler {
     @Override
     public void clear(Long postId) {
         redisService.removeValue(POST_LIKE_NUM_KEY, postId.toString());
+
+        String prefix = postId + ":";
+        redisService.removeSortedSetElementsByPrefix(POST_LIKE_TIMESTAMP_KEY, prefix);
     }
 
     private String buildUserLikedSetKey(Long userId) {
@@ -111,5 +135,13 @@ public class PostLikeHandler implements LikeHandler {
         if (ownerId.equals(userId)) {
             throw new CustomException(ExceptionCode.CANNOT_LIKE_OWN_POST);
         }
+    }
+
+    private String buildTimestampMember(Long postId, Long userId) {
+        return postId + ":" + userId;
+    }
+
+    private double getCurrentTimestampInSeconds() {
+        return Instant.now().getEpochSecond();
     }
 }

@@ -1,7 +1,7 @@
 package com.hong.forapw.config;
 
 import com.hong.forapw.integration.rabbitmq.RabbitMqService;
-import com.hong.forapw.domain.user.service.UserScheduledService;
+import com.hong.forapw.domain.user.service.UserScheduler;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class AppStartupListener implements ApplicationListener<ApplicationReadyEvent> {
 
     private final RabbitMqService brokerService;
-    private final UserScheduledService userScheduledTaskService;
+    private final UserScheduler userScheduledTaskService;
 
     @Override
     public void onApplicationEvent(@NonNull ApplicationReadyEvent event) {

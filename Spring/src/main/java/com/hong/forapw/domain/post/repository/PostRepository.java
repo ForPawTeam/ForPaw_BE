@@ -1,6 +1,5 @@
 package com.hong.forapw.domain.post.repository;
 
-import com.hong.forapw.domain.like.handler.PostLikeHandler;
 import com.hong.forapw.domain.post.model.query.PostIdAndLikeCount;
 import com.hong.forapw.domain.post.model.query.PostProjection;
 import com.hong.forapw.domain.post.model.query.PostTypeCount;
@@ -26,8 +25,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT p FROM Post p WHERE p.removedAt IS NULL")
     List<Post> findAll();
 
-    @Query("SELECT p FROM Post p WHERE p.createdDate BETWEEN :startOfDay AND :endOfDay AND p.postType = :postType AND p.removedAt IS NULL")
-    List<Post> findByDateAndType(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay, @Param("postType") PostType postType);
+    @Query("SELECT p FROM Post p " +
+            "WHERE p.createdDate BETWEEN :start AND :end " +
+            "AND p.postType = :postType AND p.removedAt IS NULL")
+    List<Post> findByDateRangeAndType(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("postType") PostType postType
+    );
 
     @Query("SELECT p FROM Post p WHERE p.id = :id AND p.removedAt IS NULL")
     Optional<Post> findById(@Param("id") Long id);
