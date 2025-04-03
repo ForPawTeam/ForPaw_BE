@@ -17,7 +17,6 @@ import com.hong.forapw.domain.animal.repository.FavoriteAnimalRepository;
 import com.hong.forapw.domain.shelter.ShelterRepository;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.integration.redis.RedisService;
-import com.hong.forapw.domain.shelter.ShelterService;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.domain.like.LikeService;
 import lombok.RequiredArgsConstructor;
@@ -26,17 +25,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -45,10 +40,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.ANIMAL_SEARCH_KEY;
 import static com.hong.forapw.common.utils.DateTimeUtils.YEAR_HOUR_DAY_FORMAT;
 import static com.hong.forapw.common.utils.PaginationUtils.DEFAULT_PAGEABLE;
 import static com.hong.forapw.common.utils.PaginationUtils.isLastPage;
+import static com.hong.forapw.integration.redis.RedisConstants.ANIMAL_SEARCH_KEY;
 
 @Service
 @RequiredArgsConstructor

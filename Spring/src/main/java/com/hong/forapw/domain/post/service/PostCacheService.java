@@ -6,15 +6,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.integration.redis.RedisConstants.*;
 
 @Service
 @RequiredArgsConstructor
 public class PostCacheService {
 
     private final RedisService redisService;
-
-    private static final Long POST_CACHE_EXPIRATION = 1000L * 60 * 60 * 24 * 90; // 게시글 좋아요/뷰 카운트를 캐싱하는 기간 (3개월)
-    private static final Long NOTICE_READ_EXPIRATION = 60L * 60 * 24 * 360; // 공지사항 읽음 상태 캐싱 기간 (1년)
 
     public void markNoticePostAsRead(Post post, Long userId, Long postId) {
         if (post.isNoticeType()) {

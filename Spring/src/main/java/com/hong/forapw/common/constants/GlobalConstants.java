@@ -15,20 +15,6 @@ public class GlobalConstants {
     public static final String REFRESH_TOKEN_KEY = "refreshToken";
     public static final String ACCESS_TOKEN_KEY = "accessToken";
 
-    // Redis Key
-    public static final String ANIMAL_SEARCH_KEY = "animal:search";
-    public static final String POST_READ_KEY = "user:readPosts";
-    public static final String POST_VIEW_COUNT_KEY = "post:view:count";
-    public static final String POST_LIKE_NUM_KEY = "post:like:count";
-    public static final String POST_LIKED_SET_KEY = "user:%s:liked_posts";
-    public static final String ANIMAL_LIKE_NUM_KEY = "animal:like:count";
-    public static final String ANIMAL_LIKED_SET_KEY = "user:%s:liked_animals";
-    public static final String COMMENT_LIKE_NUM_KEY = "comment:like:count";
-    public static final String COMMENT_LIKED_SET_KEY = "user:%s:liked_comments";
-    public static final String GROUP_LIKE_NUM_KEY = "group:like:count";
-    public static final String GROUP_LIKED_SET_KEY = "user:%s:liked_groups";
-    public static final String USER_ANIMAL_INTERACTION_KEY = "userAnimalInteraction";
-
     // Http
     public static final String AUTH_CODE_GRANT_TYPE = "authorization_code";
     public static final String AUTHORIZATION_HEADER = "Authorization";

@@ -20,7 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.integration.redis.RedisConstants.ANIMAL_LIKED_SET_KEY;
+import static com.hong.forapw.integration.redis.RedisConstants.ANIMAL_LIKE_NUM_KEY;
 
 @Component
 @RequiredArgsConstructor

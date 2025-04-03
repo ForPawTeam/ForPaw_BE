@@ -1,24 +1,15 @@
 package com.hong.forapw.domain.animal.cf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hong.forapw.domain.animal.model.InteractionDTO;
-import com.hong.forapw.domain.user.repository.UserRepository;
 import com.hong.forapw.integration.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.USER_ANIMAL_INTERACTION_KEY;
+import static com.hong.forapw.integration.redis.RedisConstants.USER_ANIMAL_INTERACTION_KEY;
 
 @Service
 @RequiredArgsConstructor

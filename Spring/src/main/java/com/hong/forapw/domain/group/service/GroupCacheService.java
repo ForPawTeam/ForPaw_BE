@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Set;
 
-import static com.hong.forapw.common.constants.GlobalConstants.POST_READ_KEY;
+import static com.hong.forapw.integration.redis.RedisConstants.POST_READ_KEY;
 
 @Service
 @RequiredArgsConstructor

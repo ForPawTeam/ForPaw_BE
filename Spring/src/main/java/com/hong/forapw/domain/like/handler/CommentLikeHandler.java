@@ -6,7 +6,6 @@ import com.hong.forapw.domain.like.common.LikeHandler;
 import com.hong.forapw.domain.like.common.Like;
 import com.hong.forapw.domain.post.entity.Comment;
 import com.hong.forapw.domain.post.entity.CommentLike;
-import com.hong.forapw.domain.post.model.query.CommentIdAndLikeCount;
 import com.hong.forapw.domain.user.entity.User;
 import com.hong.forapw.domain.post.repository.CommentLikeRepository;
 import com.hong.forapw.domain.post.repository.CommentRepository;
@@ -20,7 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.hong.forapw.common.constants.GlobalConstants.*;
+import static com.hong.forapw.integration.redis.RedisConstants.COMMENT_LIKED_SET_KEY;
+import static com.hong.forapw.integration.redis.RedisConstants.COMMENT_LIKE_NUM_KEY;
+
 
 @Component
 @RequiredArgsConstructor

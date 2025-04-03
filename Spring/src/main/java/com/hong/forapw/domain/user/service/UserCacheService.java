@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import static com.hong.forapw.common.constants.GlobalConstants.REFRESH_TOKEN_KEY;
+import static com.hong.forapw.integration.redis.RedisConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -19,14 +20,6 @@ public class UserCacheService {
 
     @Value("${jwt.refresh-exp-milli}")
     public Long refreshExpMilli;
-
-    private static final long VERIFICATION_CODE_EXPIRATION_MS = 175 * 1000L;
-    private static final String EMAIL_CODE_KEY_PREFIX = "code:";
-    private static final String CODE_TO_EMAIL_KEY_PREFIX = "codeToEmail";
-    private static final long LOGIN_FAIL_CURRENT_EXPIRATION_MS = 300_000L; // 5분
-    private static final String MAX_LOGIN_ATTEMPTS_BEFORE_LOCK = "loginFail";
-    private static final String MAX_DAILY_LOGIN_FAILURES = "loginFailDaily";
-    private static final long LOGIN_FAIL_DAILY_EXPIRATION_MS = 86400000L; // 24시간
 
     public void storeVerificationCode(String email, String codeType, String verificationCode) {
         redisService.storeValue(getCodeTypeKey(codeType), email, verificationCode, VERIFICATION_CODE_EXPIRATION_MS);
@@ -41,16 +34,16 @@ public class UserCacheService {
     }
 
     public long incrementDailyLoginFailures(User user) {
-        long dailyFailures = redisService.getValueInLong(MAX_DAILY_LOGIN_FAILURES, user.getId().toString());
+        long dailyFailures = redisService.getValueInLong(MAX_DAILY_LOGIN_FAILURES_KEY, user.getId().toString());
         dailyFailures++;
-        redisService.storeValue(MAX_DAILY_LOGIN_FAILURES, user.getId().toString(), Long.toString(dailyFailures), LOGIN_FAIL_DAILY_EXPIRATION_MS);
+        redisService.storeValue(MAX_DAILY_LOGIN_FAILURES_KEY, user.getId().toString(), Long.toString(dailyFailures), LOGIN_FAIL_DAILY_EXPIRATION_MS);
         return dailyFailures;
     }
 
     public long incrementCurrentLoginFailures(Long userId) {
-        long currentFailures = redisService.getValueInLong(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK, userId.toString());
+        long currentFailures = redisService.getValueInLong(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK_KEY, userId.toString());
         currentFailures++;
-        redisService.storeValue(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK, userId.toString(), Long.toString(currentFailures), LOGIN_FAIL_CURRENT_EXPIRATION_MS);
+        redisService.storeValue(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK_KEY, userId.toString(), Long.toString(currentFailures), LOGIN_FAIL_CURRENT_EXPIRATION_MS);
         return currentFailures;
     }
 
@@ -79,11 +72,11 @@ public class UserCacheService {
     }
 
     public long getDailyLoginFailures(Long userId) {
-        return redisService.getValueInLong(MAX_DAILY_LOGIN_FAILURES, userId.toString());
+        return redisService.getValueInLong(MAX_DAILY_LOGIN_FAILURES_KEY, userId.toString());
     }
 
     public long getCurrentLoginFailures(Long userId) {
-        return redisService.getValueInLong(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK, userId.toString());
+        return redisService.getValueInLong(MAX_LOGIN_ATTEMPTS_BEFORE_LOCK_KEY, userId.toString());
     }
 
     public String getEmailByVerificationCode(String verificationCode) {
