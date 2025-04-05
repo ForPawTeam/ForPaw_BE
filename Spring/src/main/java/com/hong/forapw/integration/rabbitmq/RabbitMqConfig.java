@@ -23,7 +23,9 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
 
     private final ConnectionFactory connectionFactory;
 
-    // RabbitMQ 관리 작업(Queue, Exchange 생성 등)을 위한 도구
+    //==== 기본 RabbitMQ 컴포넌트 ====//
+
+    // RabbitMQ 관리 작업(Queue, Exchange 생성 등)을 위한 컴포넌트
     @Bean
     public RabbitAdmin rabbitAdmin() {
         RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
@@ -37,6 +39,22 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(jackson2JsonMessageConverter());
         return rabbitTemplate;
+    }
+
+    //==== 리스너 컨테이너 및 관련 팩토리 ====//
+
+    // 동적으로 생성되는 리스너 관리
+    @Bean
+    public RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry() {
+        return new RabbitListenerEndpointRegistry();
+    }
+
+    // 리스너 메서드 호출 처리
+    @Bean
+    public DefaultMessageHandlerMethodFactory messageHandlerMethodFactory() {
+        DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
+        factory.setMessageConverter(consumerJackson2MessageConverter());
+        return factory;
     }
 
     // 메시지 리스너 컨테이너 설정 -> 메시지 소비자의 동작 방식 정의
@@ -66,19 +84,15 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         return factory;
     }
 
-    // 동적으로 생성되는 리스너 관리
-    @Bean
-    public RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry() {
-        return new RabbitListenerEndpointRegistry();
+    // 리스너 생성 시 사용할 팩토리와 레지스트리 지정
+    @Override
+    public void configureRabbitListeners(RabbitListenerEndpointRegistrar registrar) {
+        registrar.setContainerFactory(rabbitListenerContainerFactory());
+        registrar.setEndpointRegistry(rabbitListenerEndpointRegistry());
+        registrar.setMessageHandlerMethodFactory(messageHandlerMethodFactory());
     }
 
-    // 리스너 메서드 호출 처리
-    @Bean
-    public DefaultMessageHandlerMethodFactory messageHandlerMethodFactory() {
-        DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
-        factory.setMessageConverter(consumerJackson2MessageConverter());
-        return factory;
-    }
+    //==== 메시지 Converters ====//
 
     // JSON 메시지 컨버터
     @Bean
@@ -91,6 +105,8 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
     public MappingJackson2MessageConverter consumerJackson2MessageConverter() {
         return new MappingJackson2MessageConverter();
     }
+
+    //==== Exchanges, Queues, Bindings 설정 ====//
 
     // 채팅을 위한 Exchange
     @Bean
@@ -116,13 +132,5 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         return BindingBuilder.bind(deadLetterQueue())
                 .to(deadLetterExchange())
                 .with("chat.dead-letter.key");
-    }
-
-    // 리스너 생성 시 사용할 팩토리와 레지스트리 지정
-    @Override
-    public void configureRabbitListeners(RabbitListenerEndpointRegistrar registrar) {
-        registrar.setContainerFactory(rabbitListenerContainerFactory());
-        registrar.setEndpointRegistry(rabbitListenerEndpointRegistry());
-        registrar.setMessageHandlerMethodFactory(messageHandlerMethodFactory());
     }
 }
