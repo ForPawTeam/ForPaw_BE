@@ -27,7 +27,7 @@ public class RedisConstants {
 
     public static final String EMAIL_CODE_KEY_PREFIX = "code:";
     public static final String CODE_TO_EMAIL_KEY_PREFIX = "codeToEmail";
-    
+
     public static final String MAX_LOGIN_ATTEMPTS_BEFORE_LOCK_KEY = "loginFail";
     public static final String MAX_DAILY_LOGIN_FAILURES_KEY = "loginFailDaily";
 }

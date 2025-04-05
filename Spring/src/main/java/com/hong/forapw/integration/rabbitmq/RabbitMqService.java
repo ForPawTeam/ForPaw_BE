@@ -55,9 +55,9 @@ public class RabbitMqService {
 
         // 데드레터 교환기 설정이 포함된 큐 생성
         Queue queue = QueueBuilder.durable(queueName)
-                .withArgument("x-dead-letter-exchange", "chat.dead-letter.exchange")
-                .withArgument("x-dead-letter-routing-key", "chat.dead-letter.key")
-                .withArgument("x-message-ttl", 30000) // 30초 후 데드레터로 이동
+                .withArgument("x-dead-letter-exchange", "chat.dead-letter.exchange") // 메시지 처리 실패 시 이동할 exchange 지정
+                .withArgument("x-dead-letter-routing-key", "chat.dead-letter.key") // 데드레터 exchange에서 사용할 라우팅 키 지정
+                .withArgument("x-message-ttl", 30000) // 큐에서 30초 동안 처리되지 않은 메시지는 자동으로 데드레터로 이동
                 .build();
 
         amqpAdmin.declareQueue(queue);
@@ -77,8 +77,7 @@ public class RabbitMqService {
                 MessageDTO messageDTO = convertToMessageDTO(message);
                 messageService.saveMessage(messageDTO);
                 alarmService.sendAlarmToChatRoomUsers(messageDTO);
-            } catch (Exception e) {
-                // 예외를 그대로 던져서 Spring Retry가 재시도 처리하도록 함
+            } catch (Exception e) { // 예외를 그대로 던져서 Spring Retry가 재시도 처리하도록 함
                 throw e;
             }
         });

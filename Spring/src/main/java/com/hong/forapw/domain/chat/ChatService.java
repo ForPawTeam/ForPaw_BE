@@ -18,6 +18,7 @@ import com.hong.forapw.domain.chat.repository.MessageRepository;
 import com.hong.forapw.integration.rabbitmq.RabbitMqService;
 import com.hong.forapw.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ import static com.hong.forapw.common.utils.PaginationUtils.DEFAULT_IMAGE_PAGEABL
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ChatService {
 
     private final MessageRepository messageRepository;
@@ -166,7 +168,11 @@ public class ChatService {
     }
 
     private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
-        CompletableFuture.runAsync(() -> rabbitMqService.sendChatMessageToRoom(chatRoomId, message));
+        CompletableFuture.runAsync(() -> rabbitMqService.sendChatMessageToRoom(chatRoomId, message))
+                .exceptionally(ex -> { // 메시지 발행 단계에서 실패 처리
+                    log.error("메시지 발행에 실패: messageId={}, error={}", message.messageId(), ex.getMessage(), ex);
+                    return null;
+                });
     }
 
     private List<ImageObjectDTO> getImageObjects(Long chatRoomId) {
