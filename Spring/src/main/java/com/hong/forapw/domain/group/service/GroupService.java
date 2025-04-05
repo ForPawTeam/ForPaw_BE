@@ -38,9 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
-import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
 import static com.hong.forapw.common.utils.PaginationUtils.*;
+import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.CHAT_EXCHANGE;
+import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.ROOM_QUEUE_PREFIX;
 
 @Service
 @RequiredArgsConstructor
@@ -459,7 +459,7 @@ public class GroupService {
 
     private void configureRabbitMQForChatRoom(ChatRoom chatRoom) {
         String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
-        rabbitMqService.bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
+        rabbitMqService.createAndBindQueueToExchange(CHAT_EXCHANGE, queueName);
 
         String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
         rabbitMqService.createMessageConsumerForQueue(listenerId, queueName);

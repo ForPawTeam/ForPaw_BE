@@ -15,8 +15,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
-import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
+import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.CHAT_EXCHANGE;
+import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.ROOM_QUEUE_PREFIX;
 
 @Component
 @RequiredArgsConstructor
@@ -40,16 +40,17 @@ public class RabbitMqService {
                     String queueName = ROOM_QUEUE_PREFIX + chatRoom.getId();
                     String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
 
-                    bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
+                    createAndBindQueueToExchange(CHAT_EXCHANGE, queueName);
                     createMessageConsumerForQueue(listenerId, queueName);
                 });
     }
 
     // 채팅방 큐를 생성하고 교환기에 바인딩
-    public void bindDirectExchangeToQueue(String exchangeName, String queueName) {
+    public void createAndBindQueueToExchange(String exchangeName, String queueName) {
         DirectExchange exchange = new DirectExchange(exchangeName);
 
-        // 데드레터 교환기 설정이 포함된 큐 생성
+        // 큐 생성 (dead-letter 설정도 진행)
+        // RabbitMQ는 공식적으로 'requeue=false'로 거부된 메시지를 큐 설정의 x-dead-letter-exchange 인자에 지정된 교환기로 라우팅
         Queue queue = QueueBuilder.durable(queueName)
                 .withArgument("x-dead-letter-exchange", "chat.dead-letter.exchange") // 메시지 처리 실패 시 이동할 exchange 지정
                 .withArgument("x-dead-letter-routing-key", "chat.dead-letter.key") // 데드레터 exchange에서 사용할 라우팅 키 지정
@@ -67,9 +68,7 @@ public class RabbitMqService {
     // 지정된 큐에 대한 메시지 소비자를 생성하고 등록
     public void createMessageConsumerForQueue(String listenerId, String queueName) {
         SimpleRabbitListenerEndpoint endpoint = createListenerEndpoint(listenerId, queueName);
-
-        // 메시지 처리 로직 설정 (자동 ACK 모드)
-        endpoint.setMessageListener(message -> {
+        endpoint.setMessageListener(message -> { // 메시지 처리 로직 설정 (자동 ACK 모드)
             try {
                 MessageDTO messageDTO = deserializeMessageToDTO(message);
                 messageService.saveMessage(messageDTO);

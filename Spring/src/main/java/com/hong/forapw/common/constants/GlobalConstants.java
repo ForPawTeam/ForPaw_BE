@@ -22,10 +22,6 @@ public class GlobalConstants {
     public static final String USER_AGENT_HEADER = "User-Agent";
     public static final String[] IP_HEADER_CANDIDATES = {"X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
 
-    // RabbitMQ
-    public static final String ROOM_QUEUE_PREFIX = "room.";
-    public static final String CHAT_EXCHANGE = "chat.exchange";
-
     // Sort
     public static final String SORT_BY_ID = "id";
     public static final String SORT_BY_PARTICIPANT_NUM = "participantNum";

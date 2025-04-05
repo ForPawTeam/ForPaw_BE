@@ -49,7 +49,7 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         return new RabbitListenerEndpointRegistry();
     }
 
-    // 리스너 메서드 호출 처리
+    // 메시지를 처리하는 메서드에 파라미터 바인딩할 때 사용하는 로직 정의
     @Bean
     public DefaultMessageHandlerMethodFactory messageHandlerMethodFactory() {
         DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
@@ -62,6 +62,7 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory() {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
+
         factory.setMismatchedQueuesFatal(true); // 큐 불일치 오류 시 실패 처리
         factory.setMessageConverter(jackson2JsonMessageConverter());
 
@@ -74,7 +75,6 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
         factory.setMaxConcurrentConsumers(10); // 최대 소비자 수
 
         // 예외 발생 시 재시도 전략
-        // RabbitMQ는 공식적으로 'requeue=false'로 거부된 메시지를 큐 설정의 x-dead-letter-exchange 인자에 지정된 교환기로 라우팅
         factory.setAdviceChain(RetryInterceptorBuilder
                 .stateless()               // 상태를 저장하지 않는 재시도(동일 스레드에서 재시도)
                 .maxAttempts(5)            // 최대 5번 재시도
@@ -87,9 +87,9 @@ public class RabbitMqConfig implements RabbitListenerConfigurer {
     // 리스너 생성 시 사용할 팩토리와 레지스트리 지정
     @Override
     public void configureRabbitListeners(RabbitListenerEndpointRegistrar registrar) {
-        registrar.setContainerFactory(rabbitListenerContainerFactory());
         registrar.setEndpointRegistry(rabbitListenerEndpointRegistry());
         registrar.setMessageHandlerMethodFactory(messageHandlerMethodFactory());
+        registrar.setContainerFactory(rabbitListenerContainerFactory());
     }
 
     //==== 메시지 Converters ====//

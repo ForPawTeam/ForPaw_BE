@@ -12,8 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static com.hong.forapw.common.constants.GlobalConstants.CHAT_EXCHANGE;
-import static com.hong.forapw.common.constants.GlobalConstants.ROOM_QUEUE_PREFIX;
+import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.*;
 
 @Component
 @RequiredArgsConstructor
@@ -27,27 +26,34 @@ public class RabbitMqScheduler {
     public void processDeadLetterQueue() {
         try {
             Message failedMessage = rabbitTemplate.receive("chat.dead-letter.queue");
-            if (failedMessage != null) {
-                MessageDTO messageDTO = (MessageDTO) converter.fromMessage(failedMessage);
 
-                // x-death 헤더 체크
-                Map<String, Object> headers = failedMessage.getMessageProperties().getHeaders();
-                List<?> xDeathHeader = (List<?>) headers.get("x-death");
-                int retryCount = 0;
-
-                if (xDeathHeader != null && !xDeathHeader.isEmpty()) {
-                    Map<?, ?> xDeathProperties = (Map<?, ?>) xDeathHeader.get(0);
-                    Number count = (Number) xDeathProperties.get("count");
-                    retryCount = count != null ? count.intValue() : 0;
-                }
-
-                if (retryCount < 10) {
-                    String routingKey = ROOM_QUEUE_PREFIX + messageDTO.chatRoomId();
-                    rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, messageDTO);
-                }
+            if (failedMessage != null && extractRetryCount(failedMessage) < MAX_RETRY_COUNT) {
+                MessageDTO messageDTO = deserializeMessage(failedMessage);
+                resendMessageToOriginalQueue(messageDTO);
             }
         } catch (Exception e) {
             log.error("데드레터 큐 처리 중 오류 발생", e);
         }
+    }
+
+    private MessageDTO deserializeMessage(Message message) {
+        return (MessageDTO) converter.fromMessage(message);
+    }
+
+    private int extractRetryCount(Message message) {
+        Map<String, Object> headers = message.getMessageProperties().getHeaders();
+        List<?> xDeathHeader = (List<?>) headers.get(X_DEATH_HEADER);
+
+        if (xDeathHeader == null || xDeathHeader.isEmpty())
+            return 0;
+
+        Map<?, ?> xDeathProperties = (Map<?, ?>) xDeathHeader.get(0);
+        Number count = (Number) xDeathProperties.get(COUNT_PROPERTY);
+        return count != null ? count.intValue() : 0;
+    }
+
+    private void resendMessageToOriginalQueue(MessageDTO messageDTO) {
+        String routingKey = ROOM_QUEUE_PREFIX + messageDTO.chatRoomId();
+        rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, messageDTO);
     }
 }
