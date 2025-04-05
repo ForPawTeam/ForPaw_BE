@@ -17,7 +17,7 @@ public class AppStartupListener implements ApplicationListener<ApplicationReadyE
 
     @Override
     public void onApplicationEvent(@NonNull ApplicationReadyEvent event) {
-        brokerService.initChatListener();
+        brokerService.initializeAllChatRoomListeners();
         userScheduledTaskService.initSuperAdmin();
     }
 }

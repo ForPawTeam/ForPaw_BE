@@ -462,7 +462,7 @@ public class GroupService {
         rabbitMqService.bindDirectExchangeToQueue(CHAT_EXCHANGE, queueName);
 
         String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
-        rabbitMqService.registerChatListener(listenerId, queueName);
+        rabbitMqService.createMessageConsumerForQueue(listenerId, queueName);
     }
 
     private GroupUser getGroupUser(Long groupId, Long userId) {

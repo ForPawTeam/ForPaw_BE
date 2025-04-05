@@ -168,7 +168,7 @@ public class ChatService {
     }
 
     private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
-        CompletableFuture.runAsync(() -> rabbitMqService.sendChatMessageToRoom(chatRoomId, message))
+        CompletableFuture.runAsync(() -> rabbitMqService.publishMessageToChatRoom(chatRoomId, message))
                 .exceptionally(ex -> { // 메시지 발행 단계에서 실패 처리
                     log.error("메시지 발행에 실패: messageId={}, error={}", message.messageId(), ex.getMessage(), ex);
                     return null;
