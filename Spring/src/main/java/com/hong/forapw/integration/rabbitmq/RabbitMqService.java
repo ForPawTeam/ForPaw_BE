@@ -6,14 +6,20 @@ import com.hong.forapw.domain.chat.model.MessageDTO;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerEndpoint;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
 
 import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.CHAT_EXCHANGE;
 import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.ROOM_QUEUE_PREFIX;
@@ -82,9 +88,16 @@ public class RabbitMqService {
         rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
     }
 
+    @Retryable(backoff = @Backoff(delay = 1000, multiplier = 2))
     public void publishMessageToChatRoom(Long chatRoomId, MessageDTO message) {
         String routingKey = ROOM_QUEUE_PREFIX + chatRoomId;
         rabbitTemplate.convertAndSend(CHAT_EXCHANGE, routingKey, message);
+    }
+
+    @Recover
+    public void logFailedMessagePublish(Exception e, Long chatRoomId, MessageDTO message) {
+        log.error("메시지 발행 최종 실패: messageId={}, chatRoomId={}, error={}",
+                message.messageId(), chatRoomId, e.getMessage(), e);
     }
 
     public void deleteQueue(String queueName) {
