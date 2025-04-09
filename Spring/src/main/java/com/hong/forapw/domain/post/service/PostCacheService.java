@@ -5,7 +5,6 @@ import com.hong.forapw.integration.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import static com.hong.forapw.common.constants.GlobalConstants.*;
 import static com.hong.forapw.integration.redis.RedisConstants.*;
 
 @Service
@@ -26,7 +25,7 @@ public class PostCacheService {
     }
 
     public Long getPostViewCount(Long postId, Post post) {
-        Long viewCount = redisService.getValueInLongWithNull(POST_VIEW_COUNT_KEY, postId.toString());
+        Long viewCount = redisService.getValueInLongOrNull(POST_VIEW_COUNT_KEY, postId.toString());
         if (viewCount == null) {
             viewCount = post.getReadCnt();
             redisService.storeValue(POST_VIEW_COUNT_KEY, postId.toString(), viewCount.toString(), POST_CACHE_EXPIRATION);
@@ -35,6 +34,6 @@ public class PostCacheService {
     }
 
     public Long getPostViewCount(Post post) {
-        return redisService.getValueInLongWithNull(POST_VIEW_COUNT_KEY, post.getId().toString());
+        return redisService.getValueInLongOrNull(POST_VIEW_COUNT_KEY, post.getId().toString());
     }
 }
