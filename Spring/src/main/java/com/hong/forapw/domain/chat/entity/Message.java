@@ -21,6 +21,7 @@ public class Message implements Serializable {
     @Id
     private String id;
 
+    @Indexed
     private Long chatRoomId;
 
     private Long senderId; // 내가 보낸 메시지인지 판별을 위해 도입
