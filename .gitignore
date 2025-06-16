@@ -1,4 +1,5 @@
-1.DS_Store
+.DS_Store
+
 **/application.properties
 **/application-prod.properties
 **/application-dev.properties
@@ -13,7 +14,7 @@ build/
 !**/src/test/**/build/
 
 # Maven/Gradle/IDE 빌드 결과
-/bin/
+**/bin/
 /target/
 /build/
 /out/
