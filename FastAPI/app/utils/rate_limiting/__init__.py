@@ -1,3 +1,3 @@
-from .async_rate_limiter import AsyncRateLimiter
+from .async_rate_limiter import RateLimiter
 
-__all__ = ['AsyncRateLimiter']
+__all__ = ['RateLimiter']

@@ -1,4 +1,4 @@
-.DS_Store
+1.DS_Store
 **/application.properties
 **/application-prod.properties
 **/application-dev.properties
@@ -12,6 +12,14 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+# Maven/Gradle/IDE 빌드 결과
+/bin/
+/target/
+/build/
+/out/
+
+# Java 컴파일 산출물
+/**/*.class
 
 ### IntelliJ IDEA ###
 .idea

@@ -6,17 +6,18 @@ from langchain.prompts import PromptTemplate
 from fastapi import HTTPException
 from typing import Tuple, List
 from app.core.config import settings
+from app.models.animal import Animal
 from app.db.session import get_db_context
 from app.db.session import get_db_context, get_background_db_context
-from app.crud.animal import find_animal_by_id, find_recent_animal_ids_with_null_title, update_animal_introduction
+from app.crud.animal import find_animals_by_ids, find_recent_animal_ids_with_null_title, update_animal_introduction
 from app.utils.retry import with_db_retry
-from app.utils.rate_limiting import AsyncRateLimiter
+from app.utils.rate_limiting import RateLimiter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 20  # 한 번에 처리할 동물 수
-CONCURRENT_LIMIT = 10  # 최대 동시 API 호출 수 (API 요청 병렬 처리 제한)
+BATCH_SIZE = 30  # 메모리에 올라갈 배치 job 갯수
+CONCURRENT_LIMIT = 10  # API 요청 병렬 처리량
 
 class AnimalIntroductionService:
 
@@ -25,20 +26,23 @@ class AnimalIntroductionService:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.api_key = settings.OPENAI_API_KEY
-        self.rate_limiter = AsyncRateLimiter(rate_limit=3000, time_period=60.0)
+        self.rate_limiter = RateLimiter(max_calls_per_period=600, period_seconds=60.0)
 
     async def update_introductions_batch(self, animal_ids: List[int]) -> None:
         total_animals = len(animal_ids)
         logger.info(f"총 {total_animals}개 동물 소개글 업데이트 작업 시작")
         
-        # 배치 단위로 처리 (BATCH_SIZE 만큼씩)
+        # 배치 단위로 처리 => 메모리에 올라가는 task 제어와 DB에서 가져오는 동물 데이터 prefetch 목적으로 배치 처리 
         for i in range(0, total_animals, BATCH_SIZE):
             batch = animal_ids[i:i+BATCH_SIZE]
             batch_size = len(batch)
             logger.info(f"배치 처리 시작 ({i+1}-{i+batch_size}/{total_animals})")
             
+            async with get_background_db_context() as db:
+                animals = await find_animals_by_ids(db, batch)
+
             # 배치 내 모든 동물을 태스크로 변환
-            tasks = [self._process_single_animal(animal_id) for animal_id in batch]
+            tasks = [self._process_single_animal(animal) for animal in animals]
             
             # 동시성 제한을 위해 청크 단위로 태스크 실행
             for j in range(0, len(tasks), CONCURRENT_LIMIT):
@@ -47,32 +51,24 @@ class AnimalIntroductionService:
             
             logger.info(f"배치 처리 완료 - {batch_size}개 동물")
 
-    async def _process_single_animal(self, animal_id: int) -> None:
+    async def _process_single_animal(self, animal: Animal) -> None:
         try:
-            # 백그라운드 작업 전용 DB 세션 사용
-            async with get_background_db_context() as db:
-                animal = await find_animal_by_id(db, animal_id)
-                if animal and not animal.introduction_title:
-                    title, introduction = await self._generate_introduction(animal_id)
-                    await update_animal_introduction(db, animal_id, title, introduction)
-                    logger.info(f"동물 ID {animal_id} 업데이트 완료.")
-                else:
-                    logger.info(f"동물 ID {animal_id}는 이미 소개글이 있거나 존재하지 않습니다.")
-        except Exception as e:
-            # 개별 동물 처리 실패 시에도 다른 동물 처리 계속 진행
-            logger.error(f"동물 ID {animal_id} 업데이트 실패: {str(e)}")
+            # 소개글이 없을 때만 생성
+            if animal and not animal.introduction_title:
+                title, intro = await self._generate_introduction(animal)
 
-    async def _generate_introduction(self, animal_id: int) -> Tuple[str, str]:
-        async with get_db_context() as db:
-            animal = await find_animal_by_id(db, animal_id)
-            if not animal:
-                logger.error(f"동물 ID {animal_id}에 해당하는 동물이 존재하지 않습니다.")
-                raise HTTPException(status_code=404, detail="해당 동물을 찾을 수 없습니다.")
-            
-            prompt = self._create_prompt(animal)
-            response_text = await self._generate_text_with_llm(prompt)
-                        
-            return self._parse_response(response_text, animal_id)
+                async with get_background_db_context() as db:
+                    await update_animal_introduction(db, animal.id, title, intro)
+                logger.info(f"동물 ID {animal.id} 업데이트 완료.")
+            else:
+                logger.info(f"동물 ID {animal.id}는 이미 소개글이 있거나 존재하지 않습니다.")
+        except Exception as e:
+            logger.error(f"동물 ID {animal.id} 업데이트 실패: {str(e)}")
+
+    async def _generate_introduction(self, animal: Animal) -> Tuple[str, str]:
+        prompt = self._create_prompt(animal)
+        response_text = await self._generate_text_with_llm(prompt)
+        return self._parse_response(response_text, animal.id)
 
     def _create_prompt(self, animal) -> str:
         return (
@@ -113,7 +109,7 @@ class AnimalIntroductionService:
 
     async def _generate_text_with_llm(self, prompt: str) -> str:
         try:
-            # API 호출 전 레이트 리미터에서 토큰 획득
+            # LLM API 호출 전 API 요청 LIMIT 체크 (2차 방어)
             await self.rate_limiter.acquire()
 
             chatmodel = ChatOpenAI(

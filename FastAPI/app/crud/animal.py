@@ -17,6 +17,13 @@ async def find_animal_by_id(db, animal_id: int):
     return result.scalars().first()
 
 @with_db_retry(max_retries=3)
+async def find_animals_by_ids(db, ids: list[int]):
+    result = await db.execute(
+        select(Animal).filter(Animal.id.in_(ids))
+    )
+    return result.scalars().all()
+
+@with_db_retry(max_retries=3)
 async def find_all_animals(db):
     result = await db.execute(
         select(Animal).filter(Animal.removed_at.is_(None))
