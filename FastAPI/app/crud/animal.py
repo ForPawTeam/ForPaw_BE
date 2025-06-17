@@ -2,6 +2,7 @@
 import datetime
 import logging
 from sqlalchemy.future import select
+from sqlalchemy.orm import Session
 from app.models.animal import Animal
 from app.models.group import Group
 from sqlalchemy.exc import SQLAlchemyError
@@ -68,3 +69,11 @@ async def update_animal_introduction(db, animal_id: int, title: str, content: st
         db.add(animal)
         return True
     return False
+
+@with_db_retry(max_retries=3)
+async def bulk_update_animal_introductions(db: Session, records: list[dict]):
+    if not records:
+        return 0
+
+    db.bulk_update_mappings(Animal, records)
+    return len(records)

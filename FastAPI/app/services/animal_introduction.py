@@ -4,12 +4,12 @@ import logging
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from fastapi import HTTPException
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 from app.core.config import settings
 from app.models.animal import Animal
 from app.db.session import get_db_context
 from app.db.session import get_db_context, get_background_db_context
-from app.crud.animal import find_animals_by_ids, find_recent_animal_ids_with_null_title, update_animal_introduction
+from app.crud.animal import find_animals_by_ids, find_recent_animal_ids_with_null_title, bulk_update_animal_introductions
 from app.utils.retry import with_db_retry
 from app.utils.rate_limiting import RateLimiter
 
@@ -42,28 +42,36 @@ class AnimalIntroductionService:
                 animals = await find_animals_by_ids(db, batch)
 
             # 배치 내 모든 동물을 태스크로 변환
-            tasks = [self._process_single_animal(animal) for animal in animals]
+            animals_to_update = [a for a in animals if not a.introduction_title]
+            tasks = [self._process_single_animal(a) for a in animals_to_update]            
             
             # 동시성 제한을 위해 청크 단위로 태스크 실행
+            updated_records: list[tuple] = []
             for j in range(0, len(tasks), CONCURRENT_LIMIT):
                 chunk = tasks[j:j+CONCURRENT_LIMIT]
-                await asyncio.gather(*chunk) # 여러 태스크를 동시에 실행 (비동기 병렬 처리)
+                chunk_results = await asyncio.gather(*chunk) # 여러 태스크를 동시에 실행 (비동기 병렬 처리)
+                updated_records.extend([r for r in chunk_results if r])
+
+            bulk_data = [
+                {"id": aid, "introduction_title": t, "introduction_content": c}
+                for (aid, t, c) in updated_records
+            ]
+
+            if bulk_data:
+                async with get_background_db_context() as db:
+                    cnt = await bulk_update_animal_introductions(db, bulk_data)
+                    logger.info(f"배치 {i//BATCH_SIZE+1}: {cnt}건 일괄 업데이트 완료")
             
             logger.info(f"배치 처리 완료 - {batch_size}개 동물")
 
-    async def _process_single_animal(self, animal: Animal) -> None:
+    async def _process_single_animal(self, animal: Animal) -> Optional[tuple[int, str, str]]:
         try:
-            # 소개글이 없을 때만 생성
             if animal and not animal.introduction_title:
                 title, intro = await self._generate_introduction(animal)
-
-                async with get_background_db_context() as db:
-                    await update_animal_introduction(db, animal.id, title, intro)
-                logger.info(f"동물 ID {animal.id} 업데이트 완료.")
-            else:
-                logger.info(f"동물 ID {animal.id}는 이미 소개글이 있거나 존재하지 않습니다.")
+                return (animal.id, title, intro)
         except Exception as e:
-            logger.error(f"동물 ID {animal.id} 업데이트 실패: {str(e)}")
+            logger.error(f"동물 ID {animal.id} 소개글 생성 실패: {str(e)}")
+        return None
 
     async def _generate_introduction(self, animal: Animal) -> Tuple[str, str]:
         prompt = self._create_prompt(animal)
