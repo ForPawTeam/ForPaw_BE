@@ -220,8 +220,7 @@ public class AnimalService {
                 .filter(this::isAdoptionNoticeValid)
                 .map(animalDTO -> {
                     String name = createAnimalName();
-                    String kind = parseSpecies(animalDTO.kindCd());
-                    return animalDTO.toEntity(name, kind, shelter);
+                    return animalDTO.toEntity(name, shelter);
                 })
                 .toList();
     }
@@ -237,16 +236,6 @@ public class AnimalService {
     private String createAnimalName() {
         int index = ThreadLocalRandom.current().nextInt(animalNames.length);
         return animalNames[index];
-    }
-
-    private String parseSpecies(String input) {
-        Pattern pattern = Pattern.compile("\\[.*?\\] (.+)");
-        Matcher matcher = pattern.matcher(input);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return null;
     }
 
     private List<Animal> handleExpiredAnimals() {

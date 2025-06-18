@@ -17,10 +17,23 @@ public class UriUtils {
     }
 
     public static String convertToHttpsUri(String url) {
-        if (StringUtils.isBlank(url))
+        if (StringUtils.isBlank(url)) {
             throw new CustomException(ExceptionCode.INVALID_URI_FORMAT);
+        }
 
-        return StringUtils.replaceOnce(url, "http://", "https://");
+        String result = url;
+
+        if (StringUtils.startsWithIgnoreCase(result, "http://")) {
+            result = StringUtils.replaceOnce(result, "http://", "https://");
+        }
+
+        String oldPrefix = "https://openapi.animal.go.kr/openapi/service/rest/fileDownloadSrvc";
+        String newPrefix = "https://www.animal.go.kr";
+        if (StringUtils.startsWithIgnoreCase(result, oldPrefix)) {
+            result = newPrefix + result.substring(oldPrefix.length());
+        }
+
+        return result;
     }
 
     public static Mono<URI> buildAnimalOpenApiURI(String baseUri, String serviceKey, Long careRegNo) {

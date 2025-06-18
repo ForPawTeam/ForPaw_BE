@@ -13,10 +13,10 @@ public enum AnimalType {
 
     private final String value;
 
-    public static AnimalType fromPrefix(String prefix) {
-        if (prefix.startsWith("DOG")) {
+    public static AnimalType fromPrefix(String kindCd) {
+        if (kindCd.equals("417000")) {
             return DOG;
-        } else if (prefix.startsWith("CAT")) {
+        } else if (kindCd.equals("422400")) {
             return CAT;
         } else {
             return OTHER;

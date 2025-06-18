@@ -28,29 +28,34 @@ public record PublicAnimalDTO(ResponseDTO response) {
     }
 
     public record AnimalDTO(String desertionNo,
-                            String filename,
                             String happenDt,
                             String happenPlace,
+                            String kindFullNm,
+                            String upKindCd,
+                            String upKindNm,
                             String kindCd,
+                            String kindNm,
                             String colorCd,
                             String age,
                             String weight,
                             String noticeNo,
                             String noticeSdt,
                             String noticeEdt,
-                            String popfile,
+                            String popfile1,
+                            String popfile2,
                             String processState,
                             String sexCd,
                             String neuterYn,
                             String specialMark,
+                            String careRegNo,
                             String careNm,
                             String careTel,
                             String careAddr,
+                            String careOwnerNm,
                             String orgNm,
-                            String chargeNm,
-                            String officetel
+                            String chargeNm
     ) {
-        public Animal toEntity(String name, String kind, Shelter shelter) {
+        public Animal toEntity(String name, Shelter shelter) {
             DateTimeFormatter formatter = YEAR_HOUR_DAY_FORMAT;
             return Animal.builder()
                     .id(Long.valueOf(desertionNo))
@@ -58,14 +63,14 @@ public record PublicAnimalDTO(ResponseDTO response) {
                     .shelter(shelter)
                     .happenDt(LocalDate.parse(happenDt, formatter))
                     .happenPlace(happenPlace)
-                    .kind(kind)
+                    .kind(kindNm)
                     .category(AnimalType.fromPrefix(kindCd))
                     .color(colorCd)
                     .age(age)
                     .weight(weight)
                     .noticeSdt(LocalDate.parse(noticeSdt, formatter))
                     .noticeEdt(LocalDate.parse(noticeEdt, formatter))
-                    .profileURL(convertToHttpsUri(popfile))
+                    .profileURL(convertToHttpsUri(popfile1))
                     .processState(processState)
                     .gender(sexCd)
                     .neuter(neuterYn)
