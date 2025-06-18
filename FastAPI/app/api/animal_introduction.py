@@ -1,6 +1,7 @@
 # app/api/animal_introduction.py
 from fastapi import APIRouter, BackgroundTasks
-from app.services.animal_introduction import AnimalIntroductionService, get_introduction_service, update_animal_introductions, find_animals_without_introduction
+from app.services.animal_introduction import AnimalIntroductionService, update_animal_introductions, find_animals_without_introduction
+from app.dependencies import get_introduction_service
 from fastapi import Depends
 
 router = APIRouter()

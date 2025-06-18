@@ -2,7 +2,8 @@
 import datetime
 import logging
 from sqlalchemy.future import select
-from sqlalchemy.orm import Session
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.animal import Animal
 from app.models.group import Group
 from sqlalchemy.exc import SQLAlchemyError
@@ -70,10 +71,23 @@ async def update_animal_introduction(db, animal_id: int, title: str, content: st
         return True
     return False
 
-@with_db_retry(max_retries=3)
-async def bulk_update_animal_introductions(db: Session, records: list[dict]):
+async def bulk_update_animal_introductions(db: AsyncSession, records: list[dict]):
     if not records:
         return 0
 
-    db.bulk_update_mappings(Animal, records)
-    return len(records)
+    sql = text("""
+        UPDATE animal_tb
+            SET introduction_title   = :title,
+                introduction_content = :content
+        WHERE id = :id
+    """)
+
+    params = [
+        {"id": rec["b_id"],
+        "title": rec["title_param"],
+        "content": rec["content_param"]}
+        for rec in records
+    ]
+    await db.execute(sql, params)
+    await db.commit()
+    return len(params)

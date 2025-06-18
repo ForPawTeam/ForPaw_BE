@@ -53,8 +53,12 @@ class AnimalIntroductionService:
                 updated_records.extend([r for r in chunk_results if r])
 
             bulk_data = [
-                {"id": aid, "introduction_title": t, "introduction_content": c}
-                for (aid, t, c) in updated_records
+                {
+                    "b_id": aid,
+                    "title_param": title,
+                    "content_param": content,
+                }
+                for (aid, title, content) in updated_records
             ]
 
             if bulk_data:
@@ -162,10 +166,6 @@ class AnimalIntroductionService:
         introduction = '\n'.join(response_lines[content_start_index:]).strip()
         
         return title, introduction
-
-# 의존성 주입 제공자
-def get_introduction_service() -> AnimalIntroductionService:
-    return AnimalIntroductionService()
 
 async def update_animal_introductions(animal_ids, service: AnimalIntroductionService):
     try:

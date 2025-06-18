@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 """분당 호출 가능 횟수를 제한 => 배치당 동시성 제한을 줬지만 API LIMIT를 2차적으로 방어하기 위해 사용"""
 class RateLimiter:
@@ -6,11 +7,17 @@ class RateLimiter:
         self.max_calls = max_calls_per_period
         self.period = period_seconds
         self.available_calls = max_calls_per_period  # 현재 사용 가능한 토큰 수
-        self.last_refill = None   # 비동기 컨텍스트에서 초기화하기 위해 None으로 설정
-        self._lock = asyncio.Lock() 
+        self.last_refill: Optional[float] = None
+        self._lock: Optional[asyncio.Lock] = None
+
+    async def _get_lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
     
     async def acquire(self):
-        async with self._lock:
+        lock = await self._get_lock()
+        async with lock:
             now = asyncio.get_running_loop().time()  # 실행 중인 루프 가져오기
 
             # 첫 번째 호출 시 last_refill 초기화
