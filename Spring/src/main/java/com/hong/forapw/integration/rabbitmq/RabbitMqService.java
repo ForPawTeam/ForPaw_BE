@@ -6,7 +6,6 @@ import com.hong.forapw.domain.chat.model.MessageDTO;
 import com.hong.forapw.domain.chat.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerEndpoint;
@@ -19,7 +18,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.CHAT_EXCHANGE;
@@ -48,7 +46,7 @@ public class RabbitMqService {
                     String listenerId = ROOM_QUEUE_PREFIX + chatRoom.getId();
 
                     createAndBindQueueToExchange(CHAT_EXCHANGE, queueName);
-                    createMessageConsumerForQueue(listenerId, queueName);
+                    registerMessageQueueListener(listenerId, queueName);
                 });
     }
 
@@ -70,7 +68,6 @@ public class RabbitMqService {
         DirectExchange exchange = new DirectExchange(exchangeName);
         amqpAdmin.declareExchange(exchange);
 
-        // 큐 생성 (dead-letter 설정도 진행)
         // RabbitMQ는 공식적으로 'requeue=false'로 거부된 메시지를 큐 설정의 x-dead-letter-exchange 인자에 지정된 교환기로 라우팅
         Queue queue = QueueBuilder.durable(queueName)
                 .withArgument("x-dead-letter-exchange", "chat.dead-letter.exchange") // 메시지 처리 실패 시 이동할 exchange 지정
@@ -86,8 +83,7 @@ public class RabbitMqService {
         amqpAdmin.declareBinding(binding);
     }
 
-    // 지정된 큐에 대한 메시지 소비자를 생성하고 등록
-    public void createMessageConsumerForQueue(String listenerId, String queueName) {
+    public void registerMessageQueueListener(String listenerId, String queueName) {
         SimpleRabbitListenerEndpoint endpoint = createListenerEndpoint(listenerId, queueName);
         endpoint.setMessageListener(message -> { // 메시지 처리 로직 설정 (자동 ACK 모드)
             try {
@@ -110,8 +106,7 @@ public class RabbitMqService {
 
     @Recover
     public void logFailedMessagePublish(Exception e, Long chatRoomId, MessageDTO message) {
-        log.error("메시지 발행 최종 실패: messageId={}, chatRoomId={}, error={}",
-                message.messageId(), chatRoomId, e.getMessage(), e);
+        log.error("메시지 발행 최종 실패: messageId={}, chatRoomId={}, error={}", message.messageId(), chatRoomId, e.getMessage(), e);
     }
 
     public void deleteQueue(String queueName) {

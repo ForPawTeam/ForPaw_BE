@@ -52,7 +52,7 @@ public class ChatService {
         String senderProfileURL = findSenderProfileURL(senderId);
 
         MessageDTO messageDTO = new MessageDTO(request, senderNickName, messageId, metadata, senderProfileURL, senderId);
-        publishMessageToBroker(request.chatRoomId(), messageDTO);
+        rabbitMqService.publishMessageToChatRoom(request.chatRoomId(), messageDTO);
 
         return new SendMessageRes(messageId);
     }
@@ -165,14 +165,6 @@ public class ChatService {
             return matcher.group();
         }
         return null;
-    }
-
-    private void publishMessageToBroker(Long chatRoomId, MessageDTO message) {
-        CompletableFuture.runAsync(() -> rabbitMqService.publishMessageToChatRoom(chatRoomId, message))
-                .exceptionally(ex -> { // 메시지 발행 단계에서 실패 처리
-                    log.error("메시지 발행에 실패: messageId={}, error={}", message.messageId(), ex.getMessage(), ex);
-                    return null;
-                });
     }
 
     private List<ImageObjectDTO> getImageObjects(Long chatRoomId) {

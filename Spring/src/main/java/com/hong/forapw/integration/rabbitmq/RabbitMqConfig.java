@@ -62,14 +62,14 @@ public class RabbitMqConfig {
         factory.setReceiveTimeout(30000L);
 
         // 동시 소비자 수 설정 -> 부하에 따라 3-10개 사이 자동 조정
-        factory.setConcurrentConsumers(3); // 최소 소비자 수
-        factory.setMaxConcurrentConsumers(10); // 최대 소비자 수
+        factory.setConcurrentConsumers(3);
+        factory.setMaxConcurrentConsumers(10);
 
         // 예외 발생 시 재시도 전략
         factory.setAdviceChain(RetryInterceptorBuilder
                 .stateless()  // 상태를 저장하지 않는 재시도(동일 스레드에서 재시도)
-                .maxAttempts(5)  // 최대 5번 재시도
-                .backOffOptions(1000, 2.0, 10000)  // 초기 1초, 2배씩 증가, 최대 10초 대기
+                .maxAttempts(5)
+                .backOffOptions(1000, 2.0, 10000)
                 .recoverer(new RejectAndDontRequeueRecoverer())  // 모든 재시도 실패 후 메시지 거부 및 데드레터 큐로 자동 라우팅
                 .build());
 
