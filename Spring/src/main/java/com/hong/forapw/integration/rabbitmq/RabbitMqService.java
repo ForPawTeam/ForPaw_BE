@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.CHAT_EXCHANGE;
 import static com.hong.forapw.integration.rabbitmq.RabbitMqConstants.ROOM_QUEUE_PREFIX;
@@ -51,9 +52,23 @@ public class RabbitMqService {
                 });
     }
 
+    public void initializeDeadLetterListener() {
+        String dlqName = "chat.dead-letter.queue";
+        String listenerId = "dlqListener";
+
+        SimpleRabbitListenerEndpoint endpoint = createListenerEndpoint(listenerId, dlqName);
+        endpoint.setMessageListener(message -> {
+            String body = new String(message.getBody(), StandardCharsets.UTF_8);
+            log.warn("DLQ 메시지 수신: {}", body);
+        });
+
+        rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
+    }
+
     // 채팅방 큐를 생성하고 교환기에 바인딩
     public void createAndBindQueueToExchange(String exchangeName, String queueName) {
         DirectExchange exchange = new DirectExchange(exchangeName);
+        amqpAdmin.declareExchange(exchange);
 
         // 큐 생성 (dead-letter 설정도 진행)
         // RabbitMQ는 공식적으로 'requeue=false'로 거부된 메시지를 큐 설정의 x-dead-letter-exchange 인자에 지정된 교환기로 라우팅
@@ -84,7 +99,6 @@ public class RabbitMqService {
             }
         });
 
-        // 리스너 컨테이너 레지스트리에 등록 (동적 리스너 생성)
         rabbitListenerEndpointRegistry.registerListenerContainer(endpoint, rabbitListenerContainerFactory, true);
     }
 
