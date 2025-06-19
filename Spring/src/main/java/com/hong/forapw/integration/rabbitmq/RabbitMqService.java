@@ -87,7 +87,7 @@ public class RabbitMqService {
         SimpleRabbitListenerEndpoint endpoint = createListenerEndpoint(listenerId, queueName);
         endpoint.setMessageListener(message -> { // 메시지 처리 로직 설정 (자동 ACK 모드)
             try {
-                MessageDTO messageDTO = deserializeMessageToDTO(message);
+                MessageDTO messageDTO = deserializeAmqpToMessageDTO(message);
                 messageService.saveMessage(messageDTO);
                 alarmService.sendAlarmToChatRoomUsers(messageDTO);
             } catch (Exception e) { // 예외를 그대로 던져서 Spring Retry가 재시도 처리하도록 함
@@ -114,7 +114,7 @@ public class RabbitMqService {
     }
 
     // AMQP 메시지를 MessageDTO 객체로 변환
-    private MessageDTO deserializeMessageToDTO(org.springframework.amqp.core.Message amqpMessage) {
+    private MessageDTO deserializeAmqpToMessageDTO(org.springframework.amqp.core.Message amqpMessage) {
         return (MessageDTO) converter.fromMessage(amqpMessage);
     }
 
